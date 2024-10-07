@@ -11,6 +11,8 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🔍 High-precision transcription with options for beam search and other configurations
 - 🖥️ Simple UI built with Gradio for easy access and use
 
+## Demo
+
 ## 🛠️ To do/fix
 - 🖥️ AMD Support
 - 💡 You tell me! 🙂
