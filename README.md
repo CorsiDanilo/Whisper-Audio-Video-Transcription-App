@@ -12,6 +12,7 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🖥️ Simple UI built with Gradio for easy access and use
 
 ## Demo
+![demo](https://github.com/user-attachments/assets/c8e0aa99-0e50-4758-9ce9-08102646d71c)
 
 ## 🛠️ To do/fix
 - 🖥️ AMD Support
