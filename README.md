@@ -1,28 +1,29 @@
-# Whisper Audio/Video Transcription App
+# 🎙️ Whisper Audio/Video Transcription App
 
-## Description
+## 📝 Description
 This project is a transcription app built using the [Faster Whisper model](https://github.com/SYSTRAN/faster-whisper), which transcribes audio and video files into text. It is powered by Gradio for a user-friendly web interface and supports audio or video file uploads for transcription.
 
-## Features
-- Transcribe both audio and video files (e.g., MP3, MP4, AVI, etc.)
-- Supports multiple model sizes for performance vs. accuracy balance
-- GPU support for faster transcription using CUDA
-- Extracts audio from video files automatically
-- High-precision transcription with options for beam search and other configurations
-- Simple UI built with Gradio for easy access and use
+## ✨ Features
+- 🎧 Transcribe both audio and video files (e.g., MP3, MP4, AVI, etc.)
+- ⚖️ Supports multiple model sizes for performance vs. accuracy balance
+- 🚀 GPU support for faster transcription using CUDA
+- 🎥 Extracts audio from video files automatically
+- 🔍 High-precision transcription with options for beam search and other configurations
+- 🖥️ Simple UI built with Gradio for easy access and use
 
-## To do/fix
-- AMD Support
-- You tell me :)
+## 🛠️ To do/fix
+- 🖥️ AMD Support
+- 💡 You tell me! 🙂
 
-## Requirements
-- Python 3.8+
-- Torch (CUDA version if using GPU)
-- FFmpeg (must be installed and added to your system's PATH)
-- Gradio
+## 📋 Requirements
+- 🐍 Python 3.8+
+- 🔥 Torch (CUDA version if using GPU)
+- 🎬 FFmpeg (must be installed and added to your system's PATH)
+- 🖼️ Gradio
 
-## Installation
+## 📦 Installation
 ### Step 1: Clone the repository
+
 ```
 git clone https://github.com/CorsiDanilo/whisper-utility.git
 
@@ -41,46 +42,48 @@ pip install -r requirements.py
 ```
 
 ### Step 4: Install FFmpeg (if not already installed):
-- Linux: Install via your package manager (e.g., `sudo apt install ffmpeg`)
-- macOS: Install via Homebrew (`brew install ffmpeg`)
-- Windows: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to your system's PATH.
+- 🐧 Linux: Install via your package manager (e.g., `sudo apt install ffmpeg`)
+- 🍎 macOS: Install via Homebrew (`brew install ffmpeg`)
+- 🖥️ Windows: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to your system's PATH.
     - Follow [this guide](https://phoenixnap.com/kb/ffmpeg-windows) to ensure it's in your system's PATH.
 
 ### (OPTIONAL) Step 5: Install CUDA Toolkit for NVIDIA GPU
 - Download and install [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads).
-    - Linux: follow [this guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/).
-    - Windows: follow [this guide](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html).
+    - 🐧 Linux: follow [this guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/).
+    - 🖥️ Windows: follow [this guide](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html).
 
-## Usage
+## 🚀 Usage
 Run the application:
 ```
 python whisper.py 
 ```
 The Gradio interface will open in your default web browser. From there, you can upload an audio or video file, and the transcription will be displayed.
 
-## Interface Guide
+💡 **REMEMBER**: When you are done click `Clear and Close` if you want to clean up the temporary files folder.
+
+## 🎛️ Interface Guide
 - **Upload an audio or video file**: Accepts audio formats like MP3, WAV, and video formats like MP4, AVI.
 - **Transcribe**: Click this button to start the transcription process.
 - **Close and Clear**: This button clears the folder where the file was temporarily stored and closes the application.
 
-## Model Configuration
-- **Language**: Set the transcription language. Default is Italian (it), but you can change it to English (en) or other languages.
-- **Model Size**: By default, the large version of the Whisper model is used (large-v3), but you can switch to small-v3 for smaller, faster models.
-- **Device**: The model automatically selects the device based on GPU availability (cuda or cpu).
-- **Beam Size**: Set beam size for decoding. Default is 4, but you can reduce it to 1 for faster inference.
+## ⚙️ Model Configuration
+- **Language**: Set the transcription language. Default is Italian 🇮🇹 (`it`), but you can change it to English 🇬🇧 (`en`) or other languages.
+- **Model Size**: By default, the large version of the Whisper model is used (`large-v3`), but you can switch to `small-v3` for smaller, faster models.
+- **Device**: The model automatically selects the device based on GPU availability (`cuda` or `cpu`).
+- **Beam Size**: Set beam size for decoding. Default is `4`, but you can reduce it to `1` for faster inference.
 
-## Troubleshoting
+## 🛠️ Troubleshooting
 - If you get the following error: 
     ```
     Could not locate cudnn_ops_infer64_8.dll. Please make sure it is in your library path!
     ```
-    Download the missing dll from [here](https://github.com/Purfview/whisper-standalone-win/releases/tag/libs) and put them into the `bin` folder of your `CUDA` installation folder.
-Usually the path is: `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\vXX.X\bin`.
+    Download the missing dll from [here](https://github.com/Purfview/whisper-standalone-win/releases/tag/libs) and put it into the `bin` folder of your `CUDA` installation folder.
+    - 🗂️ The usual path is: `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\vXX.X\bin`.
 
-## License
+## 📄 License
 This project is licensed under the MIT License. See the [LICENSE](https://github.com/CorsiDanilo/whisper-utility/blob/main/LICENSE) file for details.
 
-## Acknowledgments
+## 🙏 Acknowledgments
 - [Faster Whisper](https://github.com/SYSTRAN/faster-whisper) by Guillaume Klein
 - [Gradio](https://www.gradio.app/) for the UI interface
 
