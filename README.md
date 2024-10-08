@@ -15,8 +15,9 @@ This project is a transcription app built using the [Faster Whisper model](https
 ![demo](https://github.com/user-attachments/assets/c8e0aa99-0e50-4758-9ce9-08102646d71c)
 
 ## 🛠️ To do/fix
-- [ ] 🖥️ AMD Support
-- [ ] ⬇️ Ability to download the transcript in `.txt` format
+- [ ] ⬇️ Download the transcript in `.txt` format
+- [ ] 🎛️ Tune the model parameters
+- [ ] 🖥️ AMD Support (if you have an AMD graphics card contact me 📩)
 - [ ] You tell me! 🙂
 
 ## 📋 Requirements
