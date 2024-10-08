@@ -73,19 +73,23 @@ def clear_and_close(folder_path):
     # Terminate the script
     os.kill(os.getpid(), signal.SIGINT)  # Send interrupt signal to stop the app
 
+def upload_file(file):
+    file_path = file
+    return file_path
+
 # Gradio interface
 with gr.Blocks() as demo:
     gr.Markdown("### Audio/Video Transcription using Whisper Model")
     
     # Use 'filepath' type for audio input
-    audio_input = gr.Audio(label="Upload an audio or video file", type="filepath")
-    output_text = gr.Textbox(label="Transcription (to select all the content click in the textbox and press the key combination Ctrl+A)")
+    file_input = gr.File()
+    output_text = gr.Textbox(label="Transcription (to select all the content click the textbox and press the key combination Ctrl+A)")
 
     transcribe_button = gr.Button("Transcribe")
     close_button = gr.Button("Close and Clear")
 
     # Link the buttons to their respective functions
-    transcribe_button.click(transcribe_audio, inputs=audio_input, outputs=output_text)
+    transcribe_button.click(transcribe_audio, inputs=file_input, outputs=output_text)
     close_button.click(lambda: clear_and_close(folder_path), inputs=[], outputs=[])
 
 if __name__ == "__main__":
