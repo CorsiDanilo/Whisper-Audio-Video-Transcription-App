@@ -19,10 +19,10 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 💡 You tell me! 🙂
 
 ## 📋 Requirements
-- 🐍 Python 3.8+
-- 🔥 Torch (CUDA version if using GPU)
-- 🎬 FFmpeg (must be installed and added to your system's PATH)
-- 🖼️ Gradio
+- 🐍 [Python 3.11+](https://apps.microsoft.com/detail/9ncvdn91xzqp)
+- 🔥 [PyTorch](https://pytorch.org) + [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) (CUDA version if using GPU)
+- 🎬 [FFmpeg](https://www.ffmpeg.org) (must be installed and added to your system's PATH)
+- 🖼️ [Gradio](https://www.gradio.app)
 
 ## 📦 Installation
 ### Step 1: Clone the repository
@@ -50,7 +50,9 @@ pip install -r requirements.py
 - 🖥️ Windows: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to your system's PATH.
     - Follow [this guide](https://phoenixnap.com/kb/ffmpeg-windows) to ensure it's in your system's PATH.
 
-### (OPTIONAL) Step 5: Install CUDA Toolkit for NVIDIA GPU
+### (OPTIONAL) Step 5: Install Pythorch and CUDA Toolkit for NVIDIA GPU
+- Download and install [PyTorch](https://pytorch.org/get-started/locally/), in `Compute Platform`
+select the last version.
 - Download and install [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads).
     - 🐧 Linux: follow [this guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/).
     - 🖥️ Windows: follow [this guide](https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html).

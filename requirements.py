@@ -63,9 +63,6 @@ starlette==0.38.6
 sympy==1.13.3
 tokenizers==0.20.0
 tomlkit==0.12.0
-torch==2.4.1+cu121
-torchaudio==2.4.1+cu121
-torchvision==0.19.1+cu121
 tqdm==4.66.5
 typer==0.12.5
 typing_extensions==4.12.2
