@@ -10,13 +10,13 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🎥 Extracts audio from video files automatically
 - 🔍 High-precision transcription with options for beam search and other configurations
 - 🖥️ Simple UI built with Gradio for easy access and use
+- ⬇️ Download the transcript in `.txt` format
+- 🎛️ Tuning the model parameters via the interface
 
 ## Demo
 ![demo](https://github.com/user-attachments/assets/c8e0aa99-0e50-4758-9ce9-08102646d71c)
 
 ## 🛠️ To do/fix
-- [x] ⬇️ Download the transcript in `.txt` format
-- [ ] 🎛️ Tuning the model parameters via the interface
 - [ ] 🖥️ AMD Support (if you have an AMD graphics card contact me 📩)
 - [ ] You tell me! 🙂
 
