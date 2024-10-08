@@ -2,7 +2,7 @@ import gradio as gr
 from faster_whisper import WhisperModel
 import os
 import torch
-import subprocess  # To run ffmpeg commands
+import subprocess
 import shutil
 import signal
 
@@ -36,65 +36,52 @@ def extract_audio_from_video(video_file, output_audio_file):
     command = ['ffmpeg', '-i', video_file, '-q:a', '0', '-map', 'a', output_audio_file, '-y']
     subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-# Function to handle the transcription
-def transcribe_audio(file_path):
+def transcribe_file(file_path):
     if file_path is None:
-        return "Please upload a file"
+        return "Please upload a file", None
 
-    # Save the folder path for later deletion
     global folder_path
-    folder_path = os.path.dirname(os.path.dirname(file_path))  # Get the parent folder of the file
+    folder_path = os.path.dirname(os.path.dirname(file_path))
 
-    # Check if the file is a video
     if is_video_file(file_path):
-        # Extract audio from video
         print(f"Extracting audio from video file: {file_path}...")
-        audio_file = os.path.splitext(file_path)[0] + ".mp3"  # Save as an MP3 file
+        audio_file = os.path.splitext(file_path)[0] + ".mp3"
         extract_audio_from_video(file_path, audio_file)
-        file_path = audio_file  # Use the extracted audio for transcription
+        file_path = audio_file
     
-    # Perform transcription
     print(f"Transcribing {file_path}...")
     segments, info = model.transcribe(file_path, language=language, beam_size=beam_size, condition_on_previous_text=condition_on_previous_text)
     
-    # Compile transcription text
     transcription = ""
     for segment in segments:
         transcription += f"{segment.text}\n"
 
-    return transcription
+    # Save the transcript immediately
+    output_path = os.path.join(folder_path, "transcript.txt")
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(transcription)
 
-# Function to clear a folder and close the script
-def clear_and_close(folder_path):
-    if folder_path:
-        shutil.rmtree(folder_path)
-        print(f"Deleted folder: {folder_path}")
-
-    # Terminate the script
-    os.kill(os.getpid(), signal.SIGINT)  # Send interrupt signal to stop the app
-
-def upload_file(file):
-    file_path = file
-    return file_path
+    return transcription, output_path
 
 # Gradio interface
 with gr.Blocks() as demo:
     gr.Markdown("### Audio/Video Transcription using Whisper Model")
     
-    # Use 'filepath' type for audio input
     file_input = gr.File()
     output_text = gr.Textbox(label="Transcription (to select all the content click the textbox and press the key combination Ctrl+A)")
+    download_output = gr.File(label="Download Transcript")
 
     transcribe_button = gr.Button("Transcribe")
     close_button = gr.Button("Close and Clear")
 
-    # Link the buttons to their respective functions
-    transcribe_button.click(transcribe_audio, inputs=file_input, outputs=output_text)
+    transcribe_button.click(
+        transcribe_file, 
+        inputs=file_input, 
+        outputs=[output_text, download_output]
+    )
+    
     close_button.click(lambda: clear_and_close(folder_path), inputs=[], outputs=[])
 
 if __name__ == "__main__":
-    # Run this check at the start of your script
     check_ffmpeg_installed()
-
-    # Launch the app
     demo.launch()
