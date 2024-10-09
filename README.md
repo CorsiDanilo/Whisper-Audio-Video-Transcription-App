@@ -1,4 +1,5 @@
 # 🎙️ Whisper Audio/Video Transcription App
+![demo](https://github.com/user-attachments/assets/c8e0aa99-0e50-4758-9ce9-08102646d71c)
 
 ## 📝 Description
 This project is a transcription app built using the [Faster Whisper model](https://github.com/SYSTRAN/faster-whisper), which transcribes audio and video files into text. It is powered by Gradio for a user-friendly web interface and supports audio or video file uploads for transcription.
@@ -14,7 +15,7 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🎛️ Tuning the model parameters via the interface
 
 ## Demo
-![demo](https://github.com/user-attachments/assets/c8e0aa99-0e50-4758-9ce9-08102646d71c)
+💻 You can try the Colab version [here](https://colab.research.google.com/drive/16vi9-BhRZZs-ck6KTCkb92gpC8_GXako?usp=sharing) (remember to select GPU in 'Runtime Type' for faster execution ⚡)
 
 ## 🛠️ To do/fix
 - [ ] 🖥️ AMD Support (if you have an AMD graphics card contact me 📩)
