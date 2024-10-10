@@ -18,7 +18,7 @@ This project is a transcription app built using the [Faster Whisper model](https
 💻 You can try the Colab version [here](https://colab.research.google.com/drive/16vi9-BhRZZs-ck6KTCkb92gpC8_GXako?usp=sharing) (remember to select GPU in 'Runtime Type' for faster execution ⚡)
 
 ## 🛠️ To do/fix
-- [ ] 🖥️ AMD Support (if you have an AMD graphics card contact me 📩)
+- [ ] 🖥️ MAC/AMD Support (if you have one of those contact me 📩)
 - [ ] You tell me! 🙂
 
 ## 📋 Requirements
