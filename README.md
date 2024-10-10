@@ -23,7 +23,7 @@ This project is a transcription app built using the [Faster Whisper model](https
 
 ## 📋 Requirements
 - 🐍 [Python 3.11+](https://apps.microsoft.com/detail/9ncvdn91xzqp)
-- 🔥 [PyTorch](https://pytorch.org) + [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) (CUDA version if using GPU)
+- 🔥 [PyTorch](https://pytorch.org)  (CUDA version + [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) if using GPU)
 - 🎬 [FFmpeg](https://www.ffmpeg.org) (must be installed and added to your system's PATH)
 - 🖼️ [Gradio](https://www.gradio.app)
 
