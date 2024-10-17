@@ -17,8 +17,8 @@ filelock==3.16.1
 flatbuffers==24.3.25
 fonttools==4.54.1
 fsspec==2024.9.0
-gradio==4.44.1
-gradio_client==1.3.0
+gradio==5.1.0
+gradio_client==1.4.0
 h11==0.14.0
 httpcore==1.0.6
 httpx==0.27.2
