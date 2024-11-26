@@ -11,11 +11,9 @@ folder_path = None
 file_name = None
 
 def is_whatsapp_audio_file(file_path):
-    print(f"Checking if {file_path} is a WhatsApp audio file...")
     whatsapp_audio_extensions = ['.opus']  # Add other WhatsApp audio extensions if needed
     file_extension = os.path.splitext(file_path)[1].lower()
     is_whatsapp_audio = file_extension in whatsapp_audio_extensions
-    print(f"Is WhatsApp audio file: {is_whatsapp_audio}")
     return is_whatsapp_audio
 
 def convert_whatsapp_audio_to_mp3(file_path, output_audio_file):
@@ -43,11 +41,9 @@ def check_ffmpeg_installed():
 # Function to check if file is a video
 def is_video_file(file_path):
     try:
-        print(f"Checking if {file_path} is a video file...")
         video_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm']  # Add other video extensions if needed
         file_extension = os.path.splitext(file_path)[1].lower()
         is_video = file_extension in video_extensions
-        print(f"Is video file: {is_video}")
         return is_video
     except Exception as e:
         print(f"Error checking if file is a video: {e}")
