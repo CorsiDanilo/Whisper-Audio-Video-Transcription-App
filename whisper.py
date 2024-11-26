@@ -1,5 +1,6 @@
 import gradio as gr
 from faster_whisper import WhisperModel
+from pydub import AudioSegment
 import os
 import torch
 import subprocess
@@ -7,6 +8,21 @@ import shutil
 import signal
 
 folder_path = None
+
+def is_whatsapp_audio_file(file_path):
+    return file_path.endswith(".opus")
+
+def convert_whatsapp_audio_to_mp3(file_path, output_audio_file):
+    try:
+        # Load the WhatsApp audio file (commonly in .opus format)
+        audio = AudioSegment.from_file(file_path, codec="libopus")
+        
+        # Export the audio as an MP3 file
+        audio.export(output_audio_file, format="mp3")
+        
+        print(f"Conversion successful! MP3 file saved at: {output_audio_file}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 def check_ffmpeg_installed():
     if shutil.which("ffprobe") is None or shutil.which("ffmpeg") is None:
@@ -22,6 +38,8 @@ def is_video_file(file_path):
 def extract_audio_from_video(video_file, output_audio_file):
     command = ['ffmpeg', '-i', video_file, '-q:a', '0', '-map', 'a', output_audio_file, '-y']
     subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    print(f"Audio extracted from video file: {video_file} and saved at: {output_audio_file}")
 
 def load_model(model_size, compute_type, device):
     model = WhisperModel(model_size, device=device, compute_type=compute_type)
@@ -44,6 +62,12 @@ def transcribe_file(file_path, language, model_size, compute_type, beam_size, co
         print(f"Extracting audio from video file: {file_path}...")
         audio_file = os.path.splitext(file_path)[0] + ".mp3"
         extract_audio_from_video(file_path, audio_file)
+        file_path = audio_file
+
+    if is_whatsapp_audio_file(file_path):
+        print(f"Converting WhatsApp audio file to MP3: {file_path}...")
+        audio_file = os.path.splitext(file_path)[0] + ".mp3"
+        convert_whatsapp_audio_to_mp3(file_path, audio_file)
         file_path = audio_file
     
     print(f"Transcribing {file_path}...")
