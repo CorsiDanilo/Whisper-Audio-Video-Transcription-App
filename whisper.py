@@ -177,7 +177,7 @@ with gr.Blocks() as demo:
             """)
 
         with gr.Row():
-            language = gr.Dropdown(choices=["en", "it", "fr", "de", "es"], value="en", label="Language")
+            language = gr.Dropdown(choices=["en", "it", "fr", "de", "es"], value="it", label="Language")
             model_size = gr.Dropdown(choices=["tiny", "base", "small", "medium", "large-v3"], value="large-v3", label="Model Size")
         with gr.Row():
             compute_type = gr.Dropdown(choices=["float16", "float32", "int8"], value="float16", label="Compute Type")

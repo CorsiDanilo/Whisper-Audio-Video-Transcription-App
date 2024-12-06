@@ -1,0 +1,58 @@
+name: Build and Compress Executable
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # Step 2: Set up Python environment
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.12'
+
+    # Step 3: Install dependencies
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller gradio torch pydub faster-whisper
+
+    # Step 4: Download UPX
+    - name: Download UPX
+      run: |
+        Invoke-WebRequest -Uri https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-win64.zip -OutFile upx.zip
+        Expand-Archive -Path upx.zip -DestinationPath .
+
+    # Step 5: Add UPX to the PATH
+    - name: Add UPX to PATH
+      run: |
+        echo "C:\windows\system32;$PWD\upx-4.2.4-win64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+
+    # Step 6: Create executable with PyInstaller
+    - name: Build executable with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed --upx-dir ./upx-4.2.4-win64 whisper.py
+
+    # Step 7: Compress the executable with UPX
+    - name: Compress the executable with UPX
+      run: |
+        ./upx-4.2.4-win64/upx.exe --best dist/whisper.exe
+
+    # Step 8: Upload the executable as an artifact
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: compressed-transcribe-script
+        path: dist/whisper.exe
