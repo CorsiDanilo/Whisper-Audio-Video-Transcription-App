@@ -14,22 +14,18 @@ load_dotenv()
 # Add the GEMINI_API_KEY from the environment variables
 try:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-except Exception as e:
-    print(f"Error loading environment variables: {e}")
-    GEMINI_API_KEY = None
-
-if GEMINI_API_KEY:
-
+    
     try:
         import google.generativeai as genai
     except ImportError:
         print("Installing the generativeai package...")
         subprocess.run(["pip", "install", "google-generativeai"])
         import google.generativeai as genai
+except Exception as e:
+    print(f"Error loading environment variables: {e}")
+    GEMINI_API_KEY = None
 
-    # Initialize Gemini API
-    MODEL_NAME = "gemini-1.5-pro"
-
+def initialize_model(model_choice):
     # API parameters
     REQUESTS_PER_MINUTE = 15	
     REQUESTS_PER_DAY = 1500
@@ -80,17 +76,20 @@ if GEMINI_API_KEY:
     generation_config, safety_settings = gemini_configurations()
 
     model = genai.GenerativeModel(
-    model_name=MODEL_NAME,
+    model_name=model_choice,
     safety_settings=safety_settings,
     generation_config=generation_config,
     )
+
+    return model
 
 folder_path = None
 file_name = None
 
 # Function to query Gemini API
-def query_gemini(user_input, transcription):
+def query_gemini(user_input, transcription, model_choice):
     try:
+        model = initialize_model(model_choice)
         query = f"""
         Transcription: {transcription}\n\n
         User Input: {user_input}
@@ -283,6 +282,7 @@ with gr.Blocks() as demo:
 
         if GEMINI_API_KEY:
             gr.Markdown("## Gemini Interaction")
+            model_choice = gr.Radio(choices=["gemini-1.5-flash", "gemini-1.5-pro"], value="gemini-1.5-pro", label="Choose Gemini Model")
             user_query = gr.Textbox(label="Enter your query")
             gemini_response = gr.Textbox(label="Gemini Response", interactive=False)
 
@@ -290,14 +290,8 @@ with gr.Blocks() as demo:
 
         submit_query_button.click(
             query_gemini,
-            inputs=[user_query, output_text],
+            inputs=[user_query, output_text, model_choice],
             outputs=[gemini_response]
-        )
-
-        transcribe_button.click(
-            transcribe_file,
-            inputs=[file_input, language, model_size, compute_type, beam_size, condition_on_previous_text, word_timestamps],
-            outputs=[output_text, download_output]
         )
 
         with gr.Row():
