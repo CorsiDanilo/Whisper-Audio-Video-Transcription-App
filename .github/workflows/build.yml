@@ -1,0 +1,43 @@
+name: Build Executable
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller gradio faster-whisper pydub torch
+
+    - name: Download UPX
+      run: |
+        Invoke-WebRequest -Uri https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-win64.zip -OutFile upx.zip
+        Expand-Archive -Path upx.zip -DestinationPath .
+
+    - name: Build executable with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed --upx-dir ./upx-4.2.4-win64 whisper.py
+
+    - name: Compress executable with UPX
+      run: |
+        ./upx-4.2.4-win64/upx.exe --best dist/whisper.exe
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: whisper-executable
+        path: dist/whisper.exe
