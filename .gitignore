@@ -1,2 +1,7 @@
 venv
 __pycache__
+whisper.spec
+upx
+dist
+build
+.env

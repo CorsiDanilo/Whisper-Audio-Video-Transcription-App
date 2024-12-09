@@ -6,9 +6,100 @@ import torch
 import subprocess
 import shutil
 import signal
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Add the GEMINI_API_KEY from the environment variables
+try:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+except Exception as e:
+    print(f"Error loading environment variables: {e}")
+    GEMINI_API_KEY = None
+
+if GEMINI_API_KEY:
+
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        print("Installing the generativeai package...")
+        subprocess.run(["pip", "install", "google-generativeai"])
+        import google.generativeai as genai
+
+    # Initialize Gemini API
+    MODEL_NAME = "gemini-1.5-pro"
+
+    # API parameters
+    REQUESTS_PER_MINUTE = 15	
+    REQUESTS_PER_DAY = 1500
+    TOKENS_PER_MINUTE = 1048576
+    INPUT_TOKENS = TOKENS_PER_MINUTE
+
+    # Model parameters
+    TEMPERATURE = 1
+    TOP_P = 0.95
+    TOP_K = 40
+    MAX_OUTPUT_TOKENS = 8192
+    RESPONSE_MIME_TYPE = "text/plain"
+
+    def gemini_configurations():
+        generation_config = {
+        "temperature": TEMPERATURE,
+        "top_p": TOP_P,
+        "top_k": TOP_K,
+        "max_output_tokens": MAX_OUTPUT_TOKENS,
+        "response_mime_type": RESPONSE_MIME_TYPE,
+        }
+
+        safety_settings = [
+        {
+            "category": "HARM_CATEGORY_HARASSMENT",
+            "threshold": "BLOCK_NONE",
+        },
+        {
+            "category": "HARM_CATEGORY_HATE_SPEECH",
+            "threshold": "BLOCK_NONE",
+        },
+        {
+            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "threshold": "BLOCK_NONE",
+        },
+        {
+            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "threshold": "BLOCK_NONE",
+        },
+        ]
+
+        return generation_config, safety_settings
+
+    # Set up the API key
+    genai.configure(api_key=GEMINI_API_KEY)
+
+    # Gemini model configurations
+    generation_config, safety_settings = gemini_configurations()
+
+    model = genai.GenerativeModel(
+    model_name=MODEL_NAME,
+    safety_settings=safety_settings,
+    generation_config=generation_config,
+    )
 
 folder_path = None
 file_name = None
+
+# Function to query Gemini API
+def query_gemini(user_input, transcription):
+    try:
+        query = f"""
+        Transcription: {transcription}\n\n
+        User Input: {user_input}
+        """
+
+        response = model.generate_content(query).text
+        return response
+    except Exception as e:
+        return f"Error querying Gemini: {e}"
 
 def is_whatsapp_audio_file(file_path):
     whatsapp_audio_extensions = ['.opus']  # Add other WhatsApp audio extensions if needed
@@ -177,7 +268,7 @@ with gr.Blocks() as demo:
             """)
 
         with gr.Row():
-            language = gr.Dropdown(choices=["en", "it", "fr", "de", "es"], value="en", label="Language")
+            language = gr.Dropdown(choices=["en", "it", "fr", "de", "es"], value="it", label="Language")
             model_size = gr.Dropdown(choices=["tiny", "base", "small", "medium", "large-v3"], value="large-v3", label="Model Size")
         with gr.Row():
             compute_type = gr.Dropdown(choices=["float16", "float32", "int8"], value="float16", label="Compute Type")
@@ -189,6 +280,25 @@ with gr.Blocks() as demo:
         output_text = gr.Textbox(label="Transcription (to select all the content use Ctrl+A and then Ctrl+C)")
         download_output = gr.File(label="Download Transcript")
         transcribe_button = gr.Button("Transcribe", variant="secondary")
+
+        if GEMINI_API_KEY:
+            gr.Markdown("## Gemini Interaction")
+            user_query = gr.Textbox(label="Enter your query")
+            gemini_response = gr.Textbox(label="Gemini Response", interactive=False)
+
+            submit_query_button = gr.Button("Submit Query to Gemini", variant="secondary")
+
+        submit_query_button.click(
+            query_gemini,
+            inputs=[user_query, output_text],
+            outputs=[gemini_response]
+        )
+
+        transcribe_button.click(
+            transcribe_file,
+            inputs=[file_input, language, model_size, compute_type, beam_size, condition_on_previous_text, word_timestamps],
+            outputs=[output_text, download_output]
+        )
 
         with gr.Row():
             clear_button = gr.Button("Clear temporary files", variant="primary")
