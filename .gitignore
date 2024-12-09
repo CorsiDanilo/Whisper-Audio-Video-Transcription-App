@@ -4,3 +4,4 @@ whisper.spec
 upx
 dist
 build
+.env
