@@ -246,6 +246,22 @@ def clear_and_close(folder_path):
     except Exception as e:
         print(f"Error clearing folder and closing script: {e}")
 
+def reset_fields():
+    return (
+        None, # Clear input_file
+        "it",  # Default language
+        "large-v3",  # Default model size
+        "float16",  # Default compute type
+        4,  # Default beam size
+        False,  # Default for condition_on_previous_text
+        False,  # Default for word_timestamps
+        "*Your transcription will appear here.*",  # Clear output_text
+        None,  # Clear download_output
+        "gemini-1.5-pro",  # Default model_choice
+        "",  # Clear user_query
+        "*Gemini response will appear here.*"  # Clear gemini_response
+    )
+
 # Gradio interface
 with gr.Blocks() as demo:
     gr.Markdown("# Audio/Video Transcription using Whisper Model")
@@ -301,6 +317,14 @@ with gr.Blocks() as demo:
         with gr.Row():
             clear_button = gr.Button("Clear temporary files", variant="primary")
             close_and_clear_button = gr.Button("Clear temporary files and Close", variant="stop")
+            reset_button = gr.Button("Reset fields", variant="secondary")  # Add reset button
+
+        # Reset button functionality
+        reset_button.click(
+            reset_fields,  # Call the reset function
+            inputs=[],  # No inputs
+            outputs=[file_input, language, model_size, compute_type, beam_size, condition_on_previous_text, word_timestamps, output_text, download_output, model_choice, user_query, gemini_response]  # Reset all fields
+        )
 
         try:
             transcribe_button.click(

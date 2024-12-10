@@ -3,6 +3,8 @@ Source: https://github.com/whitphx/gradio-pyinstaller-example
 
 To generate .exe file: 
 pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --onefile
 
 Troubleshooting:
 1 - PyInstaller cannot check for assembly dependencies
