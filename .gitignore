@@ -5,3 +5,4 @@ upx
 dist
 build
 .env
+application.log

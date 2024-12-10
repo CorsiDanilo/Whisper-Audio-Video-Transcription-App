@@ -2,9 +2,9 @@
 Source: https://github.com/whitphx/gradio-pyinstaller-example
 
 To generate .exe file: 
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --onefile
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --onefile --noconfirm
 
 Troubleshooting:
 1 - PyInstaller cannot check for assembly dependencies
@@ -35,6 +35,8 @@ Troubleshooting:
 2 - FileNotFoundError: [Errno 2] No such file or directory: '...dist\\app\\_internal\\safehttpx\\version.txt'
     Solution:
         Navigate to your python directory -> Lib -> site-packages, copy the safehttpx folder and paste it into your python directory -> dist -> app -> _internal
+
+3 - 
 """
 import webview
 

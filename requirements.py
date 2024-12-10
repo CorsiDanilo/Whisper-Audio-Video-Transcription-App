@@ -21,7 +21,7 @@ debugpy==1.8.8
 decorator==5.1.1
 executing==2.1.0
 fastapi==0.115.6
-faster-whisper==1.0.3
+faster-whisper==1.1.0
 ffmpy==0.4.0
 filelock==3.16.1
 flatbuffers==24.3.25
