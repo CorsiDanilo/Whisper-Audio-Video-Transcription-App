@@ -273,9 +273,9 @@ with gr.Blocks() as demo:
         with gr.Row():
             condition_on_previous_text = gr.Checkbox(label="Condition on Previous Text")
             word_timestamps = gr.Checkbox(label="Word-level timestamps")
-
+            
         with gr.Accordion("Transcription"):
-            output_text = gr.Markdown(show_copy_button=True)
+            output_text = gr.Markdown("*Your transcription will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
 
         download_output = gr.File(label="Download Transcript")
         transcribe_button = gr.Button("Transcribe", variant="secondary")
@@ -285,7 +285,7 @@ with gr.Blocks() as demo:
                 model_choice = gr.Radio(choices=["gemini-1.5-flash", "gemini-1.5-pro"], value="gemini-1.5-pro", label="Choose Gemini Model")
                 user_query = gr.Textbox(label="Enter your query")
                 with gr.Accordion("Gemini Response"):
-                    gemini_response = gr.Markdown(show_copy_button=True)
+                    gemini_response = gr.Markdown("*Gemini response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
 
                 submit_query_button = gr.Button("Submit Query to Gemini", variant="secondary")
 

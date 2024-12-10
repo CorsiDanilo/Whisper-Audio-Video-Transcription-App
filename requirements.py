@@ -20,7 +20,7 @@ cycler==0.12.1
 debugpy==1.8.8
 decorator==5.1.1
 executing==2.1.0
-fastapi==0.115.0
+fastapi==0.115.6
 faster-whisper==1.0.3
 ffmpy==0.4.0
 filelock==3.16.1
@@ -34,8 +34,8 @@ google-auth==2.36.0
 google-auth-httplib2==0.2.0
 google-generativeai==0.8.3
 googleapis-common-protos==1.66.0
-gradio==4.44.1
-gradio_client==1.3.0
+gradio==5.8.0
+gradio_client==1.5.1
 grpcio==1.68.1
 grpcio-status==1.68.1
 h11==0.14.0
@@ -89,7 +89,7 @@ pyparsing==3.1.4
 pyreadline3==3.5.4
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
-python-multipart==0.0.12
+python-multipart==0.0.19
 pythonnet==3.0.4
 pytz==2024.2
 pywebview==5.3.2
@@ -101,13 +101,14 @@ requests==2.32.3
 rich==13.9.2
 rsa==4.9
 ruff==0.6.9
+safehttpx==0.1.6
 semantic-version==2.10.0
 setuptools==75.1.0
 shellingham==1.5.4
 six==1.16.0
 sniffio==1.3.1
 stack-data==0.6.3
-starlette==0.38.6
+starlette==0.41.3
 sympy==1.13.3
 tokenizers==0.20.0
 tomlkit==0.12.0
