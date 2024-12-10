@@ -7,6 +7,13 @@ import subprocess
 import shutil
 import signal
 
+try:
+    print("Checking if FFmpeg is installed...")
+    if shutil.which("ffprobe") is None or shutil.which("ffmpeg") is None:
+        raise RuntimeError("ffmpeg or ffprobe not found. Please install FFmpeg and ensure it's in your system's PATH.")
+except Exception as e:
+    print(f"Error checking FFmpeg installation: {e}")
+
 folder_path = None
 file_name = None
 
@@ -28,15 +35,6 @@ def convert_whatsapp_audio_to_mp3(file_path, output_audio_file):
         print(f"WhatsApp audio file converted to MP3: {output_audio_file}")
     except Exception as e:
         print(f"Error converting WhatsApp audio to MP3: {e}")
-
-def check_ffmpeg_installed():
-    try:
-        print("Checking if FFmpeg is installed...")
-        if shutil.which("ffprobe") is None or shutil.which("ffmpeg") is None:
-            raise RuntimeError("ffmpeg or ffprobe not found. Please install FFmpeg and ensure it's in your system's PATH.")
-        print("FFmpeg is installed.")
-    except Exception as e:
-        print(f"Error checking FFmpeg installation: {e}")
 
 # Function to check if file is a video
 def is_video_file(file_path):
@@ -213,12 +211,4 @@ with gr.Blocks() as demo:
         print(f"Error in interface setup: {e}")
 
 if __name__ == "__main__":
-    try:
-        check_ffmpeg_installed()
-    except Exception as e:
-        print(f"Error checking FFmpeg installation: {e}")
-
-    try:
-        demo.launch()
-    except Exception as e:
-        print(f"Error launching the application: {e}")
+    demo.launch()
