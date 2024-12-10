@@ -274,24 +274,30 @@ with gr.Blocks() as demo:
             condition_on_previous_text = gr.Checkbox(label="Condition on Previous Text")
             word_timestamps = gr.Checkbox(label="Word-level timestamps")
 
-        output_text = gr.Textbox(label="Transcription (to select all the content use Ctrl+A and then Ctrl+C)")
+        with gr.Accordion("Transcription"):
+            output_text = gr.Markdown(show_copy_button=True)
+
         download_output = gr.File(label="Download Transcript")
         transcribe_button = gr.Button("Transcribe", variant="secondary")
 
         if GEMINI_API_KEY:
-            gr.Markdown("## Gemini Interaction")
-            model_choice = gr.Radio(choices=["gemini-1.5-flash", "gemini-1.5-pro"], value="gemini-1.5-pro", label="Choose Gemini Model")
-            user_query = gr.Textbox(label="Enter your query")
-            gemini_response = gr.Textbox(label="Gemini Response", interactive=False)
+                gr.Markdown("## Gemini Interaction")
+                model_choice = gr.Radio(choices=["gemini-1.5-flash", "gemini-1.5-pro"], value="gemini-1.5-pro", label="Choose Gemini Model")
+                user_query = gr.Textbox(label="Enter your query")
+                with gr.Accordion("Gemini Response"):
+                    gemini_response = gr.Markdown(show_copy_button=True)
 
-            submit_query_button = gr.Button("Submit Query to Gemini", variant="secondary")
+                submit_query_button = gr.Button("Submit Query to Gemini", variant="secondary")
 
-        submit_query_button.click(
-            query_gemini,
-            inputs=[user_query, output_text, model_choice],
-            outputs=[gemini_response]
-        )
-
+                try:
+                    submit_query_button.click(
+                        query_gemini,
+                        inputs=[user_query, output_text, model_choice],
+                        outputs=[gemini_response]
+                    )
+                except Exception as e:
+                    print(f"Error during Gemini query setup: {e}")
+                    
         with gr.Row():
             clear_button = gr.Button("Clear temporary files", variant="primary")
             close_and_clear_button = gr.Button("Clear temporary files and Close", variant="stop")
