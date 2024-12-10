@@ -6,9 +6,106 @@ import torch
 import subprocess
 import shutil
 import signal
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Add the GEMINI_API_KEY from the environment variables
+try:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        print("Installing the generativeai package...")
+        subprocess.run(["pip", "install", "google-generativeai"])
+        import google.generativeai as genai
+except Exception as e:
+    print(f"Error loading environment variables: {e}")
+    GEMINI_API_KEY = None
+
+def initialize_model(model_choice):
+    # API parameters
+    REQUESTS_PER_MINUTE = 15	
+    REQUESTS_PER_DAY = 1500
+    TOKENS_PER_MINUTE = 1048576
+    INPUT_TOKENS = TOKENS_PER_MINUTE
+
+    # Model parameters
+    TEMPERATURE = 1
+    TOP_P = 0.95
+    TOP_K = 40
+    MAX_OUTPUT_TOKENS = 8192
+    RESPONSE_MIME_TYPE = "text/plain"
+
+    def gemini_configurations():
+        generation_config = {
+        "temperature": TEMPERATURE,
+        "top_p": TOP_P,
+        "top_k": TOP_K,
+        "max_output_tokens": MAX_OUTPUT_TOKENS,
+        "response_mime_type": RESPONSE_MIME_TYPE,
+        }
+
+        safety_settings = [
+        {
+            "category": "HARM_CATEGORY_HARASSMENT",
+            "threshold": "BLOCK_NONE",
+        },
+        {
+            "category": "HARM_CATEGORY_HATE_SPEECH",
+            "threshold": "BLOCK_NONE",
+        },
+        {
+            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "threshold": "BLOCK_NONE",
+        },
+        {
+            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+            "threshold": "BLOCK_NONE",
+        },
+        ]
+
+        return generation_config, safety_settings
+
+    # Set up the API key
+    genai.configure(api_key=GEMINI_API_KEY)
+
+    # Gemini model configurations
+    generation_config, safety_settings = gemini_configurations()
+
+    model = genai.GenerativeModel(
+    model_name=model_choice,
+    safety_settings=safety_settings,
+    generation_config=generation_config,
+    )
+
+    return model
+
+try:
+    print("Checking if FFmpeg is installed...")
+    if shutil.which("ffprobe") is None or shutil.which("ffmpeg") is None:
+        raise RuntimeError("ffmpeg or ffprobe not found. Please install FFmpeg and ensure it's in your system's PATH.")
+except Exception as e:
+    print(f"Error checking FFmpeg installation: {e}")
 
 folder_path = None
 file_name = None
+
+# Function to query Gemini API
+def query_gemini(user_input, transcription, model_choice):
+    try:
+        model = initialize_model(model_choice)
+        query = f"""
+        Transcription: {transcription}\n\n
+        User Input: {user_input}
+        """
+
+        response = model.generate_content(query).text
+        return response
+    except Exception as e:
+        return f"Error querying Gemini: {e}"
 
 def is_whatsapp_audio_file(file_path):
     whatsapp_audio_extensions = ['.opus']  # Add other WhatsApp audio extensions if needed
@@ -28,15 +125,6 @@ def convert_whatsapp_audio_to_mp3(file_path, output_audio_file):
         print(f"WhatsApp audio file converted to MP3: {output_audio_file}")
     except Exception as e:
         print(f"Error converting WhatsApp audio to MP3: {e}")
-
-def check_ffmpeg_installed():
-    try:
-        print("Checking if FFmpeg is installed...")
-        if shutil.which("ffprobe") is None or shutil.which("ffmpeg") is None:
-            raise RuntimeError("ffmpeg or ffprobe not found. Please install FFmpeg and ensure it's in your system's PATH.")
-        print("FFmpeg is installed.")
-    except Exception as e:
-        print(f"Error checking FFmpeg installation: {e}")
 
 # Function to check if file is a video
 def is_video_file(file_path):
@@ -177,7 +265,7 @@ with gr.Blocks() as demo:
             """)
 
         with gr.Row():
-            language = gr.Dropdown(choices=["en", "it", "fr", "de", "es"], value="en", label="Language")
+            language = gr.Dropdown(choices=["en", "it", "fr", "de", "es"], value="it", label="Language")
             model_size = gr.Dropdown(choices=["tiny", "base", "small", "medium", "large-v3"], value="large-v3", label="Model Size")
         with gr.Row():
             compute_type = gr.Dropdown(choices=["float16", "float32", "int8"], value="float16", label="Compute Type")
@@ -185,11 +273,31 @@ with gr.Blocks() as demo:
         with gr.Row():
             condition_on_previous_text = gr.Checkbox(label="Condition on Previous Text")
             word_timestamps = gr.Checkbox(label="Word-level timestamps")
+            
+        with gr.Accordion("Transcription"):
+            output_text = gr.Markdown("*Your transcription will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
 
-        output_text = gr.Textbox(label="Transcription (to select all the content use Ctrl+A and then Ctrl+C)")
         download_output = gr.File(label="Download Transcript")
         transcribe_button = gr.Button("Transcribe", variant="secondary")
 
+        if GEMINI_API_KEY:
+                gr.Markdown("## Gemini Interaction")
+                model_choice = gr.Radio(choices=["gemini-1.5-flash", "gemini-1.5-pro"], value="gemini-1.5-pro", label="Choose Gemini Model")
+                user_query = gr.Textbox(label="Enter your query")
+                with gr.Accordion("Gemini Response"):
+                    gemini_response = gr.Markdown("*Gemini response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
+
+                submit_query_button = gr.Button("Submit Query to Gemini", variant="secondary")
+
+                try:
+                    submit_query_button.click(
+                        query_gemini,
+                        inputs=[user_query, output_text, model_choice],
+                        outputs=[gemini_response]
+                    )
+                except Exception as e:
+                    print(f"Error during Gemini query setup: {e}")
+                    
         with gr.Row():
             clear_button = gr.Button("Clear temporary files", variant="primary")
             close_and_clear_button = gr.Button("Clear temporary files and Close", variant="stop")
@@ -213,12 +321,4 @@ with gr.Blocks() as demo:
         print(f"Error in interface setup: {e}")
 
 if __name__ == "__main__":
-    try:
-        check_ffmpeg_installed()
-    except Exception as e:
-        print(f"Error checking FFmpeg installation: {e}")
-
-    try:
-        demo.launch()
-    except Exception as e:
-        print(f"Error launching the application: {e}")
+    demo.launch()
