@@ -137,6 +137,17 @@ def is_video_file(file_path):
         print(f"Error checking if file is a video: {e}")
         return False
 
+# Function to check if file is an audio file
+def is_audio_file(file_path):
+    try:
+        audio_extensions = ['.mp3', '.wav', '.flac', '.ogg', '.m4a']  # Add other audio extensions if needed
+        file_extension = os.path.splitext(file_path)[1].lower()
+        is_audio = file_extension in audio_extensions
+        return is_audio
+    except Exception as e:
+        print(f"Error checking if file is an audio file: {e}")
+        return False
+
 # Function to extract audio from video
 def extract_audio_from_video(video_file, output_audio_file):
     try:
@@ -148,6 +159,20 @@ def extract_audio_from_video(video_file, output_audio_file):
         print(f"Error extracting audio from video: {e}")
 
     print(f"Audio extracted from video file: {video_file} and saved at: {output_audio_file}")
+
+# Function to convert audio file to MP3
+def convert_audio_to_mp3(audio_file, output_audio_file):
+    try:
+        print(f"Converting audio file to MP3: {audio_file}...")
+        # Load the audio file
+        audio = AudioSegment.from_file(audio_file)
+        
+        # Export the audio as an MP3 file
+        audio.export(output_audio_file, format="mp3")
+        
+        print(f"Audio file converted to MP3: {output_audio_file}")
+    except Exception as e:
+        print(f"Error converting audio to MP3: {e}")
 
 def load_model(model_size, compute_type, device):
     try:
@@ -191,16 +216,26 @@ def transcribe_file(file_path, language, model_size, compute_type, beam_size, co
             convert_whatsapp_audio_to_mp3(file_path, audio_file)
             file_path = audio_file
 
+        if is_audio_file(file_path):
+            audio_file = os.path.splitext(file_path)[0] + ".mp3"
+            convert_audio_to_mp3(file_path, audio_file)
+            file_path = audio_file
+
         print(f"Transcribing {file_path}...")
         segments, info = model.transcribe(file_path, language=language, beam_size=beam_size, condition_on_previous_text=condition_on_previous_text, word_timestamps=word_timestamps)
 
+        print(f"File transcribed successfully, generating transcript...")
+        
         transcription = ""
-        for segment in segments:
-            if word_timestamps:
-                for word in segment.words:
-                    transcription += f"{word.start:.2f} -> {word.end:.2f} {word.word}\n"
-            else:
-                transcription += f"{segment.text}\n"
+        if word_timestamps:
+            transcription = "\n".join(
+                f"{word.start:.2f} -> {word.end:.2f} {word.word}"
+                for segment in segments for word in segment.words
+            )
+        else:
+            transcription = "\n".join(segment.text for segment in segments)
+
+        print(f"Transcript generated. Saving transcript to: {folder_path}...")
 
         # Save the transcript immediately
         output_path = os.path.join(folder_path, f"{os.path.splitext(file_name)[0]}_transcript.txt")
@@ -315,9 +350,9 @@ with gr.Blocks() as demo:
                     print(f"Error during Gemini query setup: {e}")
                     
         with gr.Row():
+            reset_button = gr.Button("Reset fields", variant="secondary")  # Add reset button
             clear_button = gr.Button("Clear temporary files", variant="primary")
             close_and_clear_button = gr.Button("Clear temporary files and Close", variant="stop")
-            reset_button = gr.Button("Reset fields", variant="secondary")  # Add reset button
 
         # Reset button functionality
         reset_button.click(
@@ -345,4 +380,4 @@ with gr.Blocks() as demo:
         print(f"Error in interface setup: {e}")
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(debug=True)
