@@ -7,7 +7,7 @@ pyinstaller app.py --collect-data gradio --collect-data gradio_client --addition
 Troubleshooting:
 1 - PyInstaller cannot check for assembly dependencies
     Solution:
-        - Source: https://stackoverflow.com/questions/59638691/pyinstaller-cannot-check-for-assembly-dependencies
+        Source: https://stackoverflow.com/questions/59638691/pyinstaller-cannot-check-for-assembly-dependencies
         Navigate to your python directory -> Lib -> site-packages -> Pyinstaller. Open compat.py and look for the following:
         ```
             if is_win:
@@ -29,6 +29,10 @@ Troubleshooting:
             import pywintypes
             import win32api
         ```
+
+2 - FileNotFoundError: [Errno 2] No such file or directory: '...dist\\app\\_internal\\safehttpx\\version.txt'
+    Solution:
+        Navigate to your python directory -> Lib -> site-packages, copy the safehttpx folder and paste it into your python directory -> dist -> app -> _internal
 """
 import webview
 
