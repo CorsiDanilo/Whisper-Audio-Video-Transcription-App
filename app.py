@@ -2,9 +2,9 @@
 Source: https://github.com/whitphx/gradio-pyinstaller-example
 
 To generate .exe file: 
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --onefile --noconfirm
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm --icon=logo.ico --distpath=./dist/whisper_with_cmd
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm --icon=logo.ico --distpath=./dist/whisper_without_cmd
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --onefile --noconfirm --icon=logo.ico --distpath=./dist/whisper_without_cmd
 
 Troubleshooting:
 1 - PyInstaller cannot check for assembly dependencies
@@ -32,11 +32,13 @@ Troubleshooting:
             import win32api
         ```
 
-2 - FileNotFoundError: [Errno 2] No such file or directory: '...dist\\app\\_internal\\safehttpx\\version.txt'
+2 - FileNotFoundError: [Errno 2] No such file or directory: '...\\app\\_internal\\safehttpx\\version.txt'
     Solution:
         Navigate to your python directory -> Lib -> site-packages, copy the safehttpx folder and paste it into your python directory -> dist -> app -> _internal
 
-3 - 
+3 - failed:Load model C:...\\app\_internal\faster_whisper\assets\silero_encoder_v5.onnx failed. File doesn't exist
+    Solution:
+        Navigate to your python directory -> Lib -> site-packages, copy the faster_whisper folder and paste it into your python directory -> dist -> app -> _internal
 """
 import webview
 
