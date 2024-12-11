@@ -2,9 +2,9 @@
 Source: https://github.com/whitphx/gradio-pyinstaller-example
 
 To generate .exe file: 
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm --icon=logo.ico --distpath=./dist/whisper_with_cmd
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm --icon=logo.ico --distpath=./dist/whisper_without_cmd
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --onefile --noconfirm --icon=logo.ico --distpath=./dist/whisper_without_cmd
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm --icon=logo.ico --distpath=./dist/whisper_with_cmd --name=Whisper
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm --icon=logo.ico --distpath=./dist/whisper_without_cmd --name=Whisper
+pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --onefile --noconfirm --icon=logo.ico --distpath=./dist/whisper_without_cmd --name=Whisper
 
 Troubleshooting:
 1 - PyInstaller cannot check for assembly dependencies
