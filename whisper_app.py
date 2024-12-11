@@ -14,7 +14,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("application.log"),
+        logging.FileHandler("whisper.log"),
         logging.StreamHandler()
     ]
 )
