@@ -6,7 +6,6 @@ import torch
 import subprocess
 import shutil
 import signal
-from dotenv import load_dotenv
 import logging
 
 # Configure logging
@@ -30,84 +29,7 @@ default_values = {
     "word_timestamps": False,
     "output_text": "*Your transcription will appear here.*",
     "download_output": None,
-    "model_choice": "gemini-1.5-pro",
-    "user_query": "",
-    "gemini_response": "*Gemini response will appear here.*"
 }
-
-# Load environment variables
-load_dotenv()
-
-# Add the GEMINI_API_KEY from the environment variables
-try:
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    try:
-        import google.generativeai as genai
-    except ImportError:
-        logging.info("Installing the generativeai package...")
-        subprocess.run(["pip", "install", "google-generativeai"])
-        import google.generativeai as genai
-except Exception as e:
-    logging.error(f"Error loading environment variables: {e}")
-    GEMINI_API_KEY = None
-
-def initialize_model(model_choice):
-    # API parameters
-    REQUESTS_PER_MINUTE = 15	
-    REQUESTS_PER_DAY = 1500
-    TOKENS_PER_MINUTE = 1048576
-    INPUT_TOKENS = TOKENS_PER_MINUTE
-
-    # Model parameters
-    TEMPERATURE = 1
-    TOP_P = 0.95
-    TOP_K = 40
-    MAX_OUTPUT_TOKENS = 8192
-    RESPONSE_MIME_TYPE = "text/plain"
-
-    def gemini_configurations():
-        generation_config = {
-        "temperature": TEMPERATURE,
-        "top_p": TOP_P,
-        "top_k": TOP_K,
-        "max_output_tokens": MAX_OUTPUT_TOKENS,
-        "response_mime_type": RESPONSE_MIME_TYPE,
-        }
-
-        safety_settings = [
-        {
-            "category": "HARM_CATEGORY_HARASSMENT",
-            "threshold": "BLOCK_NONE",
-        },
-        {
-            "category": "HARM_CATEGORY_HATE_SPEECH",
-            "threshold": "BLOCK_NONE",
-        },
-        {
-            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            "threshold": "BLOCK_NONE",
-        },
-        {
-            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-            "threshold": "BLOCK_NONE",
-        },
-        ]
-
-        return generation_config, safety_settings
-
-    # Set up the API key
-    genai.configure(api_key=GEMINI_API_KEY)
-
-    # Gemini model configurations
-    generation_config, safety_settings = gemini_configurations()
-
-    model = genai.GenerativeModel(
-    model_name=model_choice,
-    safety_settings=safety_settings,
-    generation_config=generation_config,
-    )
-
-    return model
 
 try:
     logging.info("Checking if FFmpeg is installed...")
@@ -118,21 +40,6 @@ except Exception as e:
 
 folder_path = None
 file_name = None
-
-# Function to query Gemini API
-def query_gemini(user_input, transcription, model_choice):
-    try:
-        model = initialize_model(model_choice)
-        query = f"""
-        Transcription: {transcription}\n\n
-        User Input: {user_input}
-        """
-
-        response = model.generate_content(query).text
-        return response
-    except Exception as e:
-        logging.error(f"Error querying Gemini: {e}")
-        return f"Error querying Gemini: {e}"
 
 def is_whatsapp_audio_file(file_path):
     whatsapp_audio_extensions = ['.opus']  # Add other WhatsApp audio extensions if needed
@@ -244,7 +151,6 @@ def transcribe_file(file_path, language, model_size, compute_type, beam_size, ba
             file_path = audio_file
 
         logging.info(f"Transcribing {file_path}...")
-        # segments, info = model.transcribe(file_path, language=language, beam_size=beam_size, condition_on_previous_text=condition_on_previous_text, word_timestamps=word_timestamps)
         batched_model = BatchedInferencePipeline(model=model)
         segments, info = batched_model.transcribe(file_path, batch_size=batch_size, language=language, beam_size=beam_size, condition_on_previous_text=condition_on_previous_text, word_timestamps=word_timestamps)
 
@@ -318,9 +224,6 @@ def reset_fields():
         default_values["word_timestamps"],
         default_values["output_text"],
         default_values["download_output"],
-        default_values["model_choice"],
-        default_values["user_query"],
-        default_values["gemini_response"]
     )
 
 # Gradio interface
@@ -358,24 +261,6 @@ with gr.Blocks() as demo:
 
         download_output = gr.File(label="Download Transcript")
         transcribe_button = gr.Button("Transcribe", variant="secondary")
-
-        if GEMINI_API_KEY:
-            gr.Markdown("## Gemini Interaction")
-            model_choice = gr.Radio(choices=["gemini-1.5-flash", "gemini-1.5-pro"], value=default_values["model_choice"], label="Choose Gemini Model")
-            user_query = gr.Textbox(label="Enter your query")
-            with gr.Accordion("Gemini Response"):
-                gemini_response = gr.Markdown("*Gemini response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
-
-            submit_query_button = gr.Button("Submit Query to Gemini", variant="secondary")
-
-            try:
-                submit_query_button.click(
-                    query_gemini,
-                    inputs=[user_query, output_text, model_choice],
-                    outputs=[gemini_response]
-                )
-            except Exception as e:
-                logging.error(f"Error during Gemini query setup: {e}")
                     
         with gr.Row():
             reset_button = gr.Button("Reset fields", variant="secondary")  # Add reset button
@@ -386,7 +271,7 @@ with gr.Blocks() as demo:
         reset_button.click(
             reset_fields,  # Call the reset function
             inputs=[],  # No inputs
-            outputs=[file_input, language, model_size, compute_type, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_text, download_output, model_choice, user_query, gemini_response]  # Reset all fields
+            outputs=[file_input, language, model_size, compute_type, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_text, download_output]  # Reset all fields
         )
 
         try:

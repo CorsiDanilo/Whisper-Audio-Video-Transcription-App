@@ -2,9 +2,8 @@
 Source: https://github.com/whitphx/gradio-pyinstaller-example
 
 To generate .exe file: 
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm --icon=logo.ico --distpath=./dist/whisper_with_cmd --name=Whisper
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm --icon=logo.ico --distpath=./dist/whisper_no_cmd --name=Whisper
-pyinstaller app.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --onefile --noconfirm --icon=logo.ico --distpath=./dist/whisper_no_cmd_one_file --name=Whisper
+pyinstaller app_without_gemini.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm --icon=logo.ico --distpath=./dist/whisper_no_gemini_with_cmd --name=Whisper
+pyinstaller app_without_gemini.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm --icon=logo.ico --distpath=./dist/whisper_no_gemini_no_cmd --name=Whisper
 
 Troubleshooting:
 1 - PyInstaller cannot check for assembly dependencies
@@ -45,9 +44,9 @@ Troubleshooting:
 """
 import webview
 
-from whisper_app import demo as whisper_app 
+from whisper_app_without_gemini import demo as whisper_app_without_gemini 
 
-whisper_app.launch(prevent_thread_lock=True)
+whisper_app_without_gemini.launch(prevent_thread_lock=True)
 
-webview.create_window("🎙️ Whisper Audio/Video Transcription App", whisper_app.local_url)
+webview.create_window("🎙️ Whisper Audio/Video Transcription App", whisper_app_without_gemini.local_url)
 webview.start()
