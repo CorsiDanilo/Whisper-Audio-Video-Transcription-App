@@ -10,11 +10,15 @@ from dotenv import load_dotenv
 import logging
 
 # Configure logging
+log_file = "whisper.log"
+if os.path.exists(log_file):
+    os.remove(log_file)
+
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("whisper.log"),
+        logging.FileHandler(log_file),
         logging.StreamHandler()
     ]
 )
