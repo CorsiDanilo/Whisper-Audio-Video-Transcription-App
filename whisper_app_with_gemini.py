@@ -34,7 +34,7 @@ default_values = {
     "word_timestamps": False,
     "output_text": "*Your transcription will appear here.*",
     "download_output": None,
-    "model_choice": "gemini-1.5-pro",
+    "model_choice": "gemini-2.0-flash",
     "user_query": "",
     "gemini_response": "*Gemini response will appear here.*"
 }
@@ -364,7 +364,7 @@ with gr.Blocks() as demo:
 
         if GEMINI_API_KEY:
             gr.Markdown("## Gemini Interaction")
-            model_choice = gr.Radio(choices=["gemini-1.5-flash", "gemini-1.5-pro"], value=default_values["model_choice"], label="Choose Gemini Model")
+            model_choice = gr.Radio(choices=["gemini-2.0-flash", "gemini-2.0-flash-lite"], value=default_values["model_choice"], label="Choose Gemini Model")
             user_query = gr.Textbox(label="Enter your query")
             with gr.Accordion("Gemini Response"):
                 gemini_response = gr.Markdown("*Gemini response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
