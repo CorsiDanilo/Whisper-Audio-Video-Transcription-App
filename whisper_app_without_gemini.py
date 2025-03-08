@@ -156,7 +156,13 @@ def transcribe_file(file_path, language, model_size, compute_type, beam_size, ba
 
         logging.info(f"Transcribing {file_path}...")
         batched_model = BatchedInferencePipeline(model=model)
-        segments, info = batched_model.transcribe(file_path, batch_size=batch_size, language=language, beam_size=beam_size, condition_on_previous_text=condition_on_previous_text, word_timestamps=word_timestamps)
+        segments, info = batched_model.transcribe(file_path, 
+                                                    batch_size=batch_size, 
+                                                    language=language, 
+                                                    beam_size=beam_size, 
+                                                    condition_on_previous_text=condition_on_previous_text, 
+                                                    word_timestamps=word_timestamps
+                                                )
 
         logging.info("File transcribed successfully, generating transcript...")
         
@@ -254,8 +260,8 @@ with gr.Blocks() as demo:
             model_size = gr.Dropdown(choices=["tiny", "base", "small", "medium", "large-v3"], value=default_values["model_size"], label="Model Size")
         with gr.Row():
             compute_type = gr.Dropdown(choices=["float16", "float32", "int8"], value=default_values["compute_type"], label="Compute Type")
-            beam_size = gr.Slider(minimum=1, maximum=10, value=default_values["beam_size"], step=1, label="Beam Size")
-            batch_size = gr.Slider(minimum=1, maximum=16, value=default_values["batch_size"], step=1, label="Batch Size")
+            beam_size = gr.Slider(minimum=1, value=default_values["beam_size"], step=1, label="Beam Size")
+            batch_size = gr.Slider(minimum=1, value=default_values["batch_size"], step=1, label="Batch Size")
         with gr.Row():
             condition_on_previous_text = gr.Checkbox(label="Condition on Previous Text")
             word_timestamps = gr.Checkbox(label="Word-level timestamps")

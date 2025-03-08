@@ -8,6 +8,15 @@ import shutil
 import signal
 from dotenv import load_dotenv
 import logging
+import yaml
+
+# Load default values
+with open("default/default_values.yaml", "r") as ymlfile:
+    default_values = yaml.safe_load(ymlfile)
+ 
+# Load default configuration values
+with open("configurations/default.yaml", "r") as ymlfile:
+    default_config_values = yaml.safe_load(ymlfile)
 
 # Configure logging
 log_file = "whisper.log"
@@ -22,22 +31,6 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-
-default_values = {
-    "input_file": None,
-    "language": "it",
-    "model_size": "large-v3",
-    "compute_type": "float16",
-    "beam_size": 4,
-    "batch_size": 8,
-    "condition_on_previous_text": False,
-    "word_timestamps": False,
-    "output_text": "*Your transcription will appear here.*",
-    "download_output": None,
-    "model_choice": "gemini-2.0-flash",
-    "user_query": "",
-    "gemini_response": "*Gemini response will appear here.*"
-}
 
 # Load environment variables
 load_dotenv()
@@ -55,46 +48,34 @@ except Exception as e:
     logging.error(f"Error loading environment variables: {e}")
     GEMINI_API_KEY = None
 
-def initialize_model(model_choice):
-    # API parameters
-    REQUESTS_PER_MINUTE = 15	
-    REQUESTS_PER_DAY = 1500
-    TOKENS_PER_MINUTE = 1048576
-    INPUT_TOKENS = TOKENS_PER_MINUTE
-
-    # Model parameters
-    TEMPERATURE = 1
-    TOP_P = 0.95
-    TOP_K = 40
-    MAX_OUTPUT_TOKENS = 8192
-    RESPONSE_MIME_TYPE = "text/plain"
-
+def initialize_model(gemini_model):
     def gemini_configurations():
+        gemini_config = default_values['gemini']
         generation_config = {
-        "temperature": TEMPERATURE,
-        "top_p": TOP_P,
-        "top_k": TOP_K,
-        "max_output_tokens": MAX_OUTPUT_TOKENS,
-        "response_mime_type": RESPONSE_MIME_TYPE,
+            "temperature": gemini_config["temperature"],
+            "top_p": gemini_config["top_p"],
+            "top_k": gemini_config["top_k"],
+            "max_output_tokens": gemini_config["max_output_tokens"],
+            "response_mime_type": gemini_config["response_mime_type"],
         }
 
         safety_settings = [
-        {
-            "category": "HARM_CATEGORY_HARASSMENT",
-            "threshold": "BLOCK_NONE",
-        },
-        {
-            "category": "HARM_CATEGORY_HATE_SPEECH",
-            "threshold": "BLOCK_NONE",
-        },
-        {
-            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            "threshold": "BLOCK_NONE",
-        },
-        {
-            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-            "threshold": "BLOCK_NONE",
-        },
+            {
+            "category": gemini_config['safety_settings']["harm_category_harassment"]['name'],
+            "threshold": gemini_config['safety_settings']["harm_category_harassment"]['threshold'],
+            },
+            {
+            "category": gemini_config['safety_settings']["harm_category_hate_speech"]['name'],
+            "threshold": gemini_config['safety_settings']["harm_category_hate_speech"]['threshold'],
+            },
+            {
+            "category": gemini_config['safety_settings']["harm_category_sexually_explicit"]['name'],
+            "threshold": gemini_config['safety_settings']["harm_category_sexually_explicit"]['threshold'],
+            },
+            {
+            "category": gemini_config['safety_settings']["harm_category_dangerous_content"]['name'],
+            "threshold": gemini_config['safety_settings']["harm_category_dangerous_content"]['threshold']
+            },
         ]
 
         return generation_config, safety_settings
@@ -106,7 +87,7 @@ def initialize_model(model_choice):
     generation_config, safety_settings = gemini_configurations()
 
     model = genai.GenerativeModel(
-    model_name=model_choice,
+    model_name=gemini_model,
     safety_settings=safety_settings,
     generation_config=generation_config,
     )
@@ -124,9 +105,9 @@ folder_path = None
 file_name = None
 
 # Function to query Gemini API
-def query_gemini(user_input, transcription, model_choice):
+def query_gemini(user_input, transcription, gemini_model):
     try:
-        model = initialize_model(model_choice)
+        model = initialize_model(gemini_model)
         query = f"""
         Transcription: {transcription}\n\n
         User Input: {user_input}
@@ -160,7 +141,7 @@ def convert_whatsapp_audio_to_mp3(file_path, output_audio_file):
 # Function to check if file is a video
 def is_video_file(file_path):
     try:
-        video_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.webm']  # Add other video extensions if needed
+        video_extensions = default_values['default_values']['video_extensions']  # Add other video extensions if needed
         file_extension = os.path.splitext(file_path)[1].lower()
         is_video = file_extension in video_extensions
         return is_video
@@ -171,7 +152,7 @@ def is_video_file(file_path):
 # Function to check if file is an audio file
 def is_audio_file(file_path):
     try:
-        audio_extensions = ['.mp3', '.wav', '.flac', '.ogg', '.m4a']  # Add other audio extensions if needed
+        audio_extensions = default_values['default_values']['audio_extensions']  # Add other audio extensions if needed
         file_extension = os.path.splitext(file_path)[1].lower()
         is_audio = file_extension in audio_extensions
         return is_audio
@@ -203,17 +184,29 @@ def convert_audio_to_mp3(audio_file, output_audio_file):
     except Exception as e:
         logging.error(f"Error converting audio to MP3: {e}")
 
-def load_model(model_size, compute_type, device):
+def load_model(model_size, compute_type, device, cpu_threads, num_workers):
     try:
-        logging.info(f"Loading model: {model_size} | Compute type: {compute_type} | Device: {device}...")
-        model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        logging.info(f"Loading model: {model_size} | Compute type: {compute_type} | Device: {device} | CPU Threads: {cpu_threads} | Number of Workers: {num_workers}...")
+        model = WhisperModel(model_size, device=device, compute_type=compute_type, cpu_threads=cpu_threads, num_workers=num_workers)
         logging.info("Model loaded successfully.")
         return model
     except Exception as e:
         logging.error(f"Error loading model: {e}")
         return None
 
-def transcribe_file(file_path, language, model_size, compute_type, beam_size, batch_size, condition_on_previous_text, word_timestamps, model=None):
+def transcribe_file(file_path,
+                    device,   
+                    cpu_threads,
+                    num_workers, 
+                    language, 
+                    whisper_model, 
+                    compute_type, 
+                    temperature,
+                    beam_size, 
+                    batch_size, 
+                    condition_on_previous_text, 
+                    word_timestamps, 
+                    ):
     global folder_path
     try:
         if file_path is None:
@@ -229,10 +222,9 @@ def transcribe_file(file_path, language, model_size, compute_type, beam_size, ba
         folder_path = os.path.dirname(os.path.dirname(file_path))
         logging.info(f"Folder path: {folder_path}")
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
         logging.info(f"Using device: {device}")
 
-        model = load_model(model_size, compute_type, device)
+        model = load_model(whisper_model, compute_type, device, cpu_threads, num_workers)
         if model is None:
             return "Error loading model", None
 
@@ -249,7 +241,7 @@ def transcribe_file(file_path, language, model_size, compute_type, beam_size, ba
 
         logging.info(f"Transcribing {file_path}...")
         batched_model = BatchedInferencePipeline(model=model)
-        segments, info = batched_model.transcribe(file_path, batch_size=batch_size, language=language, beam_size=beam_size, condition_on_previous_text=condition_on_previous_text, word_timestamps=word_timestamps)
+        segments, info = batched_model.transcribe(file_path, batch_size=batch_size, language=language, beam_size=beam_size, condition_on_previous_text=condition_on_previous_text, word_timestamps=word_timestamps, temperature=temperature)
 
         logging.info("File transcribed successfully, generating transcript...")
         
@@ -309,53 +301,127 @@ def clear_and_close(folder_path):
     except Exception as e:
         logging.error(f"Error clearing folder and closing script: {e}")
 
+# Load configuration button functionality
+def load_configuration_file(file_path):
+    try:
+        config = yaml.safe_load(open(file_path.name, "r"))
+        return (
+            config["device"],
+            config["cpu_threads"],
+            config["num_workers"],
+            config["language"],
+            config["whisper_model"],
+            config["compute_type"],
+            config["temperature"],
+            config["beam_size"],
+            config["batch_size"],
+            config["condition_on_previous_text"],
+            config["word_timestamps"],
+        )
+    except Exception as e:
+        logging.error(f"Error loading configuration: {e}")
+        return (
+            default_config_values["device"],
+            default_config_values["cpu_threads"],
+            default_config_values["num_workers"],
+            default_config_values["language"],
+            default_config_values["whisper_model"],
+            default_config_values["compute_type"],
+            default_config_values["temperature"],
+            default_config_values["beam_size"],
+            default_config_values["batch_size"],
+            default_config_values["condition_on_previous_text"],
+            default_config_values["word_timestamps"],
+        )
+
+def save_config(
+        device,
+        cpu_threads,
+        num_workers,
+        language,
+        whisper_model,
+        compute_type,
+        temperature,
+        beam_size,
+        batch_size,
+        condition_on_previous_text,
+        word_timestamps,
+        gemini_model,
+    ):
+    try:
+        config = {
+            "device": device,
+            "cpu_threads": cpu_threads,
+            "num_workers": num_workers,
+            "language": language,
+            "whisper_model": whisper_model,
+            "compute_type": compute_type,
+            "temperature": temperature,
+            "beam_size": beam_size,
+            "batch_size": batch_size,
+            "condition_on_previous_text": condition_on_previous_text,
+            "word_timestamps": word_timestamps,
+            "gemini_model": gemini_model,
+        }
+        with open("configurations/myconfig.yaml", "w") as file:
+            yaml.dump(config, file)
+    except Exception as e:
+        logging.error(f"Error saving configuration: {e}")
+
 def reset_fields():
     return (
-        default_values["input_file"],
-        default_values["language"],
-        default_values["model_size"],
-        default_values["compute_type"],
-        default_values["beam_size"],
-        default_values["batch_size"],
-        default_values["condition_on_previous_text"],
-        default_values["word_timestamps"],
-        default_values["output_text"],
-        default_values["download_output"],
-        default_values["model_choice"],
-        default_values["user_query"],
-        default_values["gemini_response"]
+        default_values['default_values']["input_file"],
+        default_config_values["device"],
+        default_config_values["cpu_threads"],
+        default_config_values["num_workers"],
+        default_config_values["language"],
+        default_config_values["whisper_model"],
+        default_config_values["compute_type"],
+        default_config_values["temperature"],
+        default_config_values["beam_size"],
+        default_config_values["batch_size"],
+        default_config_values["condition_on_previous_text"],
+        default_values['default_values']["output_text"],
+        default_values['default_values']["download_output"],
+        default_config_values["word_timestamps"],
+        default_config_values["gemini_model"],
+        default_values['gemini']["user_query"],
+        default_values['gemini']["gemini_response"],
     )
 
 # Gradio interface
 with gr.Blocks() as demo:
     gr.Markdown("# 🎤 Audio/Video Transcription using Whisper Model")
 
-    file_input = gr.File()
+    file_input = gr.File(label="Upload an audio or video file")
     
     try:
         with gr.Row():
-            gr.Markdown("""
-            ## Configuration
-            ### Legend:
-            - **Model Size**: Larger models are more accurate but slower and require more memory.
-            - **Compute Type**: float16 is faster, float32 is more precise, int8 is fastest but less accurate.
-            - **Beam Size**: Higher values may improve accuracy but increase processing time.
-            - **Batch Size**: Higher values may improve processing time but require more memory.
-            - **Condition on Previous Text**: If checked, uses previous text to improve transcription continuity.
-            - **Word-level timestamps**: If checked, provides timestamps for individual words instead of sentences.
-            """)
+            gr.Markdown("## Configurations")
+        with gr.Row():
+            with gr.Accordion(label="Explanation", open=False):
+                gr.Markdown(default_values['explanation'])
 
+        load_configuration = gr.File(label="Load Configuration File")
         with gr.Row():
-            language = gr.Dropdown(choices=["en", "it", "fr", "de", "es"], value=default_values["language"], label="Language")
-            model_size = gr.Dropdown(choices=["tiny", "base", "small", "medium", "large-v3"], value=default_values["model_size"], label="Model Size")
+            device = gr.Dropdown(choices=default_values['configurations']['devices'], value=default_config_values["device"], label="Device")
+            cpu_threads = gr.Slider(minimum=default_values['configurations']['cpu_threads']['min'], value=default_config_values["cpu_threads"], step=1, label="CPU Threads")
+            num_workers = gr.Slider(minimum=default_values['configurations']['num_workers']['min'], value=default_config_values["num_workers"], step=1, label="Number of Workers")
         with gr.Row():
-            compute_type = gr.Dropdown(choices=["float16", "float32", "int8"], value=default_values["compute_type"], label="Compute Type")
-            beam_size = gr.Slider(minimum=1, maximum=10, value=default_values["beam_size"], step=1, label="Beam Size")
-            batch_size = gr.Slider(minimum=1, maximum=16, value=default_values["batch_size"], step=1, label="Batch Size")
+            language = gr.Dropdown(choices=default_values['configurations']['languages'], value=default_config_values["language"], label="Language")
+            whisper_model = gr.Dropdown(choices=default_values['configurations']['models'], value=default_config_values["whisper_model"], label="Whisper Model")
+            compute_type = gr.Dropdown(choices=default_values['configurations']['compute_types'], value=default_config_values["compute_type"], label="Compute Type")
         with gr.Row():
-            condition_on_previous_text = gr.Checkbox(label="Condition on Previous Text")
-            word_timestamps = gr.Checkbox(label="Word-level timestamps")
-            
+            temperature = gr.Slider(minimum=default_values['configurations']['temperature']['min'], value=default_config_values["temperature"], step=0.1, label="Temperature")
+            beam_size = gr.Slider(minimum=default_values['configurations']['beam_size']['min'], value=default_config_values["beam_size"], step=1, label="Beam Size")
+            batch_size = gr.Slider(minimum=default_values['configurations']['batch_size']['min'], value=default_config_values["batch_size"], step=1, label="Batch Size")
+        with gr.Row():
+            condition_on_previous_text = gr.Checkbox(value=default_config_values["condition_on_previous_text"], label="Condition on Previous Text")
+            word_timestamps = gr.Checkbox(value=default_config_values["word_timestamps"], label="Word-level timestamps")
+            save_configurations = gr.Button("Save configurations", variant="secondary")
+        
+        with gr.Row():
+            gr.Markdown("## Transcription")
         with gr.Accordion("Transcription"):
             output_text = gr.Markdown("*Your transcription will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
 
@@ -364,7 +430,7 @@ with gr.Blocks() as demo:
 
         if GEMINI_API_KEY:
             gr.Markdown("## Gemini Interaction")
-            model_choice = gr.Radio(choices=["gemini-2.0-flash", "gemini-2.0-flash-lite"], value=default_values["model_choice"], label="Choose Gemini Model")
+            gemini_model = gr.Radio(choices=default_values['gemini']['models'], value=default_config_values["gemini_model"], label="Choose Gemini Model")
             user_query = gr.Textbox(label="Enter your query")
             with gr.Accordion("Gemini Response"):
                 gemini_response = gr.Markdown("*Gemini response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
@@ -374,28 +440,98 @@ with gr.Blocks() as demo:
             try:
                 submit_query_button.click(
                     query_gemini,
-                    inputs=[user_query, output_text, model_choice],
+                    inputs=[user_query, output_text, gemini_model],
                     outputs=[gemini_response]
                 )
             except Exception as e:
                 logging.error(f"Error during Gemini query setup: {e}")
                     
         with gr.Row():
-            reset_button = gr.Button("Reset fields", variant="secondary")  # Add reset button
+            reset_button = gr.Button("Reset fields", variant="secondary")
             clear_button = gr.Button("Clear temp files", variant="primary")
             close_and_clear_button = gr.Button("Clear temp files and quit", variant="stop")
+
+        # Save configuration button functionality
+        load_configuration.change(
+            load_configuration_file,
+            inputs=[load_configuration],
+            outputs=[
+            device,
+            cpu_threads,
+            num_workers,
+            language,
+            whisper_model,
+            compute_type,
+            temperature,
+            beam_size,
+            batch_size,
+            condition_on_previous_text,
+            word_timestamps,
+            gemini_model,
+            ]
+        )
+
+        # Save configuration button functionality
+        save_configurations.click(
+            save_config,
+            inputs=[
+                device,
+                cpu_threads,
+                num_workers,
+                language,
+                whisper_model,
+                compute_type,
+                temperature,
+                beam_size,
+                batch_size,
+                condition_on_previous_text,
+                word_timestamps,
+            ],
+            outputs=[]
+        )
 
         # Reset button functionality
         reset_button.click(
             reset_fields,  # Call the reset function
             inputs=[],  # No inputs
-            outputs=[file_input, language, model_size, compute_type, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_text, download_output, model_choice, user_query, gemini_response]  # Reset all fields
+            outputs=[
+                file_input,
+                device,
+                cpu_threads,
+                num_workers,
+                language,
+                whisper_model,
+                compute_type,
+                temperature,
+                beam_size,
+                batch_size,
+                condition_on_previous_text,
+                output_text,
+                download_output,
+                word_timestamps,
+                gemini_model,
+                user_query,
+                gemini_response,
+            ] 
         )
 
         try:
             transcribe_button.click(
                 transcribe_file, 
-                inputs=[file_input, language, model_size, compute_type, beam_size, batch_size, condition_on_previous_text, word_timestamps], 
+                inputs=[
+                    file_input, 
+                    device, 
+                    cpu_threads, 
+                    num_workers, 
+                    language, 
+                    whisper_model, 
+                    compute_type, 
+                    temperature, 
+                    beam_size, 
+                    batch_size, 
+                    condition_on_previous_text, 
+                    word_timestamps
+                ], 
                 outputs=[output_text, download_output]
             )
         except Exception as e:

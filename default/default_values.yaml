@@ -1,0 +1,60 @@
+configurations:
+    devices: ["cpu", "cuda"]
+    cpu_threads:
+        min: 0
+    num_workers:
+        min: 1
+    languages: ["en", "it", "fr", "de", "es"]
+    models: ["tiny", "base", "small", "medium", "large-v3"]
+    compute_types: ["auto", "default", "int8", "int8_float32", "int8_float16", "int8_bfloat16", "int16", "float16", "bfloat16", "float32"]
+    temperature:
+        min: 0.0
+    beam_size:
+        min: 1
+    batch_size:
+        min: 1
+explanation: |-
+    - **Device**: Determines the device to use for processing (CPU or GPU).
+    - **CPU Threads**: Determines the number of threads to use for processing (higher values may improve processing speed but require more CPU resources).
+    - **Number of Workers**: Determines the number of workers to use for processing (higher values may improve processing speed but require more memory).
+    - **Language**: Determines the language of the audio file.
+    - **Model Size**: Determines the size of the model (larger models are more accurate but slower).
+    - **Condition on Previous Text**: If checked, the model will consider the previous text when transcribing the current text.
+    - **Word-level timestamps**: If checked, the model will provide timestamps for each word in the transcription.
+    - **Computational Type**: Determines the precision of the model's calculations (higher precision is more accurate but slower).
+    - **Temperature**: Determines the randomness of the model's predictions (higher values may introduce more errors but can improve diversity).
+    - **Beam Size**: Determines the number of possible transcription paths to consider (higher values may improve accuracy but require more processing time).
+    - **Batch Size**: Determines the number of audio files to process simultaneously (higher values may improve processing speed but require more memory).
+default_values:
+    video_extensions: ['.mp4', '.avi', '.mov', '.mkv', '.webm']
+    audio_extensions: ['.mp3', '.wav', '.flac', '.ogg', '.m4a']
+    input_file: null
+    output_text: "*Your transcription will appear here.*"
+    download_output: null
+
+gemini:
+    models: ["gemini-2.0-flash", "gemini-2.0-flash-lite"]
+    user_query: ""
+    gemini_response: "*Gemini response will appear here*"
+    requests_per_minute: 15
+    requests_per_day: 1500
+    tokens_per_minute: 1048576
+    input_tokens: 1048576
+    temperature: 1
+    top_p: 0.95
+    top_k: 40
+    max_output_tokens: 8192
+    response_mime_type: "text/plain"
+    safety_settings:
+        harm_category_harassment: 
+            name: "HARM_CATEGORY_HARASSMENT"
+            threshold: "BLOCK_NONE"
+        harm_category_hate_speech: 
+            name: "HARM_CATEGORY_HATE_SPEECH"
+            threshold: "BLOCK_NONE"
+        harm_category_sexually_explicit: 
+            name: "HARM_CATEGORY_SEXUALLY_EXPLICIT"
+            threshold: "BLOCK_NONE"
+        harm_category_dangerous_content:
+            name: "HARM_CATEGORY_DANGEROUS_CONTENT"
+            threshold: "BLOCK_NONE"
