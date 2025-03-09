@@ -4,7 +4,7 @@ REM Path to the virtual environment
 set VENV_DIR=.venv
 
 REM Path to the Python script
-set PYTHON_SCRIPT=app_with_gemini.py
+set PYTHON_SCRIPT=main.py
 
 REM Activate the virtual environment
 call %VENV_DIR%\Scripts\activate

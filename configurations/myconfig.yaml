@@ -4,9 +4,9 @@ compute_type: auto
 condition_on_previous_text: true
 cpu_threads: 4
 device: cuda
-gemini_model: null
+gemini_model: gemini-2.0-flash
 language: it
 num_workers: 1
 temperature: 0
-whisper_model: large-v3
+whisper_model: tiny
 word_timestamps: false

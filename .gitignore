@@ -5,4 +5,4 @@ upx
 dist
 build
 .env
-whisper.log
+logs

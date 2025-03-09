@@ -2,8 +2,8 @@
 Source: https://github.com/whitphx/gradio-pyinstaller-example
 
 To generate .exe file: 
-pyinstaller app_without_gemini.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm --icon=logo.ico --distpath=./dist/whisper_no_gemini_with_cmd --name=Whisper
-pyinstaller app_without_gemini.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm --icon=logo.ico --distpath=./dist/whisper_no_gemini_no_cmd --name=Whisper
+pyinstaller app_main.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm --icon=logo.ico --distpath=./dist/whisper_with_cmd --name=Whisper
+pyinstaller app_main.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm --icon=logo.ico --distpath=./dist/whisper_no_cmd --name=Whisper
 
 Troubleshooting:
 1 - PyInstaller cannot check for assembly dependencies
@@ -16,7 +16,7 @@ Troubleshooting:
                     from win32ctypes.pywin32 import pywintypes  # noqa: F401
                     from win32ctypes.pywin32 import win32api
                 except ImportError:
-                    # This environment variable is set by seutp.py
+                    # This environment variable is set by setup.py
                     # - It's not an error for pywin32 to not be installed at that point
                     if not os.environ.get('PYINSTALLER_NO_PYWIN32_FAILURE'):
                         raise SystemExit('PyInstaller cannot check for assembly dependencies.\n'
@@ -44,9 +44,9 @@ Troubleshooting:
 """
 import webview
 
-from whisper_app_without_gemini import demo as whisper_app_without_gemini 
+from main import demo as main 
 
-whisper_app_without_gemini.launch(prevent_thread_lock=True)
+main.launch(prevent_thread_lock=True)
 
-webview.create_window("🎙️ Whisper Audio/Video Transcription App", whisper_app_without_gemini.local_url)
+webview.create_window("🎙️ Whisper Audio/Video Transcription App", main.local_url)
 webview.start()
