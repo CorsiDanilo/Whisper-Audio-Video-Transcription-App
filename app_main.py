@@ -2,8 +2,11 @@
 Source: https://github.com/whitphx/gradio-pyinstaller-example
 
 To generate .exe file: 
-pyinstaller app_main.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconfirm --icon=logo.ico --distpath=./dist/whisper_with_cmd --name=Whisper
+pyinstaller app_main.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --add-data --noconfirm --icon=logo.ico --distpath=./dist/whisper_with_cmd --name=Whisper
 pyinstaller app_main.py --collect-data gradio --collect-data gradio_client --additional-hooks-dir=./hooks --runtime-hook ./runtime_hook.py --noconsole --noconfirm --icon=logo.ico --distpath=./dist/whisper_no_cmd --name=Whisper
+
+Or simply run the following command:
+pyinstaller --noconfirm whisper.spec
 
 Troubleshooting:
 1 - PyInstaller cannot check for assembly dependencies
@@ -42,6 +45,7 @@ Troubleshooting:
     Solution:
         Navigate to your python directory -> Lib -> site-packages, copy the faster_whisper folder and paste it into your python directory -> dist -> app -> _internal
 """
+
 import webview
 
 from main import demo as main 

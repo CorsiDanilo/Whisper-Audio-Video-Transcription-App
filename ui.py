@@ -2,18 +2,12 @@ import gradio as gr
 import logging
 import yaml
 from transcription import transcribe_file, clear, clear_and_close
-from config import load_default_values, load_default_config
-from dotenv import load_dotenv
-import os
+from config import load_default_values, load_default_config, get_gemini_api_key
+from gemini_api import query_gemini
+from config import setup_logging
 
 default_values = load_default_values()
 default_config_values = load_default_config()
-
-USE_GEMINI = False
-load_dotenv()
-if os.getenv("GEMINI_API_KEY"):
-    from gemini_api import query_gemini
-    USE_GEMINI = True
 
 def load_config_file(file_path):
     try:
@@ -78,10 +72,10 @@ def save_config(
             "word_timestamps": word_timestamps,
             "gemini_model": gemini_model,
         }
-        with open("configurations/myconfig.yaml", "w") as file:
+        with open("settings/mysettingsyaml", "w") as file:
             yaml.dump(config, file)
     except Exception as e:
-        logging.error(f"Error saving configuration: {e}")
+        logging.error(f"Error saving settings: {e}")
 
 def reset_fields():
     """Reset fields to default values."""
@@ -106,6 +100,7 @@ def reset_fields():
     )
 
 with gr.Blocks() as demo:
+    setup_logging()
     gr.Markdown("# 🎤 Audio/Video Transcription using Whisper Model")
 
     file_input = gr.File(label="Upload an audio or video file")
@@ -142,14 +137,26 @@ with gr.Blocks() as demo:
     download_output = gr.File(label="Download Transcript")
     transcribe_button = gr.Button("Transcribe", variant="secondary")
 
-    gemini_model = None
-    if USE_GEMINI:
+    gemini_model = None  # Ensure gemini_model is always defined
+    user_query = None  # Ensure user_query is always defined
+    gemini_response = None  # Ensure gemini_response is always defined
+    if get_gemini_api_key() is not None:
         gemini_model = gr.Radio(choices=default_values['gemini']['models'], value=default_config_values["gemini_model"], label="Choose Gemini Model")
         user_query = gr.Textbox(label="Enter your query")
         with gr.Accordion("Gemini Response"):
             gemini_response = gr.Markdown("*Gemini response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
 
         submit_query_button = gr.Button("Submit Query to Gemini", variant="secondary")
+
+        submit_query_button.click(
+            fn=query_gemini,
+            inputs=[user_query, output_text, gemini_model],
+            outputs=[gemini_response]
+        )
+    else:
+        gemini_model = gr.State(None)  # Placeholder state
+        user_query = gr.State(None)   # Placeholder state
+        gemini_response = gr.State(None)  # Placeholder state
     folder_state = gr.State(None) # Used to clear temp files
 
     with gr.Row():
@@ -215,12 +222,6 @@ with gr.Blocks() as demo:
         outputs=[output_text, download_output, folder_state]
     )
 
-    submit_query_button.click(
-        fn=query_gemini,
-        inputs=[user_query, output_text, gemini_model],
-        outputs=[gemini_response]
-    )
-
     clear_button.click(
         fn=clear,
         inputs=[folder_state],
@@ -232,6 +233,3 @@ with gr.Blocks() as demo:
         inputs=[folder_state],
         outputs=[file_input, output_text]
     )
-
-if __name__ == "__main__":
-    demo.launch(debug=True)

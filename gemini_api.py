@@ -1,15 +1,8 @@
 import logging
-import os
-from dotenv import load_dotenv
-from config import load_default_values
+from config import load_default_values, get_gemini_api_key
 import google.generativeai as genai
 
 default_values = load_default_values()
-
-def get_gemini_api_key():
-    """Retrieve the Gemini API key from the environment variables."""
-    load_dotenv()
-    return os.getenv("GEMINI_API_KEY")
 
 def initialize_model(gemini_model):
     """Initialize the Gemini model with the specified configurations."""
