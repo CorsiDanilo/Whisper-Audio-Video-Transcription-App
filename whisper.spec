@@ -5,6 +5,7 @@ datas = []
 datas += collect_data_files('gradio')
 datas += collect_data_files('gradio_client')
 
+
 a = Analysis(
     ['app_main.py'],
     pathex=[],
@@ -29,7 +30,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=False,
+    upx=True,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
