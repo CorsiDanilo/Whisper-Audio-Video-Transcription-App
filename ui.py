@@ -72,7 +72,7 @@ def save_config(
             "word_timestamps": word_timestamps,
             "gemini_model": gemini_model,
         }
-        with open("settings/mysettingsyaml", "w") as file:
+        with open("settings/mysettings.yaml", "w") as file:
             yaml.dump(config, file)
     except Exception as e:
         logging.error(f"Error saving settings: {e}")

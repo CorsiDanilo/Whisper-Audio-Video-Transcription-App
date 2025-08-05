@@ -9,4 +9,4 @@ beam_size: 5
 batch_size: 8
 condition_on_previous_text: true
 word_timestamps: false
-gemini_model: "gemini-2.5-pro"
+gemini_model: "gemini-2.5-flash"
