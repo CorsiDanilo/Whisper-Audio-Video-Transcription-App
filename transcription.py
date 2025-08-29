@@ -40,15 +40,17 @@ def transcribe_file(file_path, device, cpu_threads, num_workers, language, whisp
 
         # Prepare the audio file in MP3
         audio_file = os.path.splitext(file_path)[0] + ".mp3"
-        if is_video_file(file_path):
-            extract_audio_from_video(file_path, audio_file)
-            file_path = audio_file
-        if is_whatsapp_audio_file(file_path):
-            convert_whatsapp_audio_to_mp3(file_path, audio_file)
-            file_path = audio_file
-        if is_audio_file(file_path):
-            convert_audio_to_mp3(file_path, audio_file)
-            file_path = audio_file
+        file_ext = os.path.splitext(file_path)[1].lower()
+        if file_ext != ".mp3":
+            if is_video_file(file_path):
+                extract_audio_from_video(file_path, audio_file)
+                file_path = audio_file
+            elif is_whatsapp_audio_file(file_path):
+                convert_whatsapp_audio_to_mp3(file_path, audio_file)
+                file_path = audio_file
+            elif is_audio_file(file_path):
+                convert_audio_to_mp3(file_path, audio_file)
+                file_path = audio_file
 
         logging.info(f"Transcribing {file_path}...")
         batched_model = BatchedInferencePipeline(model=model)
