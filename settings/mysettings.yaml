@@ -4,7 +4,7 @@ compute_type: auto
 condition_on_previous_text: true
 cpu_threads: 4
 device: cuda
-gemini_model: "gemini-2.5-flash"
+gemini_model: "gemini-flash-latest"
 language: it
 num_workers: 1
 temperature: 0
