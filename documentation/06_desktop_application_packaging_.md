@@ -14,8 +14,8 @@ Our goal is to bridge this gap. We want to give a friend a single file they can 
 
 ```mermaid
 graph TD
-    A[Python Project <br> (Code, Libraries, etc.)] --> B{Packaging Process};
-    B --> C[Standalone App <br> (Whisper.exe)];
+    A[Python Project (Code, Libraries, etc.)] --> B{Packaging Process}
+    B --> C[Standalone App (Whisper.exe)]
 ```
 
 This packaging process is the final assembly line that turns our collection of parts into a finished, polished product.
