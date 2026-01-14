@@ -3,7 +3,7 @@ import logging
 import yaml
 from transcription import transcribe_file, clear, clear_and_close
 from config import load_default_values, load_default_config, get_gemini_api_key
-from gemini_api import query_gemini
+from llms import query_gemini, list_ollama_models
 from config import setup_logging
 
 default_values = load_default_values()
@@ -137,26 +137,47 @@ with gr.Blocks() as demo:
     download_output = gr.File(label="Download Transcript")
     transcribe_button = gr.Button("Transcribe", variant="secondary")
 
-    gemini_model = None  # Ensure gemini_model is always defined
-    user_query = None  # Ensure user_query is always defined
-    gemini_response = None  # Ensure gemini_response is always defined
+    # Ensure UI elements exist for AI querying
+    gemini_model = None
+    user_query = None
+    gemini_response = None
+
+    # Provider selection: if Gemini API key present, allow Gemini + Ollama; otherwise only Ollama
     if get_gemini_api_key() is not None:
-        gemini_model = gr.Radio(choices=default_values['gemini']['models'], value=default_config_values["gemini_model"], label="Choose Gemini Model")
-        user_query = gr.Textbox(label="Enter your query")
-        with gr.Accordion("Gemini Response"):
-            gemini_response = gr.Markdown("*Gemini response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
-
-        submit_query_button = gr.Button("Submit Query to Gemini", variant="secondary")
-
-        submit_query_button.click(
-            fn=query_gemini,
-            inputs=[user_query, output_text, gemini_model],
-            outputs=[gemini_response]
-        )
+        provider = gr.Radio(choices=["Gemini", "Ollama"], value="Gemini", label="AI Provider")
     else:
-        gemini_model = gr.State(None)  # Placeholder state
-        user_query = gr.State(None)   # Placeholder state
-        gemini_response = gr.State(None)  # Placeholder state
+        provider = gr.Radio(choices=["Ollama"], value="Ollama", label="AI Provider")
+
+    # Gemini model selector (visible when using Gemini)
+    gemini_model = gr.Radio(choices=default_values['gemini']['models'], value=default_config_values["gemini_model"], label="Choose Gemini Model", visible=True)
+
+    # Ollama-specific model selector (populated from local Ollama)
+    # allow_custom_value=True prevents Gradio warning when choices are empty at init
+    ollama_model = gr.Dropdown(choices=[], value="", allow_custom_value=True, label="Ollama model (local)", visible=False)
+
+    user_query = gr.Textbox(label="Enter your query")
+    with gr.Accordion("AI Response"):
+        gemini_response = gr.Markdown("*Response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
+
+    submit_query_button = gr.Button("Submit Query", variant="secondary")
+
+    def _provider_change(p):
+        # show Gemini model choices only when Gemini selected
+        if str(p).lower().startswith('g'):
+            return gr.update(visible=True), gr.update(visible=False, choices=[])
+        # when Ollama selected, fetch models and show dropdown
+        models = list_ollama_models() or ["(no models found)"]
+        # pick first model if available
+        value = models[0] if models and models[0] != "(no models found)" else ""
+        return gr.update(visible=False), gr.update(visible=True, choices=models, value=value)
+
+    provider.change(fn=_provider_change, inputs=[provider], outputs=[gemini_model, ollama_model])
+
+    submit_query_button.click(
+        fn=query_gemini,
+        inputs=[user_query, output_text, gemini_model, provider, ollama_model],
+        outputs=[gemini_response]
+    )
     folder_state = gr.State(None) # Used to clear temp files
 
     with gr.Row():
