@@ -88,9 +88,9 @@ starlette
 sympy
 tokenizers
 tomlkit
-torch==2.5.1+cu126
-torchaudio==2.5.1+cu126
-torchvision==0.20.1+cu126
+torch
+torchaudio
+torchvision
 tqdm
 typer
 typing_extensions
