@@ -1,0 +1,12 @@
+device: "cpu"
+cpu_threads: 4
+num_workers: 1
+language: "it"
+whisper_model: "small"
+compute_type: "auto"
+temperature: 0.0
+beam_size: 5
+batch_size: 8
+condition_on_previous_text: true
+word_timestamps: false
+gemini_model: "gemini-flash-latest"
