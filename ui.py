@@ -99,6 +99,14 @@ def reset_fields():
         default_values['gemini']["gemini_response"],
     )
 
+
+def preset_query_summary():
+    return "Fammi un riassunto"
+
+
+def preset_query_todo():
+    return "Dimmi le cose da fare"
+
 with gr.Blocks() as demo:
     setup_logging()
     gr.Markdown("# 🎤 Audio/Video Transcription using Whisper Model")
@@ -147,6 +155,22 @@ with gr.Blocks() as demo:
         provider = gr.Radio(choices=["Gemini", "Ollama"], value="Gemini", label="AI Provider")
     else:
         provider = gr.Radio(choices=["Ollama"], value="Ollama", label="AI Provider")
+
+    with gr.Row():
+        preset_summary_button = gr.Button("Fammi un riassunto", variant="secondary")
+        preset_todo_button = gr.Button("Dimmi le cose da fare", variant="secondary")
+
+    preset_summary_button.click(
+        fn=preset_query_summary,
+        inputs=[],
+        outputs=[user_query],
+    )
+
+    preset_todo_button.click(
+        fn=preset_query_todo,
+        inputs=[],
+        outputs=[user_query],
+    )
 
     # Gemini model selector (visible when using Gemini)
     gemini_model = gr.Radio(choices=default_values['gemini']['models'], value=default_config_values["gemini_model"], label="Choose Gemini Model", visible=True)
