@@ -99,6 +99,14 @@ def reset_fields():
         default_values['gemini']["gemini_response"],
     )
 
+
+def preset_query_summary():
+    return "Fammi un riassunto"
+
+
+def preset_query_todo():
+    return "Dimmi le cose da fare"
+
 with gr.Blocks() as demo:
     setup_logging()
     gr.Markdown("# 🎤 Audio/Video Transcription using Whisper Model")
@@ -142,11 +150,28 @@ with gr.Blocks() as demo:
     gemini_response = None  # Ensure gemini_response is always defined
     if get_gemini_api_key() is not None:
         gemini_model = gr.Radio(choices=default_values['gemini']['models'], value=default_config_values["gemini_model"], label="Choose Gemini Model")
+
+        with gr.Row():
+            preset_summary_button = gr.Button("Fammi un riassunto", variant="secondary")
+            preset_todo_button = gr.Button("Dimmi le cose da fare", variant="secondary")
+
         user_query = gr.Textbox(label="Enter your query")
         with gr.Accordion("Gemini Response"):
             gemini_response = gr.Markdown("*Gemini response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
 
         submit_query_button = gr.Button("Submit Query to Gemini", variant="secondary")
+
+        preset_summary_button.click(
+            fn=preset_query_summary,
+            inputs=[],
+            outputs=[user_query],
+        )
+
+        preset_todo_button.click(
+            fn=preset_query_todo,
+            inputs=[],
+            outputs=[user_query],
+        )
 
         submit_query_button.click(
             fn=query_gemini,
