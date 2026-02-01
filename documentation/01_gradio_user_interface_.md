@@ -44,6 +44,19 @@ with gr.Blocks() as demo:
     file_input = gr.File(label="Upload an audio or video file")
     
     transcribe_button = gr.Button("Transcribe", variant="secondary")
+
+    # Optional AI block (Gemini / Ollama) to ask questions about the transcript
+    with gr.Accordion("AI Provider", open=True):
+        provider = gr.Radio(choices=["Gemini", "Ollama"], value="Gemini", label="Provider")
+        gemini_model = gr.Radio(choices=["gemini-1.5-pro"], value="gemini-1.5-pro", label="Choose Gemini Model")
+        ollama_model = gr.Dropdown(choices=["llama3"], value="llama3", label="Choose Ollama Model", visible=False)
+
+        with gr.Row():
+            preset_summary_button = gr.Button("Fammi un riassunto", variant="secondary")
+            preset_todo_button = gr.Button("Dimmi le cose da fare", variant="secondary")
+
+        user_query = gr.Textbox(label="Enter your query")
+        submit_query_button = gr.Button("Submit Query", variant="secondary")
 ```
 
 Let's break this down:
@@ -53,6 +66,13 @@ Let's break this down:
 -   `gr.Button(...)`: This creates a clickable button with the label "Transcribe". We name it `transcribe_button`.
 
 Every slider, dropdown, and checkbox in the application is created with a similar one-line command. Gradio handles all the complex web code behind the scenes.
+
+### A Note About Conditional UI
+
+Some UI elements are shown or hidden depending on what is available on the machine.
+
+- If a Gemini API key is present (read from `config/gemini.yaml`), the app enables the Gemini provider and shows **Choose Gemini Model**.
+- If no Gemini API key is present, the UI defaults to **Ollama** and shows **Choose Ollama Model**.
 
 ## The Magic Connection: How a Click Triggers an Action
 
@@ -80,6 +100,18 @@ This `.click()` method is the bridge between the UI and our backend logic. It sa
 3.  **`outputs=[...]`**: After the function finishes and returns some results (like the transcribed text and a path to a downloadable file), take those results and update the UI components in this list.
 
 This input-function-output pattern is the fundamental concept behind Gradio and our entire user interface.
+
+The same pattern is used for the AI query feature:
+
+```python
+# File: ui.py
+
+submit_query_button.click(
+    fn=query_gemini,  # dispatches to Gemini or Ollama depending on `provider`
+    inputs=[user_query, output_text, gemini_model, provider, ollama_model],
+    outputs=[gemini_response]
+)
+```
 
 ### What Happens Under the Hood?
 

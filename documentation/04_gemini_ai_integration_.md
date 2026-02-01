@@ -1,14 +1,19 @@
-# Chapter 4: Gemini AI Integration
+# Chapter 4: AI Provider Integration (Gemini + Ollama)
 
 In the [previous chapter](03_media_pre_processing_pipeline_.md), we saw how our application cleverly prepares any audio or video file for transcription. The result of that process is a clean, accurate text transcript. This is already very useful, but what if we could do more?
 
 Imagine you've just transcribed a one-hour meeting. You now have a long wall of text. Finding the key decisions or action items could mean reading the whole thing. What if you could just ask the application, "What were the main takeaways from this meeting?" and get a perfect summary?
 
-This is exactly the problem that our Gemini AI Integration solves. It's an optional but incredibly powerful feature that connects your transcript to Google's Gemini AI. Think of it as hiring a brilliant assistant who can read your transcript in an instant and answer any question you have about it.
+This is exactly the problem that our AI Provider Integration solves. It's an optional but incredibly powerful feature that connects your transcript either to:
+
+- **Google Gemini (cloud)** for high-quality analysis
+- **Ollama (local)** for on-device/private analysis, as long as Ollama is installed and running
+
+Think of it as hiring a brilliant assistant who can read your transcript in an instant and answer any question you have about it.
 
 ## The Smart Assistant for Your Transcript
 
-Once you've generated a transcript, the Gemini integration adds a new set of controls to the user interface. It gives you a new superpower: the ability to have a conversation with your document.
+Once you've generated a transcript, the AI integration adds a new set of controls to the user interface (inside the **AI Provider** box). It gives you a new superpower: the ability to have a conversation with your document.
 
 Here’s what you can do:
 -   **Summarize:** Ask "Summarize this transcript" to get a short, concise version.
@@ -40,25 +45,31 @@ How does our application talk to a powerful AI like Gemini? It happens through a
 sequenceDiagram
     participant User
     participant UI as Gradio User Interface
-    participant GAPI as Gemini API Module
+    participant L as AI Provider Module (llms.py)
     participant GEM as Google Gemini AI
+    participant OLL as Ollama (local)
 
     User->>UI: Types "Summarize this" & clicks "Submit"
-    UI->>GAPI: Calls query_gemini() with transcript and question
-    Note over GAPI: Formats a special prompt for the AI
-    GAPI->>GEM: Sends the full prompt over the internet
-    GEM-->>GAPI: Processes the text and sends back a summary
-    GAPI-->>UI: Returns the summary text
+    UI->>L: Calls query_gemini() with transcript, question, provider, model
+    Note over L: Formats a prompt containing transcript + user input
+    alt Provider = Gemini
+        L->>GEM: Sends prompt over the internet
+        GEM-->>L: Returns generated text
+    else Provider = Ollama
+        L->>OLL: Sends prompt to local HTTP API
+        OLL-->>L: Streams back response chunks
+    end
+    L-->>UI: Returns final response text
     UI-->>User: Displays the summary on the screen
 ```
 
 Let's break down this process into its key steps.
 
-### Step 1: Getting Access (The API Key)
+### Step 1: Getting Access (Gemini API Key)
 
 To use Google's Gemini service, our application needs permission. This permission is granted via a special secret code called an **API Key**. Think of it like a library card that proves you're allowed to use the AI's services.
 
-This is an optional feature, so the application first checks if you've provided a key. It uses a helper function to look for it in a special configuration file.
+Gemini is optional, so the application first checks if you've provided a key. It uses a helper function to look for it in a special configuration file.
 
 ```python
 # File: config.py
@@ -73,7 +84,14 @@ def get_gemini_api_key():
         # If the file or key doesn't exist, it returns nothing
         return None
 ```
-If this function finds a key, the Gemini features will appear in the UI. If not, they stay hidden.
+    If this function finds a key, Gemini becomes available in the UI. If not, the UI defaults to Ollama.
+
+    The file format is simple:
+
+    ```yaml
+    # File: config/gemini.yaml
+    gemini_api_key: "YOUR_KEY_HERE"
+    ```
 
 ### Step 2: Preparing the Question (Prompting)
 
@@ -81,65 +99,62 @@ We can't just send your question "Summarize this" to the AI by itself. The AI wo
 
 Our application cleverly combines the full transcript with your question into a single package called a **prompt**. This is handled inside our main Gemini function.
 
+The same prompt format is used for both providers:
+
 ```python
-# File: gemini_api.py
-def query_gemini(user_input, transcription, gemini_model):
-    # ...
-    # Combine the transcript and the question into one prompt
-    prompt = f"Transcription: {transcription}\n\nUser Input: {user_input}"
-    # ...
+# File: llms.py
+prompt = f"Transcription: {transcription}\n\nUser Input: {user_input}"
 ```
 This prompt gives the AI everything it needs: the document to analyze (`Transcription: ...`) and the instruction on what to do (`User Input: ...`).
 
-### Step 3: Talking to the AI (The API Call)
+### Step 3: Talking to the AI (Provider Dispatch)
 
 With the prompt ready, our application makes the "call" to Google's servers. This is where the real magic happens. We send our carefully crafted prompt, and the Gemini model reads it, "thinks" about it, and generates a response.
 
+The app uses a single dispatcher function that routes your request to Gemini or Ollama based on the selected provider:
+
 ```python
-# File: gemini_api.py
-def query_gemini(user_input, transcription, gemini_model):
-    """Sends the transcript and user's question to Gemini."""
-    try:
-        # 1. Initialize the connection to the AI model
-        model = initialize_model(gemini_model)
+# File: llms.py
+def query_gemini(user_input, transcription, gemini_model, provider="Gemini", ollama_model=None):
+    if provider and str(provider).lower().startswith('olla'):
+        return query_ollama(user_input, transcription, ollama_model)
 
-        # 2. Create the prompt (as seen above)
-        prompt = f"Transcription: {transcription}\n\nUser Input: {user_input}"
-
-        # 3. Send the prompt and get the AI's text response
-        response = model.generate_content(prompt).text
-        return response
-    except Exception as e:
-        return f"Error querying Gemini: {e}"
+    model = initialize_model(gemini_model)
+    prompt = f"Transcription: {transcription}\n\nUser Input: {user_input}"
+    return model.generate_content(prompt).text
 ```
+
+#### Ollama requirements
+
+To use Ollama, it must be installed and running locally. The code talks to the Ollama daemon via HTTP (default: `http://127.0.0.1:11434`).
 The line `model.generate_content(prompt).text` is the most important part. It sends the request and waits for the text answer to come back.
 
 ### Step 4: Displaying the Answer
 
 Finally, how does the AI's response get back to the screen? This is handled by the same event-listener pattern we saw in the [Gradio User Interface](01_gradio_user_interface_.md) chapter.
 
-The "Submit Query to Gemini" button is wired up to our `query_gemini` function.
+The "Submit Query" button is wired up to the same `query_gemini` dispatcher function.
 
 ```python
 # File: ui.py
 
 # When the button is clicked...
 submit_query_button.click(
-    fn=query_gemini,                               # ...run this function.
-    inputs=[user_query, output_text, gemini_model],# ...give it these inputs.
-    outputs=[gemini_response]                      # ...put the result here.
+    fn=query_gemini,
+    inputs=[user_query, output_text, gemini_model, provider, ollama_model],
+    outputs=[gemini_response]
 )
 ```
 This tells Gradio: "When the submit button is clicked, run the `query_gemini` function. Give it the user's question and the full transcript. Take whatever it returns and display it in the `gemini_response` area."
 
 ## Conclusion
 
-In this chapter, we've added a layer of advanced intelligence to our application. You've learned that the Gemini AI integration:
+In this chapter, we've added a layer of advanced intelligence to our application. You've learned that the AI integration:
 
 -   Acts as a **smart assistant** that can understand and analyze your transcripts.
--   Is an **optional feature** that requires a secret API key to activate.
--   Works by combining your **transcript and your question** into a single prompt.
--   Communicates with Google's AI over the internet to get a response.
+-   Supports **Gemini (cloud)** and **Ollama (local)**.
+-   Uses a single **prompt format** (transcript + user input).
+-   Uses a simple **dispatcher** function to route to the chosen provider.
 
 By connecting the output of our transcription engine to another powerful AI, we've turned `whisper-utility` from a simple dictation tool into a sophisticated research and analysis platform.
 

@@ -150,15 +150,46 @@ with gr.Blocks() as demo:
     user_query = None
     gemini_response = None
 
-    # Provider selection: if Gemini API key present, allow Gemini + Ollama; otherwise only Ollama
-    if get_gemini_api_key() is not None:
-        provider = gr.Radio(choices=["Gemini", "Ollama"], value="Gemini", label="AI Provider")
-    else:
-        provider = gr.Radio(choices=["Ollama"], value="Ollama", label="AI Provider")
+    has_gemini = get_gemini_api_key() is not None
 
-    with gr.Row():
-        preset_summary_button = gr.Button("Fammi un riassunto", variant="secondary")
-        preset_todo_button = gr.Button("Dimmi le cose da fare", variant="secondary")
+    with gr.Accordion("AI Provider", open=True):
+        # Provider selection: if Gemini API key present, allow Gemini + Ollama; otherwise only Ollama
+        if has_gemini:
+            provider = gr.Radio(choices=["Gemini", "Ollama"], value="Gemini", label="Provider")
+        else:
+            provider = gr.Radio(choices=["Ollama"], value="Ollama", label="Provider")
+
+        # Gemini model selector (only meaningful when using Gemini)
+        gemini_model = gr.Radio(
+            choices=default_values['gemini']['models'],
+            value=default_config_values["gemini_model"],
+            label="Choose Gemini Model",
+            visible=has_gemini,
+        )
+
+        # Ollama-specific model selector (populated from local Ollama)
+        # allow_custom_value=True prevents Gradio warning when choices are empty at init
+        try:
+            _initial_ollama_models = list_ollama_models() if not has_gemini else []
+        except Exception:
+            _initial_ollama_models = []
+        _initial_ollama_value = _initial_ollama_models[0] if _initial_ollama_models else ""
+
+        ollama_model = gr.Dropdown(
+            choices=_initial_ollama_models,
+            value=_initial_ollama_value,
+            allow_custom_value=True,
+            label="Choose Ollama Model",
+            visible=not has_gemini,
+        )
+
+        with gr.Row():
+            preset_summary_button = gr.Button("Fammi un riassunto", variant="secondary")
+            preset_todo_button = gr.Button("Dimmi le cose da fare", variant="secondary")
+
+        user_query = gr.Textbox(label="Enter your query")
+
+        submit_query_button = gr.Button("Submit Query", variant="secondary")
 
     preset_summary_button.click(
         fn=preset_query_summary,
@@ -172,18 +203,8 @@ with gr.Blocks() as demo:
         outputs=[user_query],
     )
 
-    # Gemini model selector (visible when using Gemini)
-    gemini_model = gr.Radio(choices=default_values['gemini']['models'], value=default_config_values["gemini_model"], label="Choose Gemini Model", visible=True)
-
-    # Ollama-specific model selector (populated from local Ollama)
-    # allow_custom_value=True prevents Gradio warning when choices are empty at init
-    ollama_model = gr.Dropdown(choices=[], value="", allow_custom_value=True, label="Ollama model (local)", visible=False)
-
-    user_query = gr.Textbox(label="Enter your query")
     with gr.Accordion("AI Response"):
         gemini_response = gr.Markdown("*Response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
-
-    submit_query_button = gr.Button("Submit Query", variant="secondary")
 
     def _provider_change(p):
         # show Gemini model choices only when Gemini selected

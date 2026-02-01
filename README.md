@@ -13,6 +13,7 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🖥️ Simple UI built with Gradio for easy access and use
 - ⬇️ Download the transcript in `.txt` format
 - 🎛️ Tuning the model parameters via the interface
+- 🤖 Ask an AI about the transcript (Gemini or local Ollama)
 
 ## Demo
 💻 You can try the Colab version [here](https://colab.research.google.com/github/CorsiDanilo/Whisper-Audio-Video-Transcription-App/blob/main/whisper.ipynb) (remember to select GPU in 'Runtime Type' for faster execution ⚡)
@@ -26,6 +27,26 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🔥 [PyTorch](https://pytorch.org)  (CUDA version + [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) if using GPU)
 - 🎬 [FFmpeg](https://www.ffmpeg.org) (must be installed and added to your system's PATH)
 - 🖼️ [Gradio](https://www.gradio.app)
+
+### (Optional) AI Providers
+
+This app can analyze the transcript using either **Ollama (local)** or **Google Gemini (cloud)**.
+
+- **Ollama (local)**
+    - Install Ollama on your PC and make sure it is running.
+    - Pull at least one model (example):
+        ```
+        ollama pull llama3
+        ```
+    - In the UI, open the **AI Provider** box, choose **Ollama**, then pick the model from **Choose Ollama Model**.
+
+- **Gemini (cloud)**
+    - Create (or edit) the file `config/gemini.yaml` with your API key:
+        ```yaml
+        gemini_api_key: "YOUR_KEY_HERE"
+        ```
+    - Restart the app: the UI will show Gemini options (provider + **Choose Gemini Model**).
+    - Note: keep this key private and don’t commit it to git.
 
 ## 📦 Installation
 ### Step 1: Clone the repository
@@ -44,7 +65,12 @@ source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
 
 ### Step 3: Install the required dependencies
 ```
-pip install -r requirements.py
+pip install -r requirements_cpu.txt
+```
+
+If you have an NVIDIA GPU and want CUDA acceleration, use:
+```
+pip install -r requirements_gpu.txt
 ```
 
 ### Step 4: Install FFmpeg (if not already installed):
@@ -63,7 +89,7 @@ select the last version.
 ## 🚀 Usage
 Run the application:
 ```
-python whisper.py 
+python main.py
 ```
 The Gradio interface will open in your default web browser. From there, you can upload an audio or video file, and the transcription will be displayed.
 
@@ -72,6 +98,8 @@ The Gradio interface will open in your default web browser. From there, you can 
 ## 🎛️ Interface Guide
 - **Upload an audio or video file**: Accepts audio formats like MP3, WAV, and video formats like MP4, AVI.
 - **Transcribe**: Click this button to start the transcription process.
+- **AI Provider**: Choose between Gemini and Ollama, select a model, then ask questions about the transcript.
+- **Quick prompts**: Use the buttons like “Fammi un riassunto” / “Dimmi le cose da fare” to fill the query box instantly.
 - **Close and Clear**: This button clears the folder where the file was temporarily stored and closes the application.
 
 ## ⚙️ Model Configuration
