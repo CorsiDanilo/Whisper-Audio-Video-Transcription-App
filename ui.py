@@ -211,9 +211,9 @@ with gr.Blocks() as demo:
         if str(p).lower().startswith('g'):
             return gr.update(visible=True), gr.update(visible=False, choices=[])
         # when Ollama selected, fetch models and show dropdown
-        models = list_ollama_models() or ["(no models found)"]
+        models = list_ollama_models() or ["No models found"]
         # pick first model if available
-        value = models[0] if models and models[0] != "(no models found)" else ""
+        value = models[0] if models and models[0] != "No models found" else ""
         return gr.update(visible=False), gr.update(visible=True, choices=models, value=value)
 
     provider.change(fn=_provider_change, inputs=[provider], outputs=[gemini_model, ollama_model])
