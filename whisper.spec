@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+import sys
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_all
 
@@ -9,8 +10,11 @@ datas += collect_data_files('gradio')
 datas += collect_data_files('gradio_client')
 datas += collect_data_files('safehttpx')
 datas += collect_data_files('groovy')
-tmp_ret = collect_all('win32ctypes')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+
+if sys.platform == 'win32':
+    tmp_ret = collect_all('win32ctypes')
+    datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+
 tmp_ret = collect_all('faster_whisper')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
@@ -46,7 +50,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['logo.ico'],
+    icon=['logo.ico'] if sys.platform == 'win32' else None,
 )
 coll = COLLECT(
     exe,

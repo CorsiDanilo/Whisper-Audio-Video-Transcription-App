@@ -82,6 +82,18 @@ pip install -r requirements_gpu.txt
 - Download and install [CUDA Toolkit 12.9](https://developer.nvidia.com/cuda-12-9-1-download-archive).
 - Download and install [cuDNN 9.19.0](https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local).
 
+## 🔨 Building from Source
+If you want to compile the application into a standalone executable:
+
+**Windows 🪟**
+- Double-click `installer.bat` (CMD/PowerShell)
+- Or run `./build_windows.sh` (Git Bash)
+
+**Linux 🐧**
+- Run `./build_linux.sh`
+
+For detailed instructions, see [Chapter 6: Desktop Application Packaging](documentation/06_desktop_application_packaging_.md).
+
 ## 🚀 Usage
 Run the application:
 ```
