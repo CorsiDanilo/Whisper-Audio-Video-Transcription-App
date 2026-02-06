@@ -119,15 +119,24 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
     if provider and str(provider).lower().startswith('olla'):
         return query_ollama(user_input, transcription, ollama_model)
 
-    model = initialize_model(gemini_model)
-    prompt = f"Transcription: {transcription}\n\nUser Input: {user_input}"
-    return model.generate_content(prompt).text
+    client = initialize_client()
+    if not client:
+            return "Error: Gemini API key not found."
+    
+    query = f"Transcription: {transcription}\n\nUser Input: {user_input}"
+    config = get_gemini_config()
+    
+    return client.models.generate_content(
+        model=gemini_model,
+        contents=[query],
+        config=config
+    ).text
 ```
 
 #### Ollama requirements
 
 To use Ollama, it must be installed and running locally. The code talks to the Ollama daemon via HTTP (default: `http://127.0.0.1:11434`).
-The line `model.generate_content(prompt).text` is the most important part. It sends the request and waits for the text answer to come back.
+The line `client.models.generate_content(...)` is the most important part. It sends the request and waits for the text answer to come back.
 
 ### Step 4: Displaying the Answer
 
