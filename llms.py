@@ -2,54 +2,57 @@ import logging
 import requests
 import json
 from config import load_default_values, get_gemini_api_key
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 OLLAMA_ENDPOINT = "http://127.0.0.1:11434"
 
 default_values = load_default_values()
 
 
-def initialize_model(gemini_model):
-    """Initialize the Gemini model with the specified configurations."""
-    def gemini_configurations():
-        gemini_config = default_values['gemini']
-        generation_config = {
-            "temperature": gemini_config["temperature"],
-            "top_p": gemini_config["top_p"],
-            "top_k": gemini_config["top_k"],
-            "max_output_tokens": gemini_config["max_output_tokens"],
-            "response_mime_type": gemini_config["response_mime_type"],
-        }
-
-        safety_settings = [
-            {
-                "category": gemini_config['safety_settings']["harm_category_harassment"]['name'],
-                "threshold": gemini_config['safety_settings']["harm_category_harassment"]['threshold'],
-            },
-            {
-                "category": gemini_config['safety_settings']["harm_category_hate_speech"]['name'],
-                "threshold": gemini_config['safety_settings']["harm_category_hate_speech"]['threshold'],
-            },
-            {
-                "category": gemini_config['safety_settings']["harm_category_sexually_explicit"]['name'],
-                "threshold": gemini_config['safety_settings']["harm_category_sexually_explicit"]['threshold'],
-            },
-            {
-                "category": gemini_config['safety_settings']["harm_category_dangerous_content"]['name'],
-                "threshold": gemini_config['safety_settings']["harm_category_dangerous_content"]['threshold']
-            },
-        ]
-        return generation_config, safety_settings
-
+def initialize_client():
+    """Initialize the Gemini client."""
     GEMINI_API_KEY = get_gemini_api_key()
-    genai.configure(api_key=GEMINI_API_KEY)
-    generation_config, safety_settings = gemini_configurations()
-    model = genai.GenerativeModel(
-        model_name=gemini_model,
-        safety_settings=safety_settings,
-        generation_config=generation_config,
+    if not GEMINI_API_KEY:
+        return None
+    return genai.Client(api_key=GEMINI_API_KEY)
+
+
+def get_gemini_config():
+    """Get the configuration for Gemini generation."""
+    gemini_config = default_values['gemini']
+    
+    # Map old safety settings to new SDK format if necessary, 
+    # but the new SDK often uses a list of SafetySetting objects.
+    # We will construct the config dictionary compatible with types.GenerateContentConfig
+    
+    safety_settings = [
+        types.SafetySetting(
+            category=gemini_config['safety_settings']["harm_category_harassment"]['name'],
+            threshold=gemini_config['safety_settings']["harm_category_harassment"]['threshold'],
+        ),
+        types.SafetySetting(
+            category=gemini_config['safety_settings']["harm_category_hate_speech"]['name'],
+            threshold=gemini_config['safety_settings']["harm_category_hate_speech"]['threshold'],
+        ),
+        types.SafetySetting(
+            category=gemini_config['safety_settings']["harm_category_sexually_explicit"]['name'],
+            threshold=gemini_config['safety_settings']["harm_category_sexually_explicit"]['threshold'],
+        ),
+        types.SafetySetting(
+            category=gemini_config['safety_settings']["harm_category_dangerous_content"]['name'],
+            threshold=gemini_config['safety_settings']["harm_category_dangerous_content"]['threshold']
+        ),
+    ]
+
+    return types.GenerateContentConfig(
+        temperature=gemini_config["temperature"],
+        top_p=gemini_config["top_p"],
+        top_k=gemini_config["top_k"],
+        max_output_tokens=gemini_config["max_output_tokens"],
+        response_mime_type=gemini_config["response_mime_type"],
+        safety_settings=safety_settings
     )
-    return model
 
 
 def query_ollama(user_input, transcription, ollama_model):
@@ -154,10 +157,20 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
             return query_ollama(user_input, transcription, model_name)
 
         # Use Gemini
-        model = initialize_model(gemini_model)
+        client = initialize_client()
+        if not client:
+             return "Error: Gemini API key not found."
+
         query = f"Transcription: {transcription}\n\nUser Input: {user_input}"
-        response = model.generate_content(query).text
-        return response
+        
+        config = get_gemini_config()
+        
+        response = client.models.generate_content(
+            model=gemini_model,
+            contents=[query],
+            config=config
+        )
+        return response.text
     except Exception as e:
         logging.error(f"Error querying AI provider: {e}")
         return f"Error querying AI provider: {e}"

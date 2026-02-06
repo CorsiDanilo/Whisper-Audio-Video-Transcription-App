@@ -140,7 +140,7 @@ with gr.Blocks() as demo:
     with gr.Row():
         gr.Markdown("## Transcription")
     with gr.Accordion("Transcription"):
-        output_text = gr.Markdown("*Your transcription will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
+        output_text = gr.Markdown("*Your transcription will appear here.*", container=True, line_breaks=True)
 
     download_output = gr.File(label="Download Transcript")
     transcribe_button = gr.Button("Transcribe", variant="secondary")
@@ -204,7 +204,7 @@ with gr.Blocks() as demo:
     )
 
     with gr.Accordion("AI Response"):
-        gemini_response = gr.Markdown("*Response will appear here.*", show_copy_button=True, container=True, line_breaks=True, max_height=400)
+        gemini_response = gr.Markdown("*Response will appear here.*", container=True, line_breaks=True)
 
     def _provider_change(p):
         # show Gemini model choices only when Gemini selected
