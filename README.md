@@ -89,9 +89,6 @@ If you want to compile the application into a standalone executable:
 - Double-click `installer.bat` (CMD/PowerShell)
 - Or run `./build_windows.sh` (Git Bash)
 
-**Linux 🐧**
-- Run `./build_linux.sh`
-
 For detailed instructions, see [Chapter 6: Desktop Application Packaging](documentation/06_desktop_application_packaging_.md).
 
 ## 🚀 Usage
