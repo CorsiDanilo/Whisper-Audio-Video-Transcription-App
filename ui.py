@@ -109,6 +109,10 @@ def preset_query_summary():
 def preset_query_todo():
     return "Dimmi le cose da fare"
 
+
+def notify_copy():
+    gr.Info("Testo copiato")
+
 with gr.Blocks() as demo:
     setup_logging()
     gr.Markdown("# 🎤 Audio/Video Transcription using Whisper Model")
@@ -142,8 +146,8 @@ with gr.Blocks() as demo:
     with gr.Row():
         gr.Markdown("## Transcription")
     with gr.Accordion("Transcription"):
-        output_text = gr.Markdown("*Your transcription will appear here.*", container=True, line_breaks=True)
         copy_transcription_button = gr.Button("Copy Transcription", variant="secondary", size="sm")
+        output_text = gr.Markdown("*Your transcription will appear here.*", container=True, line_breaks=True)
 
     transcript_file_path = gr.State()
     save_transcript_button = gr.Button("Save Transcript As...", variant="primary", visible=False)
@@ -208,8 +212,8 @@ with gr.Blocks() as demo:
     )
 
     with gr.Accordion("AI Response"):
-        gemini_response = gr.Markdown("*Response will appear here.*", container=True, line_breaks=True)
         copy_response_button = gr.Button("Copy Response", variant="secondary", size="sm")
+        gemini_response = gr.Markdown("*Response will appear here.*", container=True, line_breaks=True)
 
     def _provider_change(p):
         # show Gemini model choices only when Gemini selected
@@ -359,12 +363,20 @@ with gr.Blocks() as demo:
     js_copy_text = "(text) => { navigator.clipboard.writeText(text); }"
 
     copy_transcription_button.click(
+        fn=notify_copy,
+        inputs=[],
+        outputs=[]
+    ).then(
         fn=None,
         inputs=[output_text],
         js=js_copy_text
     )
 
     copy_response_button.click(
+        fn=notify_copy,
+        inputs=[],
+        outputs=[]
+    ).then(
         fn=None,
         inputs=[gemini_response],
         js=js_copy_text
