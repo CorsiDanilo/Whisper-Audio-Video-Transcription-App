@@ -97,6 +97,8 @@ def reset_fields():
         default_config_values["gemini_model"],
         default_values['gemini']["user_query"],
         default_values['gemini']["gemini_response"],
+        gr.update(visible=False), # save_transcript_button
+        gr.update(visible=False), # submit_query_button
     )
 
 
@@ -106,6 +108,10 @@ def preset_query_summary():
 
 def preset_query_todo():
     return "Dimmi le cose da fare"
+
+
+def notify_copy():
+    gr.Info("Testo copiato")
 
 with gr.Blocks() as demo:
     setup_logging()
@@ -140,9 +146,11 @@ with gr.Blocks() as demo:
     with gr.Row():
         gr.Markdown("## Transcription")
     with gr.Accordion("Transcription"):
+        copy_transcription_button = gr.Button("Copy Transcription", variant="secondary", size="sm")
         output_text = gr.Markdown("*Your transcription will appear here.*", container=True, line_breaks=True)
 
-    download_output = gr.File(label="Download Transcript")
+    transcript_file_path = gr.State()
+    save_transcript_button = gr.Button("Save Transcript As...", variant="primary", visible=False)
     transcribe_button = gr.Button("Transcribe", variant="secondary")
 
     # Ensure UI elements exist for AI querying
@@ -189,7 +197,7 @@ with gr.Blocks() as demo:
 
         user_query = gr.Textbox(label="Enter your query")
 
-        submit_query_button = gr.Button("Submit Query", variant="secondary")
+        submit_query_button = gr.Button("Submit Query", variant="primary", visible=False)
 
     preset_summary_button.click(
         fn=preset_query_summary,
@@ -204,6 +212,7 @@ with gr.Blocks() as demo:
     )
 
     with gr.Accordion("AI Response"):
+        copy_response_button = gr.Button("Copy Response", variant="secondary", size="sm")
         gemini_response = gr.Markdown("*Response will appear here.*", container=True, line_breaks=True)
 
     def _provider_change(p):
@@ -271,7 +280,7 @@ with gr.Blocks() as demo:
     reset_button.click(
         fn=reset_fields,
         inputs=[],
-        outputs=[file_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, download_output, word_timestamps, gemini_model, user_query, gemini_response]
+        outputs=[file_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button]
     )
 
     def transcribe_wrapper(file, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps):
@@ -280,12 +289,18 @@ with gr.Blocks() as demo:
             whisper_model, compute_type, temperature, beam_size,
             batch_size, condition_on_previous_text, word_timestamps
         )
-        return transcription, output_path, folder_path
+        
+        # Check if transcription was successful by checking if output_path is generated
+        if output_path:
+             return transcription, output_path, folder_path, gr.update(visible=True), gr.update(visible=True)
+        else:
+             # Keep them hidden or hide them if they were visible (on error)
+             return transcription, output_path, folder_path, gr.update(visible=False), gr.update(visible=False)
 
-    transcribe_button.click(
+    transcribe_button.click( # Updated outputs to use transcript_file_path and button visibility
         fn=transcribe_wrapper,
         inputs=[file_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps],
-        outputs=[output_text, download_output, folder_state]
+        outputs=[output_text, transcript_file_path, folder_state, save_transcript_button, submit_query_button] 
     )
 
     clear_button.click(
@@ -298,4 +313,71 @@ with gr.Blocks() as demo:
         fn=clear_and_close,
         inputs=[folder_state],
         outputs=[file_input, output_text]
+    )
+
+    def save_transcript_wrapper(file_path):
+        if not file_path:
+            gr.Warning("No transcript file available to save. Please transcribe first.")
+            return
+        
+        # Only import tkinter when needed to avoid issues if not installed or headless
+        try:
+            import tkinter as tk
+            from tkinter import filedialog
+            import shutil
+            import os
+            
+            # Create a hidden root window
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes("-topmost", True)
+            
+            initial_file = os.path.basename(file_path)
+            
+            target_path = filedialog.asksaveasfilename(
+                title="Save Transcript As",
+                initialfile=initial_file,
+                defaultextension=".txt",
+                filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+                parent=root
+            )
+            
+            root.destroy()
+            
+            if target_path:
+                shutil.copy2(file_path, target_path)
+                gr.Info(f"Successfully saved to: {target_path}")
+            else:
+                gr.Info("Save cancelled.")
+        except Exception as e:
+            logging.error(f"Error saving file: {e}")
+            gr.Error(f"Error saving file: {str(e)}")
+
+    save_transcript_button.click(
+        fn=save_transcript_wrapper,
+        inputs=[transcript_file_path], 
+        outputs=[]
+    )
+
+    # JavaScript for copying text
+    js_copy_text = "(text) => { navigator.clipboard.writeText(text); }"
+
+    copy_transcription_button.click(
+        fn=notify_copy,
+        inputs=[],
+        outputs=[]
+    ).then(
+        fn=None,
+        inputs=[output_text],
+        js=js_copy_text
+    )
+
+    copy_response_button.click(
+        fn=notify_copy,
+        inputs=[],
+        outputs=[]
+    ).then(
+        fn=None,
+        inputs=[gemini_response],
+        js=js_copy_text
     )
