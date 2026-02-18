@@ -98,7 +98,7 @@ Similarly, files like `hooks/hook-gradio.py` give PyInstaller hints on how to co
 
 ## Compiling the Application
 
-### Option 1: Compiling on Windows 🪟
+### Compiling on Windows 🪟
 
 On Windows, you have two easy ways to compile the application depending on your preferred terminal.
 
@@ -117,27 +117,6 @@ If you prefer using a bash terminal (like Git Bash), you can use the provided sc
 ```bash
 ./build_windows.sh
 ```
-
-### Option 2: Compiling on Linux 🐧
-
-If you want to run this application on Linux, you **must** compile it on a Linux machine (cross-compilation is not supported).
-
-**Steps:**
-1.  Transfer the source code to your Linux machine.
-2.  Open a terminal in the project directory.
-3.  Make the script executable and run it:
-    ```bash
-    chmod +x build_linux.sh
-    ./build_linux.sh
-    ```
-
-This script handles everything for you:
-*   Creates a Linux-specific virtual environment (`.venv_linux`).
-*   Installs dependencies (filtering out Windows-only packages).
-*   Runs PyInstaller with the cross-platform `whisper.spec`.
-*   Copies configuration files to the `dist` directory.
-
-The final executable will be located in `dist/Whisper/Whisper`.
 
 ## Conclusion
 
