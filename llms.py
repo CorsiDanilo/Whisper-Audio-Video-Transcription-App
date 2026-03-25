@@ -6,8 +6,26 @@ from config import load_default_values, get_gemini_api_key
 from google import genai
 from google.genai import types
 
+def _env_int(name, default):
+    """Read integer env var with safe fallback."""
+    value = os.getenv(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        logging.warning("Invalid %s=%r. Falling back to %s.", name, value, default)
+        return default
+
+
 OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", "http://127.0.0.1:11434")
 LMSTUDIO_ENDPOINT = os.getenv("LMSTUDIO_ENDPOINT", "http://127.0.0.1:1234")
+
+# LM Studio can be slow with larger local models. Allow separate connect/read
+# timeouts and keep backward compatibility with LMSTUDIO_TIMEOUT.
+LMSTUDIO_TIMEOUT = _env_int("LMSTUDIO_TIMEOUT", 120)
+LMSTUDIO_CONNECT_TIMEOUT = _env_int("LMSTUDIO_CONNECT_TIMEOUT", 5)
+LMSTUDIO_READ_TIMEOUT = _env_int("LMSTUDIO_READ_TIMEOUT", LMSTUDIO_TIMEOUT)
 
 default_values = load_default_values()
 
@@ -151,6 +169,9 @@ def list_ollama_models():
 def query_lmstudio(user_input, transcription, lmstudio_model):
     """Query a local LM Studio server using OpenAI-compatible API."""
     try:
+        if not lmstudio_model:
+            return "Error querying LM Studio: no model selected."
+
         url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/chat/completions"
         payload = {
             "model": lmstudio_model,
@@ -167,7 +188,11 @@ def query_lmstudio(user_input, transcription, lmstudio_model):
             "temperature": 0.2,
             "stream": False,
         }
-        resp = requests.post(url, json=payload, timeout=30)
+        resp = requests.post(
+            url,
+            json=payload,
+            timeout=(LMSTUDIO_CONNECT_TIMEOUT, LMSTUDIO_READ_TIMEOUT),
+        )
         resp.raise_for_status()
         data = resp.json()
         choices = data.get("choices", []) if isinstance(data, dict) else []
@@ -177,6 +202,12 @@ def query_lmstudio(user_input, transcription, lmstudio_model):
             if isinstance(content, str) and content.strip():
                 return content.strip()
         return ""
+    except requests.exceptions.ReadTimeout as e:
+        logging.error(f"LM Studio timed out at {LMSTUDIO_ENDPOINT}: {e}")
+        return (
+            "Error querying LM Studio: request timed out while waiting for model output. "
+            "Increase LMSTUDIO_READ_TIMEOUT (or LMSTUDIO_TIMEOUT) and ensure the model is loaded in LM Studio."
+        )
     except Exception as e:
         logging.error(f"Error querying LM Studio at {LMSTUDIO_ENDPOINT}: {e}")
         return f"Error querying LM Studio: {e}"
