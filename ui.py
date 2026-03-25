@@ -3,10 +3,11 @@ import logging
 import yaml
 from transcription import transcribe_file, clear, clear_and_close
 from config import load_default_values, load_default_config, get_gemini_api_key
-from llms import query_gemini, list_ollama_models
+from llms import query_gemini, list_ollama_models, list_lmstudio_models
 from config import setup_logging
 
 default_values = load_default_values()
+NO_MODELS_FOUND = "No models found"
 default_config_values = load_default_config()
 
 def load_config_file(file_path):
@@ -161,11 +162,11 @@ with gr.Blocks() as demo:
     has_gemini = get_gemini_api_key() is not None
 
     with gr.Accordion("AI Provider", open=True):
-        # Provider selection: if Gemini API key present, allow Gemini + Ollama; otherwise only Ollama
+        # Provider selection: if Gemini API key present, allow all providers; otherwise only local providers
         if has_gemini:
-            provider = gr.Radio(choices=["Gemini", "Ollama"], value="Gemini", label="Provider")
+            provider = gr.Radio(choices=["Gemini", "Ollama", "LM Studio"], value="Gemini", label="Provider")
         else:
-            provider = gr.Radio(choices=["Ollama"], value="Ollama", label="Provider")
+            provider = gr.Radio(choices=["Ollama", "LM Studio"], value="Ollama", label="Provider")
 
         # Gemini model selector (only meaningful when using Gemini)
         gemini_model = gr.Radio(
@@ -189,6 +190,20 @@ with gr.Blocks() as demo:
             allow_custom_value=True,
             label="Choose Ollama Model",
             visible=not has_gemini,
+        )
+
+        try:
+            _initial_lmstudio_models = []
+        except Exception:
+            _initial_lmstudio_models = []
+        _initial_lmstudio_value = _initial_lmstudio_models[0] if _initial_lmstudio_models else ""
+
+        lmstudio_model = gr.Dropdown(
+            choices=_initial_lmstudio_models,
+            value=_initial_lmstudio_value,
+            allow_custom_value=False,
+            label="Choose LM Studio Model",
+            visible=False,
         )
 
         with gr.Row():
@@ -218,18 +233,35 @@ with gr.Blocks() as demo:
     def _provider_change(p):
         # show Gemini model choices only when Gemini selected
         if str(p).lower().startswith('g'):
-            return gr.update(visible=True), gr.update(visible=False, choices=[])
+            return (
+                gr.update(visible=True),
+                gr.update(visible=False, choices=[], value=""),
+                gr.update(visible=False, choices=[], value=""),
+            )
         # when Ollama selected, fetch models and show dropdown
-        models = list_ollama_models() or ["No models found"]
-        # pick first model if available
-        value = models[0] if models and models[0] != "No models found" else ""
-        return gr.update(visible=False), gr.update(visible=True, choices=models, value=value)
+        if str(p).lower().startswith('olla'):
+            models = list_ollama_models() or [NO_MODELS_FOUND]
+            value = models[0] if models and models[0] != NO_MODELS_FOUND else ""
+            return (
+                gr.update(visible=False),
+                gr.update(visible=True, choices=models, value=value),
+                gr.update(visible=False, choices=[], value=""),
+            )
 
-    provider.change(fn=_provider_change, inputs=[provider], outputs=[gemini_model, ollama_model])
+        # when LM Studio selected, fetch models and show dropdown
+        lm_models = list_lmstudio_models() or [NO_MODELS_FOUND]
+        lm_value = lm_models[0] if lm_models and lm_models[0] != NO_MODELS_FOUND else ""
+        return (
+            gr.update(visible=False),
+            gr.update(visible=False, choices=[], value=""),
+            gr.update(visible=True, choices=lm_models, value=lm_value),
+        )
+
+    provider.change(fn=_provider_change, inputs=[provider], outputs=[gemini_model, ollama_model, lmstudio_model])
 
     submit_query_button.click(
         fn=query_gemini,
-        inputs=[user_query, output_text, gemini_model, provider, ollama_model],
+        inputs=[user_query, output_text, gemini_model, provider, ollama_model, lmstudio_model],
         outputs=[gemini_response]
     )
     folder_state = gr.State(None) # Used to clear temp files

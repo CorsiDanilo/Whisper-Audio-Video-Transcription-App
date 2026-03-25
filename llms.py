@@ -1,11 +1,13 @@
 import logging
 import requests
 import json
+import os
 from config import load_default_values, get_gemini_api_key
 from google import genai
 from google.genai import types
 
-OLLAMA_ENDPOINT = "http://127.0.0.1:11434"
+OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", "http://127.0.0.1:11434")
+LMSTUDIO_ENDPOINT = os.getenv("LMSTUDIO_ENDPOINT", "http://127.0.0.1:1234")
 
 default_values = load_default_values()
 
@@ -146,7 +148,68 @@ def list_ollama_models():
         return []
 
 
-def query_gemini(user_input, transcription, gemini_model, provider="Gemini", ollama_model=None):
+def query_lmstudio(user_input, transcription, lmstudio_model):
+    """Query a local LM Studio server using OpenAI-compatible API."""
+    try:
+        url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/chat/completions"
+        payload = {
+            "model": lmstudio_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Rispondi in modo chiaro e utile basandoti sulla trascrizione fornita.",
+                },
+                {
+                    "role": "user",
+                    "content": f"Transcription: {transcription}\n\nUser Input: {user_input}",
+                },
+            ],
+            "temperature": 0.2,
+            "stream": False,
+        }
+        resp = requests.post(url, json=payload, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        choices = data.get("choices", []) if isinstance(data, dict) else []
+        if choices and isinstance(choices[0], dict):
+            message = choices[0].get("message", {})
+            content = message.get("content", "") if isinstance(message, dict) else ""
+            if isinstance(content, str) and content.strip():
+                return content.strip()
+        return ""
+    except Exception as e:
+        logging.error(f"Error querying LM Studio at {LMSTUDIO_ENDPOINT}: {e}")
+        return f"Error querying LM Studio: {e}"
+
+
+def list_lmstudio_models():
+    """Return a list of available LM Studio models from the local server."""
+    try:
+        url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/models"
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        out = []
+        if isinstance(data, dict) and isinstance(data.get("data"), list):
+            for item in data["data"]:
+                if isinstance(item, dict):
+                    model_id = item.get("id")
+                    if isinstance(model_id, str) and model_id.strip():
+                        out.append(model_id)
+        # dedupe while preserving order
+        seen = set()
+        deduped = []
+        for model in out:
+            if model not in seen:
+                seen.add(model)
+                deduped.append(model)
+        return deduped
+    except Exception as e:
+        logging.debug(f"Could not list LM Studio models: {e}")
+        return []
+
+
+def query_gemini(user_input, transcription, gemini_model, provider="Gemini", ollama_model=None, lmstudio_model=None):
     """Dispatch query to Gemini or Ollama based on `provider`.
 
     Signature is compatible with the UI which passes 6 inputs.
@@ -155,6 +218,10 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
         if provider and str(provider).lower().startswith('olla'):
             model_name = ollama_model or (gemini_model if gemini_model else 'llama2')
             return query_ollama(user_input, transcription, model_name)
+
+        if provider and str(provider).lower().startswith('lm'):
+            model_name = lmstudio_model or (gemini_model if gemini_model else "local-model")
+            return query_lmstudio(user_input, transcription, model_name)
 
         # Use Gemini
         client = initialize_client()
