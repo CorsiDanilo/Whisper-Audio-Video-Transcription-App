@@ -13,7 +13,8 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🖥️ Simple UI built with Gradio for easy access and use
 - ⬇️ Download the transcript in `.txt` format
 - 🎛️ Tuning the model parameters via the interface
-- 🤖 Ask an AI about the transcript (Gemini or local Ollama)
+- 🤖 Ask an AI about the transcript (Gemini, local Ollama, or LM Studio)
+- ✅ Copy success notifications for transcriptions and AI responses
 
 ## Demo
 💻 You can try the Colab version [here](https://colab.research.google.com/github/CorsiDanilo/Whisper-Audio-Video-Transcription-App/blob/main/whisper.ipynb) (remember to select GPU in 'Runtime Type' for faster execution ⚡)
@@ -46,6 +47,11 @@ This app can analyze the transcript using either **Ollama (local)** or **Google 
         ```
     - Restart the app: the UI will show Gemini options (provider + **Choose Gemini Model**).
     - Note: keep this key private and don’t commit it to git.
+
+- **LM Studio (local)**
+    - Launch LM Studio and start the Local Server (usually on `http://localhost:1234`).
+    - Load a model in LM Studio.
+    - In the UI, choose **LM Studio** as the provider, click **Refresh Models**, and select your model.
 
 ## 📦 Installation
 ### Step 1: Clone the repository
@@ -103,8 +109,9 @@ The Gradio interface will open in your default web browser. From there, you can 
 ## 🎛️ Interface Guide
 - **Upload an audio or video file**: Accepts audio formats like MP3, WAV, and video formats like MP4, AVI.
 - **Transcribe**: Click this button to start the transcription process.
-- **AI Provider**: Choose between Gemini and Ollama, select a model, then ask questions about the transcript.
+- **AI Provider**: Choose between Gemini, Ollama, and LM Studio. Select a model, then ask questions about the transcript.
 - **Quick prompts**: Use the buttons like “Fammi un riassunto” / “Dimmi le cose da fare” to fill the query box instantly.
+- **Copy Progress**: When you copy the transcription or the AI response, a success toast notification will appear.
 - **Close and Clear**: This button clears the folder where the file was temporarily stored and closes the application.
 
 ## ⚙️ Model Configuration

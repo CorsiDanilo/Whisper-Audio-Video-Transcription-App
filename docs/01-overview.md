@@ -10,7 +10,7 @@ The utility is engineered to handle diverse input formats, including WhatsApp au
 
 *   **High-Performance Transcription:** Utilizes `faster-whisper` to transcribe audio files with support for GPU acceleration and configurable batch sizes.
 *   **Automated Preprocessing:** The `audio_processing.py` module detects file types and automatically converts WhatsApp `.opus` files and video formats into compatible MP3 audio.
-*   **LLM Integration:** Seamlessly integrates with Google Gemini and local Ollama instances via `llms.py` to summarize, analyze, or query the generated transcripts.
+*   **LLM Integration:** Seamlessly integrates with Google Gemini, local Ollama, and LM Studio instances via `llms.py`.
 *   **Desktop-Native Experience:** Uses `pywebview` to wrap the Gradio interface, providing a standalone application feel.
 *   **Configurable Environment:** Supports granular control over transcription parameters (temperature, beam size, word timestamps) via YAML configuration files located in `settings/`.
 *   **Portable Deployment:** Packaged as a standalone executable using `PyInstaller` with custom hooks for Gradio and multiprocessing support.
@@ -23,7 +23,7 @@ The utility is engineered to handle diverse input formats, including WhatsApp au
 | **UI Framework** | Gradio |
 | **Desktop Wrapper** | pywebview |
 | **Transcription Engine** | faster-whisper |
-| **LLM Clients** | Google GenAI SDK, Requests (for Ollama) |
+| **LLM Clients** | Google GenAI SDK, Requests (for Ollama/LM Studio) |
 | **Packaging** | PyInstaller |
 | **Configuration** | PyYAML |
 
@@ -44,6 +44,7 @@ graph TD
     subgraph "LLM Services"
         LLM -->|API| Gemini[Google Gemini]
         LLM -->|Local API| Ollama[Ollama]
+        LLM -->|Local API| LMStudio[LM Studio]
     end
     
     Config[config.py] -.->|Load Settings| UI
@@ -58,7 +59,7 @@ graph TD
 | `ui.py` | Gradio interface definition and event handling. |
 | `transcription.py` | Whisper model loading and inference execution. |
 | `audio_processing.py` | File conversion logic (FFmpeg wrappers). |
-| `llms.py` | API communication with Gemini and local Ollama. |
+| `llms.py` | API communication with Gemini, Ollama, and LM Studio. |
 | `config.py` | YAML configuration loading and logging setup. |
 
 ## Quick Links

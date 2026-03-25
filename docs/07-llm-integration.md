@@ -15,8 +15,10 @@ graph TD
     UI[UI Layer: ui.py] --> Dispatcher[llms.query_gemini]
     Dispatcher -->|Provider: Gemini| GeminiClient[Google GenAI SDK]
     Dispatcher -->|Provider: Ollama| OllamaClient[Ollama REST API]
+    Dispatcher -->|Provider: LM Studio| LMStudioClient[OpenAI-Compatible REST API]
     GeminiClient --> API[Google Gemini API]
     OllamaClient --> LocalDaemon[Local Ollama Daemon]
+    LMStudioClient --> LMStudioServer[Local LM Studio Server]
 ```
 
 ## Component Details
@@ -41,8 +43,9 @@ The primary entry point for LLM interaction is `query_gemini`. This function act
 | `user_input` | `str` | The prompt or instruction provided by the user. |
 | `transcription` | `str` | The raw text output from the Whisper transcription process. |
 | `gemini_model` | `str` | The specific Gemini model identifier (e.g., `gemini-1.5-flash`). |
-| `provider` | `str` | The selected backend: `"Gemini"` or `"Ollama"`. |
+| `provider` | `str` | The selected backend: `"Gemini"`, `"Ollama"`, or `"LM Studio"`. |
 | `ollama_model` | `str` | The local model identifier if `provider` is set to `"Ollama"`. |
+| `lmstudio_model` | `str` | The local model identifier if `provider` is set to `"LM Studio"`. |
 
 ### Local Inference (Ollama)
 
@@ -50,6 +53,13 @@ The application supports local LLM execution via the Ollama REST API.
 
 *   **`list_ollama_models()`**: Queries the local Ollama daemon (typically running on `http://localhost:11434`) to retrieve a list of available models. This is used to populate the UI dropdown menus.
 *   **`query_ollama(user_input, transcription, ollama_model)`**: Sends a POST request to the Ollama `/api/generate` endpoint. This function handles the NDJSON stream response, concatenating partial `response` fields into a single coherent string.
+
+### Local Inference (LM Studio)
+
+The application supports local inference via LM Studio using its OpenAI-compatible REST API.
+
+*   **`list_lmstudio_models()`**: Queries the local LM Studio server (typically on `http://localhost:1234`) via `/v1/models` to retrieve the list of currently loaded or available models.
+*   **`query_lmstudio(user_input, transcription, lmstudio_model)`**: Sends a POST request to the LM Studio `/v1/chat/completions` endpoint. This uses a standard chat interface with system and user messages.
 
 ### Data Flow from Transcription
 
@@ -80,6 +90,15 @@ Ensure the Ollama daemon is running locally before launching the application. Th
     ```bash
     ollama pull llama3
     ```
+
+### LM Studio Setup
+Ensure the LM Studio Local Server is running.
+
+1.  **Start Local Server:**
+    Open LM Studio and click on the **Local Server** icon on the sidebar.
+    Ensure 'Local Server' is **ON** (default port `1234`).
+2.  **Load a Model:**
+    Select and load a model in the LM Studio interface before querying.
 
 ## Troubleshooting
 
