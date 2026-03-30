@@ -201,7 +201,7 @@ with gr.Blocks() as demo:
         lmstudio_model = gr.Dropdown(
             choices=_initial_lmstudio_models,
             value=_initial_lmstudio_value,
-            allow_custom_value=False,
+            allow_custom_value=True,
             label="Choose LM Studio Model",
             visible=False,
         )
