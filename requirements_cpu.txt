@@ -71,6 +71,7 @@ pyinstaller-hooks-contrib==2026.0
 pyparsing==3.3.2
 pypiwin32==223
 pyreadline3==3.5.4
+pystray==0.23.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
 python-multipart==0.0.22

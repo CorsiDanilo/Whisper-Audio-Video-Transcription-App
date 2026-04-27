@@ -10,6 +10,8 @@ datas += collect_data_files('gradio')
 datas += collect_data_files('gradio_client')
 datas += collect_data_files('safehttpx')
 datas += collect_data_files('groovy')
+datas += collect_data_files('pystray')
+datas.append(('logo.ico', '.'))
 
 if sys.platform == 'win32':
     tmp_ret = collect_all('win32ctypes')
