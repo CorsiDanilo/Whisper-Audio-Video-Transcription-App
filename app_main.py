@@ -79,8 +79,8 @@ def setup_tray():
         image = Image.new('RGB', (64, 64), color = 'white')
         
     menu = pystray.Menu(
-        pystray.MenuItem('Mostra / Nascondi App', on_show),
-        pystray.MenuItem('Esci', on_quit)
+        pystray.MenuItem('Show / Hide App', on_show),
+        pystray.MenuItem('Exit', on_quit)
     )
     
     icon = pystray.Icon("WhisperApp", image, "Whisper Audio/Video Utility", menu)

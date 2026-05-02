@@ -26,7 +26,8 @@ def transcribe_file(file_path, device, cpu_threads, num_workers, language, whisp
     try:
         if file_path is None:
             logging.warning("No file uploaded for transcription.")
-            return "Please upload a file", None, None
+            yield "Please upload a file", None, None
+            return
 
         file_name = os.path.basename(file_path)
         folder_path = os.path.dirname(os.path.dirname(file_path))
@@ -36,7 +37,8 @@ def transcribe_file(file_path, device, cpu_threads, num_workers, language, whisp
 
         model = load_model(whisper_model, compute_type, device, cpu_threads, num_workers)
         if model is None:
-            return "Error loading model", None, None
+            yield "Error loading model", None, None
+            return
 
         # Prepare the audio file in MP3
         audio_file = os.path.splitext(file_path)[0] + ".mp3"
@@ -65,25 +67,31 @@ def transcribe_file(file_path, device, cpu_threads, num_workers, language, whisp
         )
 
         logging.info("File transcribed successfully, generating transcript...")
-        if word_timestamps:
-            transcription = "\n".join(
-                f"{word.start:.2f} -> {word.end:.2f} {word.word}"
-                for segment in segments for word in segment.words
-            )
-        else:
-            transcription = "\n".join(segment.text for segment in segments)
+        accumulated_transcription = ""
+
+        # Iterate over segments and yield progressively
+        for segment in segments:
+            if word_timestamps:
+                chunk = "\n".join(f"{word.start:.2f} -> {word.end:.2f} {word.word}" for word in segment.words) + "\n"
+            else:
+                chunk = segment.text + "\n"
+            
+            accumulated_transcription += chunk
+            # Yield partial result. Output path is None until transcription is complete.
+            yield accumulated_transcription, None, folder_path
 
         logging.info(f"Transcript generated. Saving transcript to folder: {folder_path}...")
         filename = os.path.splitext(file_name)[0].replace(" ", "_")
         output_path = os.path.join(folder_path, f"{filename}_transcript.txt")
         with open(output_path, "w", encoding="utf-8") as f:
-            f.write(transcription)
+            f.write(accumulated_transcription)
         logging.info(f"Transcription saved to: {output_path}")
 
-        return transcription, output_path, folder_path
+        # Final yield with output path
+        yield accumulated_transcription, output_path, folder_path
     except Exception as e:
         logging.error(f"Error transcribing file: {e}")
-        return "Error during transcription", None, None
+        yield "Error during transcription", None, None
 
 def clear(folder_path):
     """Delete the specified folder (if it exists)."""

@@ -112,7 +112,7 @@ def preset_query_todo():
 
 
 def notify_copy():
-    gr.Info("Testo copiato")
+    gr.Info("Text copied")
 
 with gr.Blocks() as demo:
     setup_logging()
@@ -262,7 +262,8 @@ with gr.Blocks() as demo:
     submit_query_button.click(
         fn=query_gemini,
         inputs=[user_query, output_text, gemini_model, provider, ollama_model, lmstudio_model],
-        outputs=[gemini_response]
+        outputs=[gemini_response],
+        stream_every=0.05,  # flush UI at most every 50 ms
     )
     folder_state = gr.State(None) # Used to clear temp files
 
@@ -316,23 +317,23 @@ with gr.Blocks() as demo:
     )
 
     def transcribe_wrapper(file, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps):
-        transcription, output_path, folder_path = transcribe_file(
+        for transcription, output_path, folder_path in transcribe_file(
             file, device, cpu_threads, num_workers, language,
             whisper_model, compute_type, temperature, beam_size,
             batch_size, condition_on_previous_text, word_timestamps
-        )
-        
-        # Check if transcription was successful by checking if output_path is generated
-        if output_path:
-             return transcription, output_path, folder_path, gr.update(visible=True), gr.update(visible=True)
-        else:
-             # Keep them hidden or hide them if they were visible (on error)
-             return transcription, output_path, folder_path, gr.update(visible=False), gr.update(visible=False)
+        ):
+            # Check if transcription was successful by checking if output_path is generated
+            if output_path:
+                 yield transcription, output_path, folder_path, gr.update(visible=True), gr.update(visible=True)
+            else:
+                 # Keep them hidden or hide them if they were visible (on error or during streaming)
+                 yield transcription, output_path, folder_path, gr.update(visible=False), gr.update(visible=False)
 
     transcribe_button.click( # Updated outputs to use transcript_file_path and button visibility
         fn=transcribe_wrapper,
         inputs=[file_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps],
-        outputs=[output_text, transcript_file_path, folder_state, save_transcript_button, submit_query_button] 
+        outputs=[output_text, transcript_file_path, folder_state, save_transcript_button, submit_query_button],
+        stream_every=0.1
     )
 
     clear_button.click(

@@ -29,6 +29,13 @@ LMSTUDIO_READ_TIMEOUT = _env_int("LMSTUDIO_READ_TIMEOUT", LMSTUDIO_TIMEOUT)
 
 default_values = load_default_values()
 
+SYSTEM_PROMPT = (
+    "Rispondi in modo chiaro e utile basandoti sulla trascrizione fornita. \n"
+    "NON iniziare la risposta indicando che si tratta di una trascrizione. \n"
+    "Limitati solo a rispondere alla richiesta dell'utente."
+)
+
+
 
 def initialize_client():
     """Initialize the Gemini client."""
@@ -38,9 +45,10 @@ def initialize_client():
     return genai.Client(api_key=GEMINI_API_KEY)
 
 
-def get_gemini_config():
+def get_gemini_config(system_instruction=None):
     """Get the configuration for Gemini generation."""
     gemini_config = default_values['gemini']
+
     
     # Map old safety settings to new SDK format if necessary, 
     # but the new SDK often uses a list of SafetySetting objects.
@@ -71,18 +79,25 @@ def get_gemini_config():
         top_k=gemini_config["top_k"],
         max_output_tokens=gemini_config["max_output_tokens"],
         response_mime_type=gemini_config["response_mime_type"],
-        safety_settings=safety_settings
+        safety_settings=safety_settings,
+        system_instruction=system_instruction
     )
 
 
-def query_ollama(user_input, transcription, ollama_model):
-    """Query a local Ollama server (stream-aware).
 
-    Ollama may stream NDJSON lines with partial `response` fields. This
-    function collects those fragments and returns the concatenated text.
+def query_ollama(user_input, transcription, ollama_model):
+    """Query a local Ollama server with streaming.
+
+    Yields the accumulated text progressively as Ollama streams NDJSON
+    lines with partial ``response`` fields.
     """
     try:
-        prompt = f"Transcription: {transcription}\n\nUser Input: {user_input}"
+        prompt = (
+            f"System prompt:\n\n{SYSTEM_PROMPT}\n\n"
+            f"# Transcription\n{transcription}\n\n"
+            f"User prompt: \n{user_input}"
+        )
+
         url = OLLAMA_ENDPOINT.rstrip("/") + "/api/generate"
         payload = {
             "model": ollama_model,
@@ -90,34 +105,35 @@ def query_ollama(user_input, transcription, ollama_model):
         }
         resp = requests.post(url, json=payload, timeout=30, stream=True)
         resp.raise_for_status()
-        parts = []
+        accumulated = ""
         for line in resp.iter_lines(decode_unicode=True):
             if not line:
                 continue
             try:
                 obj = json.loads(line)
             except Exception:
-                parts.append(line)
+                accumulated += line
+                yield accumulated
                 continue
             # Streaming Ollama uses 'response' for incremental chunks
+            chunk = ""
             if isinstance(obj, dict):
                 if 'response' in obj:
-                    parts.append(obj['response'])
-                    continue
-                if 'text' in obj:
-                    parts.append(obj['text'])
-                    continue
-                if 'output' in obj:
-                    parts.append(obj['output'])
-                    continue
-                if 'results' in obj and isinstance(obj['results'], list):
+                    chunk = obj['response']
+                elif 'text' in obj:
+                    chunk = obj['text']
+                elif 'output' in obj:
+                    chunk = obj['output']
+                elif 'results' in obj and isinstance(obj['results'], list):
                     for r in obj['results']:
                         if isinstance(r, dict) and 'text' in r:
-                            parts.append(r['text'])
-        return ''.join(parts)
+                            chunk += r['text']
+            if chunk:
+                accumulated += chunk
+                yield accumulated
     except Exception as e:
         logging.error(f"Error querying Ollama at {OLLAMA_ENDPOINT}: {e}")
-        return f"Error querying Ollama: {e}"
+        yield f"Error querying Ollama: {e}"
 
 
 def list_ollama_models():
@@ -167,10 +183,14 @@ def list_ollama_models():
 
 
 def query_lmstudio(user_input, transcription, lmstudio_model):
-    """Query a local LM Studio server using OpenAI-compatible API."""
+    """Query a local LM Studio server using the OpenAI-compatible streaming API.
+
+    Yields the accumulated text progressively by parsing SSE delta chunks.
+    """
     try:
         if not lmstudio_model:
-            return "Error querying LM Studio: no model selected."
+            yield "Error querying LM Studio: no model selected."
+            return
 
         url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/chat/completions"
         payload = {
@@ -178,39 +198,50 @@ def query_lmstudio(user_input, transcription, lmstudio_model):
             "messages": [
                 {
                     "role": "system",
-                    "content": "Rispondi in modo chiaro e utile basandoti sulla trascrizione fornita.",
+                    "content": SYSTEM_PROMPT,
                 },
                 {
                     "role": "user",
-                    "content": f"Transcription: {transcription}\n\nUser Input: {user_input}",
+                    "content": f"# Transcription\n{transcription}\n\nUser prompt: \n{user_input}",
                 },
             ],
             "temperature": 0.2,
-            "stream": False,
+            "stream": True,
         }
         resp = requests.post(
             url,
             json=payload,
             timeout=(LMSTUDIO_CONNECT_TIMEOUT, LMSTUDIO_READ_TIMEOUT),
+            stream=True,
         )
         resp.raise_for_status()
-        data = resp.json()
-        choices = data.get("choices", []) if isinstance(data, dict) else []
-        if choices and isinstance(choices[0], dict):
-            message = choices[0].get("message", {})
-            content = message.get("content", "") if isinstance(message, dict) else ""
-            if isinstance(content, str) and content.strip():
-                return content.strip()
-        return ""
+        accumulated = ""
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line or line.strip() == "data: [DONE]":
+                continue
+            # SSE lines start with "data: "
+            if line.startswith("data: "):
+                line = line[6:]
+            try:
+                obj = json.loads(line)
+                choices = obj.get("choices", []) if isinstance(obj, dict) else []
+                if choices and isinstance(choices[0], dict):
+                    delta = choices[0].get("delta", {})
+                    content = delta.get("content", "") if isinstance(delta, dict) else ""
+                    if content:
+                        accumulated += content
+                        yield accumulated
+            except Exception:
+                continue
     except requests.exceptions.ReadTimeout as e:
         logging.error(f"LM Studio timed out at {LMSTUDIO_ENDPOINT}: {e}")
-        return (
+        yield (
             "Error querying LM Studio: request timed out while waiting for model output. "
             "Increase LMSTUDIO_READ_TIMEOUT (or LMSTUDIO_TIMEOUT) and ensure the model is loaded in LM Studio."
         )
     except Exception as e:
         logging.error(f"Error querying LM Studio at {LMSTUDIO_ENDPOINT}: {e}")
-        return f"Error querying LM Studio: {e}"
+        yield f"Error querying LM Studio: {e}"
 
 
 def list_lmstudio_models():
@@ -241,34 +272,41 @@ def list_lmstudio_models():
 
 
 def query_gemini(user_input, transcription, gemini_model, provider="Gemini", ollama_model=None, lmstudio_model=None):
-    """Dispatch query to Gemini or Ollama based on `provider`.
+    """Dispatch query to the selected provider and stream the response.
 
-    Signature is compatible with the UI which passes 6 inputs.
+    This is a generator: it yields the progressively accumulated text so
+    that Gradio can update the UI in real time. Signature is compatible
+    with the UI which passes 6 inputs.
     """
     try:
         if provider and str(provider).lower().startswith('olla'):
             model_name = ollama_model or (gemini_model if gemini_model else 'llama2')
-            return query_ollama(user_input, transcription, model_name)
+            yield from query_ollama(user_input, transcription, model_name)
+            return
 
         if provider and str(provider).lower().startswith('lm'):
             model_name = lmstudio_model or (gemini_model if gemini_model else "local-model")
-            return query_lmstudio(user_input, transcription, model_name)
+            yield from query_lmstudio(user_input, transcription, model_name)
+            return
 
         # Use Gemini
         client = initialize_client()
         if not client:
-             return "Error: Gemini API key not found."
+            yield "Error: Gemini API key not found."
+            return
 
-        query = f"Transcription: {transcription}\n\nUser Input: {user_input}"
-        
-        config = get_gemini_config()
-        
-        response = client.models.generate_content(
+        user_prompt = f"# Transcription\n{transcription}\n\nUser prompt: \n{user_input}"
+        config = get_gemini_config(system_instruction=SYSTEM_PROMPT)
+
+        accumulated = ""
+        for chunk in client.models.generate_content_stream(
             model=gemini_model,
-            contents=[query],
-            config=config
-        )
-        return response.text
+            contents=[user_prompt],
+            config=config,
+        ):
+            if chunk.text:
+                accumulated += chunk.text
+                yield accumulated
     except Exception as e:
         logging.error(f"Error querying AI provider: {e}")
-        return f"Error querying AI provider: {e}"
+        yield f"Error querying AI provider: {e}"
