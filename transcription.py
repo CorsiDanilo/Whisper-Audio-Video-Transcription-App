@@ -30,7 +30,7 @@ def transcribe_file(file_path, device, cpu_threads, num_workers, language, whisp
             return
 
         file_name = os.path.basename(file_path)
-        folder_path = os.path.dirname(os.path.dirname(file_path))
+        folder_path = os.path.dirname(file_path)
         logging.info(f"File name: {file_name}")
         logging.info(f"Folder path: {folder_path}")
         logging.info(f"Using device: {device}")
