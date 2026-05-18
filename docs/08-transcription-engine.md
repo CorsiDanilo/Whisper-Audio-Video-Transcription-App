@@ -37,7 +37,7 @@ def load_model(model_size, compute_type, device, cpu_threads, num_workers)
 
 | Parameter | Description |
 | :--- | :--- |
-| `model_size` | The Whisper model variant (e.g., "base", "small", "medium", "large-v3"). |
+| `model_size` | The Faster-Whisper model alias (e.g., "base", "small", "large-v3", "turbo", "distil-large-v3.5"). |
 | `compute_type` | Precision mode (e.g., "int8", "float16", "float32"). |
 | `device` | Hardware target ("cpu" or "cuda"). |
 | `cpu_threads` | Number of threads to use for CPU inference. |
@@ -121,7 +121,7 @@ result = transcribe_file(
 
 ### Why included
 
-**Reason:** The core value of the application is transcription. Users need to know how to configure model sizes (e.g., tiny, base, large) and device settings (CPU vs GPU) to optimize performance.
+**Reason:** The core value of the application is transcription. Users need to know how to configure model aliases (e.g., tiny, base, large-v3, turbo, distil-large-v3.5) and device settings (CPU vs GPU) to optimize performance.
 
 **Confidence:** 75%
 

@@ -116,7 +116,7 @@ The Gradio interface will open in your default web browser. From there, you can 
 
 ## ⚙️ Model Configuration
 - **Language**: Set the transcription language. Default is Italian 🇮🇹 (`it`), but you can change it to English 🇬🇧 (`en`) or other languages.
-- **Model Size**: By default, the large version of the Whisper model is used (`large-v3`), but you can switch to `small-v3` for smaller, faster models.
+- **Model Size**: By default, the large version of the Whisper model is used (`large-v3`). You can switch to smaller models such as `small`, use `turbo` for faster multilingual transcription, or use `distil-large-v3` / `distil-large-v3.5` for faster distilled English transcription.
 - **Device**: The model automatically selects the device based on GPU availability (`cuda` or `cpu`).
 - **Beam Size**: Set beam size for decoding. Default is `4`, but you can reduce it to `1` for faster inference.
 

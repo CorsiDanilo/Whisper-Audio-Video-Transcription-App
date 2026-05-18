@@ -2,10 +2,43 @@ import os
 import logging
 import yaml
 
+WHISPER_MODEL_FALLBACKS = [
+    "tiny.en",
+    "tiny",
+    "base.en",
+    "base",
+    "small.en",
+    "small",
+    "medium.en",
+    "medium",
+    "large-v1",
+    "large-v2",
+    "large-v3",
+    "large",
+    "distil-large-v2",
+    "distil-medium.en",
+    "distil-small.en",
+    "distil-large-v3",
+    "distil-large-v3.5",
+    "large-v3-turbo",
+    "turbo",
+]
+
+def get_whisper_model_choices():
+    """Return faster-whisper model aliases supported by the installed package."""
+    try:
+        from faster_whisper.utils import available_models
+        return available_models()
+    except Exception as e:
+        logging.debug(f"Could not load faster-whisper model aliases: {e}")
+        return WHISPER_MODEL_FALLBACKS
+
 def load_default_values():
     """Carica i valori di default da default_values.yaml."""
     with open("default_values/default_values.yaml", "r") as ymlfile:
-        return yaml.safe_load(ymlfile)
+        default_values = yaml.safe_load(ymlfile)
+    default_values["configurations"]["models"] = get_whisper_model_choices()
+    return default_values
 
 def load_default_config():
     """Carica la configurazione di default da settings/default.yaml."""

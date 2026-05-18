@@ -5,7 +5,7 @@ configurations:
     num_workers:
         min: 1
     languages: ["en", "it", "fr", "de", "es"]
-    models: ["tiny", "base", "small", "medium", "large-v3"]
+    models: ["tiny.en", "tiny", "base.en", "base", "small.en", "small", "medium.en", "medium", "large-v1", "large-v2", "large-v3", "large", "distil-large-v2", "distil-medium.en", "distil-small.en", "distil-large-v3", "distil-large-v3.5", "large-v3-turbo", "turbo"]
     compute_types: ["auto", "default", "int8", "int8_float32", "int8_float16", "int8_bfloat16", "int16", "float16", "bfloat16", "float32"]
     temperature:
         min: 0.0
@@ -18,8 +18,8 @@ explanation: |-
     - **CPU Threads**: Determines the number of threads to use for processing (higher values may improve processing speed but require more CPU resources).
     - **Number of Workers**: Determines the number of workers to use for processing (higher values may improve processing speed but require more memory).
     - **Language**: Determines the language of the audio file.
-    - **Model Size**: Determines the size of the model (larger models are more accurate but slower).
-    - **Condition on Previous Text**: If checked, the model will consider the previous text when transcribing the current text.
+    - **Model Size**: Determines the Whisper model alias. `turbo` is a fast multilingual option; `distil-*` models are faster distilled checkpoints, mainly useful for English speech recognition.
+    - **Condition on Previous Text**: If checked, the model will consider the previous text when transcribing the current text. Disabling it is recommended for `distil-*` models.
     - **Word-level timestamps**: If checked, the model will provide timestamps for each word in the transcription.
     - **Computational Type**: Determines the precision of the model's calculations (higher precision is more accurate but slower).
     - **Temperature**: Determines the randomness of the model's predictions (higher values may introduce more errors but can improve diversity).

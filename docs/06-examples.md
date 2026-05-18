@@ -72,7 +72,7 @@ The core transcription logic resides in `transcription.py`. The `transcribe_file
 | :--- | :--- | :--- |
 | `file_path` | `str` | Path to the source media file. |
 | `device` | `str` | Hardware device (`cpu` or `cuda`). |
-| `whisper_model` | `str` | Model size (e.g., `large-v3`, `base`). |
+| `whisper_model` | `str` | Faster-Whisper model alias (e.g., `large-v3`, `turbo`, `distil-large-v3.5`, `base`). |
 | `compute_type` | `str` | Precision (e.g., `int8`, `float16`). |
 | `batch_size` | `int` | Number of segments to process in parallel. |
 
