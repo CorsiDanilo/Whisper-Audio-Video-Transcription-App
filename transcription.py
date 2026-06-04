@@ -1,9 +1,14 @@
 import os
 import logging
-import subprocess
 import signal
 from faster_whisper import WhisperModel, BatchedInferencePipeline
 from audio_processing import is_video_file, extract_audio_from_video, is_whatsapp_audio_file, convert_whatsapp_audio_to_mp3, is_audio_file, convert_audio_to_mp3
+from security_utils import (
+    SecurityError,
+    build_local_output_path,
+    remove_controlled_tree,
+    validate_local_media_path,
+)
 
 def load_model(model_size, compute_type, device, cpu_threads, num_workers):
     """Load the Whisper model with the specified parameters."""
@@ -25,14 +30,21 @@ def transcribe_file(file_path, device, cpu_threads, num_workers, language, whisp
     """
     try:
         if file_path is None:
-            logging.warning("No file uploaded for transcription.")
-            yield "Please upload a file", None, None
+            logging.warning("No file path provided for transcription.")
+            yield "Please select a file", None, None
             return
 
-        file_name = os.path.basename(file_path)
-        folder_path = os.path.dirname(file_path)
+        try:
+            source_path = validate_local_media_path(file_path)
+        except SecurityError as e:
+            logging.warning("Rejected transcription input: %s", e)
+            yield f"Invalid file: {e}", None, None
+            return
+
+        file_path = str(source_path)
+        file_name = source_path.name
+        folder_path = str(source_path.parent)
         logging.info(f"File name: {file_name}")
-        logging.info(f"Folder path: {folder_path}")
         logging.info(f"Using device: {device}")
 
         model = load_model(whisper_model, compute_type, device, cpu_threads, num_workers)
@@ -41,18 +53,21 @@ def transcribe_file(file_path, device, cpu_threads, num_workers, language, whisp
             return
 
         # Prepare the audio file in MP3
-        audio_file = os.path.splitext(file_path)[0] + ".mp3"
-        file_ext = os.path.splitext(file_path)[1].lower()
+        audio_file = build_local_output_path(file_path, ".mp3")
+        file_ext = source_path.suffix.lower()
         if file_ext != ".mp3":
             if is_video_file(file_path):
-                extract_audio_from_video(file_path, audio_file)
-                file_path = audio_file
+                extract_audio_from_video(file_path, str(audio_file))
+                file_path = str(audio_file)
             elif is_whatsapp_audio_file(file_path):
-                convert_whatsapp_audio_to_mp3(file_path, audio_file)
-                file_path = audio_file
+                convert_whatsapp_audio_to_mp3(file_path, str(audio_file))
+                file_path = str(audio_file)
             elif is_audio_file(file_path):
-                convert_audio_to_mp3(file_path, audio_file)
-                file_path = audio_file
+                convert_audio_to_mp3(file_path, str(audio_file))
+                file_path = str(audio_file)
+            else:
+                yield "Invalid file type", None, None
+                return
 
         logging.info(f"Transcribing {file_path}...")
         batched_model = BatchedInferencePipeline(model=model)
@@ -81,14 +96,13 @@ def transcribe_file(file_path, device, cpu_threads, num_workers, language, whisp
             yield accumulated_transcription, None, folder_path
 
         logging.info(f"Transcript generated. Saving transcript to folder: {folder_path}...")
-        filename = os.path.splitext(file_name)[0].replace(" ", "_")
-        output_path = os.path.join(folder_path, f"{filename}_transcript.txt")
+        output_path = build_local_output_path(source_path, "_transcript.txt")
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(accumulated_transcription)
         logging.info(f"Transcription saved to: {output_path}")
 
         # Final yield with output path
-        yield accumulated_transcription, output_path, folder_path
+        yield accumulated_transcription, str(output_path), folder_path
     except Exception as e:
         logging.error(f"Error transcribing file: {e}")
         yield "Error during transcription", None, None
@@ -98,8 +112,7 @@ def clear(folder_path):
     try:
         if folder_path and os.path.exists(folder_path):
             logging.info(f"Clearing folder: {folder_path}...")
-            import shutil
-            shutil.rmtree(folder_path)
+            remove_controlled_tree(folder_path)
             logging.info(f"Deleted folder: {folder_path}")
         else:
             logging.warning(f"Folder does not exist: {folder_path}")
@@ -111,8 +124,7 @@ def clear_and_close(folder_path):
     try:
         if folder_path and os.path.exists(folder_path):
             logging.info(f"Clearing folder: {folder_path}...")
-            import shutil
-            shutil.rmtree(folder_path)
+            remove_controlled_tree(folder_path)
             logging.info(f"Deleted folder: {folder_path}")
         else:
             logging.warning(f"Folder does not exist: {folder_path}")

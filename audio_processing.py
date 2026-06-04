@@ -1,10 +1,34 @@
 import os
 import subprocess
 import logging
-from pydub import AudioSegment
 from config import load_default_values
+from security_utils import get_ffmpeg_timeout_seconds
 
 DEFAULT_VALUES = load_default_values()
+
+
+def _run_ffmpeg(command, action):
+    try:
+        subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+            timeout=get_ffmpeg_timeout_seconds(),
+        )
+    except FileNotFoundError:
+        logging.error("ffmpeg is not installed or not available on PATH.")
+        raise
+    except subprocess.TimeoutExpired:
+        logging.error("%s timed out.", action)
+        raise
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or "").strip()
+        if len(stderr) > 500:
+            stderr = stderr[-500:]
+        logging.error("%s failed: %s", action, stderr)
+        raise
 
 def is_whatsapp_audio_file(file_path):
     """Checks if the audio file is in WhatsApp format (e.g., .opus)."""
@@ -15,8 +39,21 @@ def is_whatsapp_audio_file(file_path):
 def convert_whatsapp_audio_to_mp3(file_path, output_audio_file):
     """Converts a WhatsApp audio file to MP3 format."""
     logging.info(f"Converting WhatsApp audio file to MP3: {file_path}...")
-    audio = AudioSegment.from_file(file_path, codec="libopus")
-    audio.export(output_audio_file, format="mp3")
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-nostdin",
+        "-y",
+        "-i",
+        file_path,
+        "-vn",
+        "-codec:a",
+        "libmp3lame",
+        "-q:a",
+        "2",
+        output_audio_file,
+    ]
+    _run_ffmpeg(command, "WhatsApp audio conversion")
     logging.info(f"Converted file saved as: {output_audio_file}")
 
 def is_video_file(file_path):
@@ -33,11 +70,24 @@ def extract_audio_from_video(video_file, output_audio_file):
     """Extracts audio from a video file using ffmpeg."""
     try:
         logging.info(f"Extracting audio from video file: {video_file}...")
-        command = ['ffmpeg', '-i', video_file, '-q:a', '0', '-map', 'a', output_audio_file, '-y']
-        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        command = [
+            "ffmpeg",
+            "-hide_banner",
+            "-nostdin",
+            "-y",
+            "-i",
+            video_file,
+            "-q:a",
+            "0",
+            "-map",
+            "a",
+            output_audio_file,
+        ]
+        _run_ffmpeg(command, "Video audio extraction")
         logging.info(f"Audio extracted to: {output_audio_file}")
     except Exception as e:
         logging.error(f"Error extracting audio from video: {e}")
+        raise
 
 def is_audio_file(file_path):
     """Checks if the file is an audio based on its extension."""
@@ -53,8 +103,22 @@ def convert_audio_to_mp3(audio_file, output_audio_file):
     """Converts an audio file to MP3 format."""
     try:
         logging.info(f"Converting audio file to MP3: {audio_file}...")
-        audio = AudioSegment.from_file(audio_file)
-        audio.export(output_audio_file, format="mp3")
+        command = [
+            "ffmpeg",
+            "-hide_banner",
+            "-nostdin",
+            "-y",
+            "-i",
+            audio_file,
+            "-vn",
+            "-codec:a",
+            "libmp3lame",
+            "-q:a",
+            "2",
+            output_audio_file,
+        ]
+        _run_ffmpeg(command, "Audio conversion")
         logging.info(f"Audio file converted to MP3: {output_audio_file}")
     except Exception as e:
         logging.error(f"Error converting audio to MP3: {e}")
+        raise

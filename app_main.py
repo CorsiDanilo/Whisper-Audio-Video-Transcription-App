@@ -54,6 +54,7 @@ import pystray
 from PIL import Image
 
 from main import demo as main 
+from security_utils import get_gradio_launch_kwargs
 
 def on_show(icon, item):
     if webview.windows:
@@ -86,7 +87,7 @@ def setup_tray():
     icon = pystray.Icon("WhisperApp", image, "Whisper Audio/Video Utility", menu)
     icon.run()
 
-main.launch(prevent_thread_lock=True)
+main.launch(**get_gradio_launch_kwargs(prevent_thread_lock=True))
 
 tray_thread = threading.Thread(target=setup_tray, daemon=True)
 tray_thread.start()

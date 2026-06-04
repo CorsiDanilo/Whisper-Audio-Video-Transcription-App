@@ -46,13 +46,20 @@ def load_default_config():
         return yaml.safe_load(ymlfile)
     
 def get_gemini_api_key():
-    """Retrieve the Gemini API key from the environment variables."""
+    """Retrieve the Gemini API key without logging or exposing the secret."""
+    env_key = os.getenv("GEMINI_API_KEY")
+    if env_key:
+        return env_key
     try:
-        with open("config/gemini.yaml", "r") as ymlfile:
+        with open("config/gemini.yaml", "r", encoding="utf-8") as ymlfile:
             gemini = yaml.safe_load(ymlfile)
-        return gemini["gemini_api_key"]
-    except:
+        if isinstance(gemini, dict):
+            key = gemini.get("gemini_api_key")
+            if key:
+                return key
+    except (FileNotFoundError, KeyError, yaml.YAMLError):
         return None
+    return None
 
 def setup_logging(log_file="whisper.log"):
     """Configura il logging: elimina il file di log precedente e imposta i gestori."""

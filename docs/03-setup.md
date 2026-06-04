@@ -113,9 +113,10 @@ The project does not currently utilize a standard test runner like `pytest`. Man
     ```
 
 2.  **Transcription**: Test the `transcription.py` module by invoking `load_model` and `transcribe_file`.
+    *   Media and configuration inputs are selected as local paths in the UI, not uploaded into Gradio-managed temporary storage.
     *   `transcribe_file(file_path, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps)`
-    *   `clear(folder_path)`: Use this to clean up temporary directories.
-    *   `clear_and_close(folder_path)`: Use this to clean up and terminate the process.
+    *   `clear(folder_path)`: Use this to clean up app-managed temporary directories.
+    *   `clear_and_close(folder_path)`: Use this to clean up app-managed temporary directories and terminate the process.
 
 3.  **LLM Integration**: Ensure `llms.py` can reach the Gemini API or local Ollama instance. The `query_gemini` function accepts the following signature:
     `query_gemini(user_input, transcription, gemini_model, provider, ollama_model)`

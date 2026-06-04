@@ -2,7 +2,7 @@
 ![demo](https://github.com/user-attachments/assets/c8e0aa99-0e50-4758-9ce9-08102646d71c)
 
 ## 📝 Description
-This project is a transcription app built using the [Faster Whisper model](https://github.com/SYSTRAN/faster-whisper), which transcribes audio and video files into text. It is powered by Gradio for a user-friendly web interface and supports audio or video file uploads for transcription.
+This project is a transcription app built using the [Faster Whisper model](https://github.com/SYSTRAN/faster-whisper), which transcribes audio and video files into text. It is powered by Gradio for a user-friendly web interface and supports local audio or video file paths for transcription.
 
 ## ✨ Features
 - 🎧 Transcribe both audio and video files (e.g., MP3, MP4, AVI, etc.)
@@ -41,6 +41,7 @@ This app can analyze the transcript using either **Ollama (local)** or **Google 
     - In the UI, open the **AI Provider** box, choose **Ollama**, then pick the model from **Choose Ollama Model**.
 
 - **Gemini (cloud)**
+    - Recommended: set the `GEMINI_API_KEY` environment variable.
     - Create (or edit) the file `config/gemini.yaml` with your API key:
         ```yaml
         gemini_api_key: "YOUR_KEY_HERE"
@@ -102,17 +103,22 @@ Run the application:
 ```
 python main.py
 ```
-The Gradio interface will open in your default web browser. From there, you can upload an audio or video file, and the transcription will be displayed.
+The Gradio interface will open in your default web browser. From there, you can select local audio/video and configuration file paths, and the transcription will be displayed.
 
-💡 **REMEMBER**: When you are done click `Clear and Close` if you want to clean up the temporary files folder.
+By default Gradio binds to `127.0.0.1`. To expose or share it, set `WHISPER_GRADIO_SHARE=1` or `WHISPER_GRADIO_SERVER_NAME`, and also set both `WHISPER_GRADIO_AUTH_USER` and `WHISPER_GRADIO_AUTH_PASSWORD`.
+
+Media and configuration files are read from the local paths you select and checked before processing. Optional limits: `WHISPER_MAX_UPLOAD_BYTES`, `WHISPER_MAX_MEDIA_DURATION_SECONDS`, `WHISPER_MAX_CONFIG_BYTES`, and `WHISPER_FFMPEG_TIMEOUT_SECONDS`.
+
+💡 **REMEMBER**: The transcript and any generated MP3 sidecar are saved next to the source file. The app still uses temporary storage for internal UI/config handling.
 
 ## 🎛️ Interface Guide
-- **Upload an audio or video file**: Accepts audio formats like MP3, WAV, and video formats like MP4, AVI.
+- **Choose an audio or video file path**: Use the path field or the `Browse` button to select a local media file.
+- **Choose a configuration file path**: Use the path field or the `Browse` button to select a local YAML file.
 - **Transcribe**: Click this button to start the transcription process.
 - **AI Provider**: Choose between Gemini, Ollama, and LM Studio. Select a model, then ask questions about the transcript.
 - **Quick prompts**: Use the buttons like “Fammi un riassunto” / “Dimmi le cose da fare” to fill the query box instantly.
 - **Copy Progress**: When you copy the transcription or the AI response, a success toast notification will appear.
-- **Close and Clear**: This button clears the folder where the file was temporarily stored and closes the application.
+- **Quit**: This button closes the application and clears only the app's internal temporary storage.
 
 ## ⚙️ Model Configuration
 - **Language**: Set the transcription language. Default is Italian 🇮🇹 (`it`), but you can change it to English 🇬🇧 (`en`) or other languages.

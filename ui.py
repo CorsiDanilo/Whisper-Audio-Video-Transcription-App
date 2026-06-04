@@ -1,77 +1,78 @@
 import logging
 import os
 import signal
-import shutil
-import sys
 import yaml
-os.environ.setdefault(
-    "GRADIO_TEMP_DIR",
-    os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "gradio_tmp")
+from security_utils import (
+    SecurityError,
+    cleanup_temp_storage,
+    configure_gradio_temp_dir,
+    validate_controlled_transcript_path,
+    validate_local_config_path,
+    validate_local_media_path,
 )
-import gradio as gr
-from transcription import transcribe_file
-from config import load_default_values, load_default_config, get_gemini_api_key
-from llms import query_gemini, list_ollama_models, list_lmstudio_models
-from config import setup_logging
+
+configure_gradio_temp_dir()
+import gradio as gr  # noqa: E402
+from transcription import transcribe_file  # noqa: E402
+from config import load_default_values, load_default_config, get_gemini_api_key  # noqa: E402
+from llms import query_gemini, list_ollama_models, list_lmstudio_models  # noqa: E402
+from config import setup_logging  # noqa: E402
 
 default_values = load_default_values()
 NO_MODELS_FOUND = "No models found"
 default_config_values = load_default_config()
 
+
+def _default_config_tuple():
+    return (
+        default_config_values["device"],
+        default_config_values["cpu_threads"],
+        default_config_values["num_workers"],
+        default_config_values["language"],
+        default_config_values["whisper_model"],
+        default_config_values["compute_type"],
+        default_config_values["temperature"],
+        default_config_values["beam_size"],
+        default_config_values["batch_size"],
+        default_config_values["condition_on_previous_text"],
+        default_config_values["word_timestamps"],
+        default_config_values["gemini_model"],
+    )
+
+
 def load_config_file(file_path):
     try:
         if not file_path:
-            return (
-                default_config_values["device"],
-                default_config_values["cpu_threads"],
-                default_config_values["num_workers"],
-                default_config_values["language"],
-                default_config_values["whisper_model"],
-                default_config_values["compute_type"],
-                default_config_values["temperature"],
-                default_config_values["beam_size"],
-                default_config_values["batch_size"],
-                default_config_values["condition_on_previous_text"],
-                default_config_values["word_timestamps"],
-                default_config_values["gemini_model"],
-            )
+            return _default_config_tuple()
 
-        if hasattr(file_path, "name"):
-            config_path = file_path.name
-        else:
-            config_path = file_path
-
-        config = yaml.safe_load(open(config_path, "r"))
+        config_path = validate_local_config_path(file_path)
+        with open(config_path, "r", encoding="utf-8") as config_file:
+            config = yaml.safe_load(config_file) or {}
+        if not isinstance(config, dict):
+            raise ValueError("Configuration file must contain a mapping.")
         return (
-            config["device"],
-            config["cpu_threads"],
-            config["num_workers"],
-            config["language"],
-            config["whisper_model"],
-            config["compute_type"],
-            config["temperature"],
-            config["beam_size"],
-            config["batch_size"],
-            config["condition_on_previous_text"],
-            config["word_timestamps"],
-            config["gemini_model"]
+            config.get("device", default_config_values["device"]),
+            config.get("cpu_threads", default_config_values["cpu_threads"]),
+            config.get("num_workers", default_config_values["num_workers"]),
+            config.get("language", default_config_values["language"]),
+            config.get("whisper_model", default_config_values["whisper_model"]),
+            config.get("compute_type", default_config_values["compute_type"]),
+            config.get("temperature", default_config_values["temperature"]),
+            config.get("beam_size", default_config_values["beam_size"]),
+            config.get("batch_size", default_config_values["batch_size"]),
+            config.get(
+                "condition_on_previous_text",
+                default_config_values["condition_on_previous_text"],
+            ),
+            config.get("word_timestamps", default_config_values["word_timestamps"]),
+            config.get("gemini_model", default_config_values["gemini_model"]),
         )
+    except SecurityError as e:
+        logging.warning("Rejected configuration path: %s", e)
+        return _default_config_tuple()
     except Exception as e:
         logging.error(f"Error loading configuration: {e}")
-        return (
-            default_config_values["device"],
-            default_config_values["cpu_threads"],
-            default_config_values["num_workers"],
-            default_config_values["language"],
-            default_config_values["whisper_model"],
-            default_config_values["compute_type"],
-            default_config_values["temperature"],
-            default_config_values["beam_size"],
-            default_config_values["batch_size"],
-            default_config_values["condition_on_previous_text"],
-            default_config_values["word_timestamps"],
-            default_config_values["gemini_model"]
-        )
+        return _default_config_tuple()
 
 def save_config(
         device,
@@ -110,7 +111,8 @@ def save_config(
 def reset_fields():
     """Reset fields to default values."""
     return (
-        "",
+        None,
+        None,
         default_config_values["device"],
         default_config_values["cpu_threads"],
         default_config_values["num_workers"],
@@ -144,74 +146,75 @@ def notify_copy():
     gr.Info("Text copied")
 
 
+def browse_local_media_file():
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        selected_path = filedialog.askopenfilename(
+            title="Select Audio/Video File",
+            filetypes=[
+                ("Media files", "*.avi *.flac *.m4a *.mkv *.mov *.mp3 *.mp4 *.ogg *.opus *.wav *.webm"),
+                ("All files", "*.*"),
+            ],
+            parent=root,
+        )
+        root.destroy()
+        return selected_path or gr.update()
+    except Exception as e:
+        logging.error(f"Error selecting media file: {e}")
+        gr.Error(f"Error selecting media file: {str(e)}")
+        return gr.update()
+
+
+def browse_local_config_file():
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        selected_path = filedialog.askopenfilename(
+            title="Select Configuration File",
+            filetypes=[
+                ("YAML files", "*.yaml *.yml"),
+                ("All files", "*.*"),
+            ],
+            parent=root,
+        )
+        root.destroy()
+        return selected_path or gr.update()
+    except Exception as e:
+        logging.error(f"Error selecting configuration file: {e}")
+        gr.Error(f"Error selecting configuration file: {str(e)}")
+        return gr.update()
+
+
 def quit_app():
     try:
         logging.info("Quitting application...")
-        temp_dir = os.environ.get("GRADIO_TEMP_DIR")
-        if temp_dir and os.path.isdir(temp_dir):
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        cleanup_temp_storage()
         os.kill(os.getpid(), signal.SIGINT)
     except Exception as e:
         logging.error(f"Error quitting application: {e}")
         raise
 
 
-def pick_file_path():
-    try:
-        import tkinter as tk
-        from tkinter import filedialog
-
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-
-        path = filedialog.askopenfilename(
-            title="Select audio or video file",
-            filetypes=[
-                ("Audio/Video", "*.mp3;*.wav;*.flac;*.ogg;*.m4a;*.mp4;*.avi;*.mov;*.mkv;*.webm"),
-                ("All files", "*.*"),
-            ],
-            parent=root,
-        )
-
-        root.destroy()
-        return path or ""
-    except Exception as e:
-        logging.error(f"Error opening file dialog: {e}")
-        return ""
-
-
-def pick_config_path():
-    try:
-        import tkinter as tk
-        from tkinter import filedialog
-
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-
-        path = filedialog.askopenfilename(
-            title="Select configuration file",
-            filetypes=[
-                ("YAML files", "*.yaml;*.yml"),
-                ("All files", "*.*"),
-            ],
-            parent=root,
-        )
-
-        root.destroy()
-        return path or ""
-    except Exception as e:
-        logging.error(f"Error opening config dialog: {e}")
-        return ""
-
 with gr.Blocks() as demo:
     setup_logging()
     gr.Markdown("# 🎤 Audio/Video Transcription using Whisper Model")
 
-    file_path_input = gr.Textbox(label="File path", placeholder="Select an audio or video file...", interactive=False)
-    browse_button = gr.Button("Browse", variant="secondary")
-    browse_button.click(fn=pick_file_path, inputs=[], outputs=[file_path_input])
+    with gr.Row():
+        file_path_input = gr.Textbox(
+            label="Audio/video file path",
+            placeholder=r"Audio/video file path (e.g., C:\path\to\file)",
+            lines=1,
+        )
+    browse_file_button = gr.Button("Browse", variant="secondary")
     
     with gr.Row():
         gr.Markdown("## Configurations")
@@ -219,9 +222,13 @@ with gr.Blocks() as demo:
         with gr.Accordion(label="Explanation", open=False):
             gr.Markdown(default_values['explanation'])
 
-    config_path_input = gr.Textbox(label="Config path", placeholder="Select a configuration file...", interactive=False)
-    browse_config_button = gr.Button("Browse config", variant="secondary")
-    browse_config_button.click(fn=pick_config_path, inputs=[], outputs=[config_path_input])
+    with gr.Row():
+        config_path_input = gr.Textbox(
+            label="Configuration file path",
+            placeholder=r"C:\path\to\config.yaml",
+            lines=1,
+        )
+    browse_config_button = gr.Button("Browse", variant="secondary")
     with gr.Row():
         device = gr.Dropdown(choices=default_values['configurations']['devices'], value=default_config_values["device"], label="Device")
         cpu_threads = gr.Slider(minimum=default_values['configurations']['cpu_threads']['min'], value=default_config_values["cpu_threads"], step=1, label="CPU Threads")
@@ -325,6 +332,18 @@ with gr.Blocks() as demo:
         copy_response_button = gr.Button("Copy Response", variant="secondary", size="sm")
         gemini_response = gr.Markdown("*Response will appear here.*", container=True, line_breaks=True)
 
+    browse_file_button.click(
+        fn=browse_local_media_file,
+        inputs=[],
+        outputs=[file_path_input],
+    )
+
+    browse_config_button.click(
+        fn=browse_local_config_file,
+        inputs=[],
+        outputs=[config_path_input],
+    )
+
     def _provider_change(p):
         # show Gemini model choices only when Gemini selected
         if str(p).lower().startswith('g'):
@@ -405,10 +424,17 @@ with gr.Blocks() as demo:
     reset_button.click(
         fn=reset_fields,
         inputs=[],
-        outputs=[file_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button]
+        outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button]
     )
 
     def transcribe_wrapper(file_path, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps):
+        try:
+            file_path = validate_local_media_path(file_path)
+        except SecurityError as e:
+            logging.warning("Rejected media path: %s", e)
+            yield f"Invalid file: {e}", None, gr.update(visible=False), gr.update(visible=False)
+            return
+
         for transcription, output_path, _folder_path in transcribe_file(
             file_path, device, cpu_threads, num_workers, language,
             whisper_model, compute_type, temperature, beam_size,
@@ -438,6 +464,12 @@ with gr.Blocks() as demo:
         if not file_path:
             gr.Warning("No transcript file available to save. Please transcribe first.")
             return
+        try:
+            source_path = validate_controlled_transcript_path(file_path)
+        except SecurityError as e:
+            logging.warning("Rejected transcript save source: %s", e)
+            gr.Warning("Transcript file is not available to save.")
+            return
         
         # Only import tkinter when needed to avoid issues if not installed or headless
         try:
@@ -451,7 +483,7 @@ with gr.Blocks() as demo:
             root.withdraw()
             root.attributes("-topmost", True)
             
-            initial_file = os.path.basename(file_path)
+            initial_file = os.path.basename(source_path)
             
             target_path = filedialog.asksaveasfilename(
                 title="Save Transcript As",
@@ -464,7 +496,7 @@ with gr.Blocks() as demo:
             root.destroy()
             
             if target_path:
-                shutil.copy2(file_path, target_path)
+                shutil.copy2(source_path, target_path)
                 gr.Info(f"Successfully saved to: {target_path}")
             else:
                 gr.Info("Save cancelled.")
