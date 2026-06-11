@@ -37,6 +37,12 @@ def load_default_values():
     """Carica i valori di default da default_values.yaml."""
     with open("default_values/default_values.yaml", "r") as ymlfile:
         default_values = yaml.safe_load(ymlfile)
+        
+    # Inject security limits dynamically into the environment variables
+    max_duration = default_values.get("default_values", {}).get("max_media_duration_seconds")
+    if max_duration is not None:
+        os.environ["WHISPER_MAX_MEDIA_DURATION_SECONDS"] = str(max_duration)
+
     default_values["configurations"]["models"] = get_whisper_model_choices()
     return default_values
 

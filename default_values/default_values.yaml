@@ -31,6 +31,7 @@ default_values:
     input_file: null
     output_text: "*Your transcription will appear here.*"
     download_output: null
+    max_media_duration_seconds: 14400 # 14400 = 4 hours
 
 gemini:
     models: ["gemini-flash-latest", "gemini-flash-lite-latest"]
