@@ -14,7 +14,7 @@ from security_utils import (
 configure_gradio_temp_dir()
 import gradio as gr  # noqa: E402
 from transcription import transcribe_file  # noqa: E402
-from config import load_default_values, load_default_config, get_gemini_api_key  # noqa: E402
+from config import load_default_values, load_default_config, get_gemini_api_key, get_translation as _  # noqa: E402
 from llms import query_gemini, list_ollama_models, list_lmstudio_models  # noqa: E402
 from config import setup_logging  # noqa: E402
 
@@ -103,7 +103,7 @@ def save_config(
             "word_timestamps": word_timestamps,
             "gemini_model": gemini_model,
         }
-        with open("settings/mysettings.yaml", "w") as file:
+        with open("settings/default.yaml", "w") as file:
             yaml.dump(config, file)
     except Exception as e:
         logging.error(f"Error saving settings: {e}")
@@ -123,27 +123,27 @@ def reset_fields():
         default_config_values["beam_size"],
         default_config_values["batch_size"],
         default_config_values["condition_on_previous_text"],
-        default_values['default_values']["output_text"],
+        _("transcription_placeholder"),
         default_values['default_values']["download_output"],
         default_config_values["word_timestamps"],
         default_config_values["gemini_model"],
-        default_values['gemini']["user_query"],
-        default_values['gemini']["gemini_response"],
+        "",
+        _("response_placeholder"),
         gr.update(visible=False), # save_transcript_button
         gr.update(visible=False), # submit_query_button
     )
 
 
 def preset_query_summary():
-    return "Fammi un riassunto"
+    return _("preset_summary")
 
 
 def preset_query_todo():
-    return "Dimmi le cose da fare"
+    return _("preset_todo")
 
 
 def notify_copy():
-    gr.Info("Text copied")
+    gr.Info(_("text_copied"))
 
 
 def browse_local_media_file():
@@ -155,10 +155,10 @@ def browse_local_media_file():
         root.withdraw()
         root.attributes("-topmost", True)
         selected_path = filedialog.askopenfilename(
-            title="Select Audio/Video File",
+            title=_("select_media_title"),
             filetypes=[
-                ("Media files", "*.avi *.flac *.m4a *.mkv *.mov *.mp3 *.mp4 *.ogg *.opus *.wav *.webm"),
-                ("All files", "*.*"),
+                (_("media_files_filter"), "*.avi *.flac *.m4a *.mkv *.mov *.mp3 *.mp4 *.ogg *.opus *.wav *.webm"),
+                (_("all_files_filter"), "*.*"),
             ],
             parent=root,
         )
@@ -166,7 +166,7 @@ def browse_local_media_file():
         return selected_path or gr.update()
     except Exception as e:
         logging.error(f"Error selecting media file: {e}")
-        gr.Error(f"Error selecting media file: {str(e)}")
+        gr.Error(_("error_selecting_media").format(str(e)))
         return gr.update()
 
 
@@ -179,10 +179,10 @@ def browse_local_config_file():
         root.withdraw()
         root.attributes("-topmost", True)
         selected_path = filedialog.askopenfilename(
-            title="Select Configuration File",
+            title=_("select_config_title"),
             filetypes=[
-                ("YAML files", "*.yaml *.yml"),
-                ("All files", "*.*"),
+                (_("yaml_files_filter"), "*.yaml *.yml"),
+                (_("all_files_filter"), "*.*"),
             ],
             parent=root,
         )
@@ -190,13 +190,13 @@ def browse_local_config_file():
         return selected_path or gr.update()
     except Exception as e:
         logging.error(f"Error selecting configuration file: {e}")
-        gr.Error(f"Error selecting configuration file: {str(e)}")
+        gr.Error(_("error_selecting_config").format(str(e)))
         return gr.update()
 
 
 def quit_app():
     try:
-        logging.info("Quitting application...")
+        logging.info(_("quitting_app"))
         cleanup_temp_storage()
         os.kill(os.getpid(), signal.SIGINT)
     except Exception as e:
@@ -206,55 +206,55 @@ def quit_app():
 
 with gr.Blocks() as demo:
     setup_logging()
-    gr.Markdown("# 🎤 Audio/Video Transcription using Whisper Model")
+    gr.Markdown(_("title"))
 
     with gr.Row():
         file_path_input = gr.Textbox(
-            label="Audio/video file path",
-            placeholder=r"Audio/video file path (e.g., C:\path\to\file)",
+            label=_("media_file_path_label"),
+            placeholder=_("media_file_path_placeholder"),
             lines=1,
         )
-    browse_file_button = gr.Button("Browse", variant="secondary")
+    browse_file_button = gr.Button(_("browse"), variant="secondary")
     
     with gr.Row():
-        gr.Markdown("## Configurations")
+        gr.Markdown(_("configurations_title"))
     with gr.Row():
-        with gr.Accordion(label="Explanation", open=False):
-            gr.Markdown(default_values['explanation'])
+        with gr.Accordion(label=_("explanation_accordion"), open=False):
+            gr.Markdown(_("explanation_text"))
 
     with gr.Row():
         config_path_input = gr.Textbox(
-            label="Configuration file path",
-            placeholder=r"C:\path\to\config.yaml",
+            label=_("config_file_path_label"),
+            placeholder=_("config_file_path_placeholder"),
             lines=1,
         )
-    browse_config_button = gr.Button("Browse", variant="secondary")
+    browse_config_button = gr.Button(_("browse"), variant="secondary")
     with gr.Row():
-        device = gr.Dropdown(choices=default_values['configurations']['devices'], value=default_config_values["device"], label="Device")
-        cpu_threads = gr.Slider(minimum=default_values['configurations']['cpu_threads']['min'], value=default_config_values["cpu_threads"], step=1, label="CPU Threads")
-        num_workers = gr.Slider(minimum=default_values['configurations']['num_workers']['min'], value=default_config_values["num_workers"], step=1, label="Number of Workers")
+        device = gr.Dropdown(choices=default_values['configurations']['devices'], value=default_config_values["device"], label=_("device_label"))
+        cpu_threads = gr.Slider(minimum=default_values['configurations']['cpu_threads']['min'], value=default_config_values["cpu_threads"], step=1, label=_("cpu_threads_label"))
+        num_workers = gr.Slider(minimum=default_values['configurations']['num_workers']['min'], value=default_config_values["num_workers"], step=1, label=_("num_workers_label"))
     with gr.Row():
-        language = gr.Dropdown(choices=default_values['configurations']['languages'], value=default_config_values["language"], label="Language")
-        whisper_model = gr.Dropdown(choices=default_values['configurations']['models'], value=default_config_values["whisper_model"], label="Whisper Model")
-        compute_type = gr.Dropdown(choices=default_values['configurations']['compute_types'], value=default_config_values["compute_type"], label="Compute Type")
+        language = gr.Dropdown(choices=default_values['configurations']['languages'], value=default_config_values["language"], label=_("language_label"))
+        whisper_model = gr.Dropdown(choices=default_values['configurations']['models'], value=default_config_values["whisper_model"], label=_("whisper_model_label"))
+        compute_type = gr.Dropdown(choices=default_values['configurations']['compute_types'], value=default_config_values["compute_type"], label=_("compute_type_label"))
     with gr.Row():
-        temperature = gr.Slider(minimum=default_values['configurations']['temperature']['min'], value=default_config_values["temperature"], step=0.1, label="Temperature")
-        beam_size = gr.Slider(minimum=default_values['configurations']['beam_size']['min'], value=default_config_values["beam_size"], step=1, label="Beam Size")
-        batch_size = gr.Slider(minimum=default_values['configurations']['batch_size']['min'], value=default_config_values["batch_size"], step=1, label="Batch Size")
+        temperature = gr.Slider(minimum=default_values['configurations']['temperature']['min'], value=default_config_values["temperature"], step=0.1, label=_("temperature_label"))
+        beam_size = gr.Slider(minimum=default_values['configurations']['beam_size']['min'], value=default_config_values["beam_size"], step=1, label=_("beam_size_label"))
+        batch_size = gr.Slider(minimum=default_values['configurations']['batch_size']['min'], value=default_config_values["batch_size"], step=1, label=_("batch_size_label"))
     with gr.Row():
-        condition_on_previous_text = gr.Checkbox(value=default_config_values["condition_on_previous_text"], label="Condition on Previous Text")
-        word_timestamps = gr.Checkbox(value=default_config_values["word_timestamps"], label="Word-level timestamps")
-        save_configurations = gr.Button("Save configurations", variant="secondary")
+        condition_on_previous_text = gr.Checkbox(value=default_config_values["condition_on_previous_text"], label=_("condition_on_previous_text_label"))
+        word_timestamps = gr.Checkbox(value=default_config_values["word_timestamps"], label=_("word_timestamps_label"))
+        save_configurations = gr.Button(_("save_configurations"), variant="secondary")
     
     with gr.Row():
-        gr.Markdown("## Transcription")
-    with gr.Accordion("Transcription"):
-        copy_transcription_button = gr.Button("Copy Transcription", variant="secondary", size="sm")
-        output_text = gr.Markdown("*Your transcription will appear here.*", container=True, line_breaks=True)
+        gr.Markdown(_("transcription_title"))
+    with gr.Accordion(_("transcription_accordion")):
+        copy_transcription_button = gr.Button(_("copy_transcription"), variant="secondary", size="sm")
+        output_text = gr.Markdown(_("transcription_placeholder"), container=True, line_breaks=True)
 
     transcript_file_path = gr.State()
-    save_transcript_button = gr.Button("Save Transcript As...", variant="primary", visible=False)
-    transcribe_button = gr.Button("Transcribe", variant="secondary")
+    save_transcript_button = gr.Button(_("save_transcript_as"), variant="primary", visible=False)
+    transcribe_button = gr.Button(_("transcribe_btn"), variant="secondary")
 
     # Ensure UI elements exist for AI querying
     gemini_model = None
@@ -263,18 +263,18 @@ with gr.Blocks() as demo:
 
     has_gemini = get_gemini_api_key() is not None
 
-    with gr.Accordion("AI Provider", open=True):
+    with gr.Accordion(_("ai_provider_accordion"), open=True):
         # Provider selection: if Gemini API key present, allow all providers; otherwise only local providers
         if has_gemini:
-            provider = gr.Radio(choices=["Gemini", "Ollama", "LM Studio"], value="Gemini", label="Provider")
+            provider = gr.Radio(choices=["Gemini", "Ollama", "LM Studio"], value="Gemini", label=_("provider_label"))
         else:
-            provider = gr.Radio(choices=["Ollama", "LM Studio"], value="Ollama", label="Provider")
+            provider = gr.Radio(choices=["Ollama", "LM Studio"], value="Ollama", label=_("provider_label"))
 
         # Gemini model selector (only meaningful when using Gemini)
         gemini_model = gr.Radio(
             choices=default_values['gemini']['models'],
             value=default_config_values["gemini_model"],
-            label="Choose Gemini Model",
+            label=_("choose_gemini_model"),
             visible=has_gemini,
         )
 
@@ -290,7 +290,7 @@ with gr.Blocks() as demo:
             choices=_initial_ollama_models,
             value=_initial_ollama_value,
             allow_custom_value=True,
-            label="Choose Ollama Model",
+            label=_("choose_ollama_model"),
             visible=not has_gemini,
         )
 
@@ -304,17 +304,17 @@ with gr.Blocks() as demo:
             choices=_initial_lmstudio_models,
             value=_initial_lmstudio_value,
             allow_custom_value=True,
-            label="Choose LM Studio Model",
+            label=_("choose_lmstudio_model"),
             visible=False,
         )
 
         with gr.Row():
-            preset_summary_button = gr.Button("Fammi un riassunto", variant="secondary")
-            preset_todo_button = gr.Button("Dimmi le cose da fare", variant="secondary")
+            preset_summary_button = gr.Button(_("preset_summary"), variant="secondary")
+            preset_todo_button = gr.Button(_("preset_todo"), variant="secondary")
 
-        user_query = gr.Textbox(label="Enter your query")
+        user_query = gr.Textbox(label=_("enter_query_label"))
 
-        submit_query_button = gr.Button("Submit Query", variant="primary", visible=False)
+        submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
 
     preset_summary_button.click(
         fn=preset_query_summary,
@@ -328,9 +328,9 @@ with gr.Blocks() as demo:
         outputs=[user_query],
     )
 
-    with gr.Accordion("AI Response"):
-        copy_response_button = gr.Button("Copy Response", variant="secondary", size="sm")
-        gemini_response = gr.Markdown("*Response will appear here.*", container=True, line_breaks=True)
+    with gr.Accordion(_("ai_response_accordion")):
+        copy_response_button = gr.Button(_("copy_response"), variant="secondary", size="sm")
+        gemini_response = gr.Markdown(_("response_placeholder"), container=True, line_breaks=True)
 
     browse_file_button.click(
         fn=browse_local_media_file,
@@ -380,8 +380,8 @@ with gr.Blocks() as demo:
         stream_every=0.05,  # flush UI at most every 50 ms
     )
     with gr.Row():
-        reset_button = gr.Button("Reset fields", variant="secondary")
-        quit_button = gr.Button("Quit", variant="stop")
+        reset_button = gr.Button(_("reset_fields"), variant="secondary")
+        quit_button = gr.Button(_("quit"), variant="stop")
 
     config_path_input.change(
         fn=load_config_file,
@@ -432,7 +432,7 @@ with gr.Blocks() as demo:
             file_path = validate_local_media_path(file_path)
         except SecurityError as e:
             logging.warning("Rejected media path: %s", e)
-            yield f"Invalid file: {e}", None, gr.update(visible=False), gr.update(visible=False)
+            yield _("invalid_file").format(e), None, gr.update(visible=False), gr.update(visible=False)
             return
 
         for transcription, output_path, _folder_path in transcribe_file(
@@ -462,13 +462,13 @@ with gr.Blocks() as demo:
 
     def save_transcript_wrapper(file_path):
         if not file_path:
-            gr.Warning("No transcript file available to save. Please transcribe first.")
+            gr.Warning(_("no_transcript_to_save"))
             return
         try:
             source_path = validate_controlled_transcript_path(file_path)
         except SecurityError as e:
             logging.warning("Rejected transcript save source: %s", e)
-            gr.Warning("Transcript file is not available to save.")
+            gr.Warning(_("transcript_not_available"))
             return
         
         # Only import tkinter when needed to avoid issues if not installed or headless
@@ -486,10 +486,10 @@ with gr.Blocks() as demo:
             initial_file = os.path.basename(source_path)
             
             target_path = filedialog.asksaveasfilename(
-                title="Save Transcript As",
+                title=_("save_transcript_title"),
                 initialfile=initial_file,
                 defaultextension=".txt",
-                filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+                filetypes=[(_("text_files_filter"), "*.txt"), (_("all_files_filter"), "*.*")],
                 parent=root
             )
             
@@ -497,12 +497,12 @@ with gr.Blocks() as demo:
             
             if target_path:
                 shutil.copy2(source_path, target_path)
-                gr.Info(f"Successfully saved to: {target_path}")
+                gr.Info(_("successfully_saved").format(target_path))
             else:
-                gr.Info("Save cancelled.")
+                gr.Info(_("save_cancelled"))
         except Exception as e:
             logging.error(f"Error saving file: {e}")
-            gr.Error(f"Error saving file: {str(e)}")
+            gr.Error(_("error_saving_file").format(str(e)))
 
     save_transcript_button.click(
         fn=save_transcript_wrapper,

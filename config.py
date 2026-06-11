@@ -67,6 +67,7 @@ def get_gemini_api_key():
         return None
     return None
 
+
 def setup_logging(log_file="whisper.log"):
     """Configura il logging: elimina il file di log precedente e imposta i gestori."""
     if os.path.exists(log_file):
@@ -79,3 +80,35 @@ def setup_logging(log_file="whisper.log"):
             logging.StreamHandler()
         ]
     )
+
+_locales = None
+_current_language = None
+
+def get_translation(key):
+    """Retrieve a translated string based on ui_language."""
+    global _locales, _current_language
+    
+    if _locales is None:
+        try:
+            with open("config/locales.yaml", "r", encoding="utf-8") as f:
+                _locales = yaml.safe_load(f) or {}
+        except Exception as e:
+            logging.error(f"Error loading locales: {e}")
+            _locales = {}
+            
+    if _current_language is None:
+        try:
+            config = load_default_config()
+            _current_language = config.get("ui_language", "english")
+        except Exception:
+            _current_language = "english"
+            
+    lang_dict = _locales.get(_current_language, {})
+    if key in lang_dict:
+        return lang_dict[key]
+        
+    english_dict = _locales.get("english", {})
+    if key in english_dict:
+        return english_dict[key]
+        
+    return key

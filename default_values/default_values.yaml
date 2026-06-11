@@ -13,30 +13,18 @@ configurations:
         min: 1
     batch_size:
         min: 1
-explanation: |-
-    - **Device**: Determines the device to use for processing (CPU or GPU).
-    - **CPU Threads**: Determines the number of threads to use for processing (higher values may improve processing speed but require more CPU resources).
-    - **Number of Workers**: Determines the number of workers to use for processing (higher values may improve processing speed but require more memory).
-    - **Language**: Determines the language of the audio file.
-    - **Model Size**: Determines the Whisper model alias. `turbo` is a fast multilingual option; `distil-*` models are faster distilled checkpoints, mainly useful for English speech recognition.
-    - **Condition on Previous Text**: If checked, the model will consider the previous text when transcribing the current text. Disabling it is recommended for `distil-*` models.
-    - **Word-level timestamps**: If checked, the model will provide timestamps for each word in the transcription.
-    - **Computational Type**: Determines the precision of the model's calculations (higher precision is more accurate but slower).
-    - **Temperature**: Determines the randomness of the model's predictions (higher values may introduce more errors but can improve diversity).
-    - **Beam Size**: Determines the number of possible transcription paths to consider (higher values may improve accuracy but require more processing time).
-    - **Batch Size**: Determines the number of audio files to process simultaneously (higher values may improve processing speed but require more memory).
+
 default_values:
     video_extensions: ['.mp4', '.avi', '.mov', '.mkv', '.webm']
     audio_extensions: ['.mp3', '.wav', '.flac', '.ogg', '.m4a']
     input_file: null
-    output_text: "*Your transcription will appear here.*"
+
     download_output: null
     max_media_duration_seconds: 14400 # 14400 = 4 hours
 
 gemini:
     models: ["gemini-flash-latest", "gemini-flash-lite-latest"]
-    user_query: ""
-    gemini_response: "*Gemini response will appear here*"
+
     requests_per_minute: 15
     requests_per_day: 1500
     tokens_per_minute: 1048576

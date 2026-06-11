@@ -1,3 +1,4 @@
+ui_language: "english"
 device: "cuda"
 cpu_threads: 4
 num_workers: 1
