@@ -1,6 +1,6 @@
 ui_language: "english"
 device: "cpu"
-cpu_threads: 4
+cpu_threads: 6
 num_workers: 1
 language: "it"
 whisper_model: "small"

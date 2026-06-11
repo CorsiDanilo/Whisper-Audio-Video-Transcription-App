@@ -204,6 +204,23 @@ def quit_app():
         raise
 
 
+custom_css = """
+.scrollable-markdown {
+    max-height: 400px !important;
+    overflow-y: auto !important;
+}
+.scrollable-markdown * {
+    overflow: visible !important;
+    max-height: none !important;
+}
+* {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -ms-user-select: text !important;
+    -moz-user-select: text !important;
+}
+"""
+
 with gr.Blocks() as demo:
     setup_logging()
     gr.Markdown(_("title"))
@@ -250,7 +267,7 @@ with gr.Blocks() as demo:
         gr.Markdown(_("transcription_title"))
     with gr.Accordion(_("transcription_accordion")):
         copy_transcription_button = gr.Button(_("copy_transcription"), variant="secondary", size="sm")
-        output_text = gr.Markdown(_("transcription_placeholder"), container=True, line_breaks=True)
+        output_text = gr.Markdown(_("transcription_placeholder"), container=True, line_breaks=True, elem_classes="scrollable-markdown")
 
     transcript_file_path = gr.State()
     save_transcript_button = gr.Button(_("save_transcript_as"), variant="primary", visible=False)
@@ -330,7 +347,7 @@ with gr.Blocks() as demo:
 
     with gr.Accordion(_("ai_response_accordion")):
         copy_response_button = gr.Button(_("copy_response"), variant="secondary", size="sm")
-        gemini_response = gr.Markdown(_("response_placeholder"), container=True, line_breaks=True)
+        gemini_response = gr.Markdown(_("response_placeholder"), container=True, line_breaks=True, elem_classes="scrollable-markdown")
 
     browse_file_button.click(
         fn=browse_local_media_file,

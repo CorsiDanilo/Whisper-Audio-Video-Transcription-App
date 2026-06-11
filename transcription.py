@@ -1,6 +1,40 @@
 import os
+import sys
 import logging
 import signal
+
+# Windows DLL directory loading helper for Python >= 3.8
+if sys.platform == "win32":
+    added_paths = set()
+    # 1. Search PATH for CUDA/cuDNN/NVIDIA directories and add them
+    path_env = os.environ.get("PATH", "")
+    for directory in path_env.split(os.path.pathsep):
+        if not directory:
+            continue
+        dir_upper = directory.upper()
+        if "NVIDIA" in dir_upper or "CUDA" in dir_upper or "CUDNN" in dir_upper:
+            if os.path.isdir(directory) and directory not in added_paths:
+                try:
+                    os.add_dll_directory(directory)
+                    added_paths.add(directory)
+                except Exception:
+                    pass
+    # 2. Check environment variables starting with CUDA_PATH
+    for k, v in os.environ.items():
+        if k.startswith("CUDA_PATH") and os.path.isdir(v):
+            bin_dir = os.path.join(v, "bin")
+            if os.path.isdir(bin_dir) and bin_dir not in added_paths:
+                try:
+                    os.add_dll_directory(bin_dir)
+                    added_paths.add(bin_dir)
+                except Exception:
+                    pass
+
+try:
+    import torch
+except ImportError:
+    pass
+
 from faster_whisper import WhisperModel, BatchedInferencePipeline
 from audio_processing import is_video_file, extract_audio_from_video, is_whatsapp_audio_file, convert_whatsapp_audio_to_mp3, is_audio_file, convert_audio_to_mp3
 from security_utils import (
