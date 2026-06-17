@@ -3,4 +3,4 @@ dist
 build
 *.log
 config
-.docgen-state.json
+.docgen-agent

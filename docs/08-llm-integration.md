@@ -1,4 +1,4 @@
-[⬅ Previous](./06-examples.md) | [🏠 Index](./README.md) | [Next ➡](./08-transcription-engine.md)
+[⬅ Previous](./07-examples.md) | [🏠 Index](./README.md) | [Next ➡](./09-transcription-engine.md)
 
 # LLM Integration
 
@@ -129,4 +129,4 @@ If `query_ollama` fails, verify the local daemon status:
 
 - `class OllamaClient`: class OllamaClient
 
-[⬅ Previous](./06-examples.md) | [🏠 Index](./README.md) | [Next ➡](./08-transcription-engine.md)
+[⬅ Previous](./07-examples.md) | [🏠 Index](./README.md) | [Next ➡](./09-transcription-engine.md)

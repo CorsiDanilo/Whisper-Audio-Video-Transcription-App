@@ -1,4 +1,4 @@
-[⬅ Previous](./03-setup.md) | [🏠 Index](./README.md) | [Next ➡](./05-installation.md)
+[⬅ Previous](./03-setup.md) | [🏠 Index](./README.md) | [Next ➡](./05-deployment.md)
 
 # CLI Commands Reference
 
@@ -121,4 +121,4 @@ If transcription fails, check the `audio_processing.py` logic:
 
 **Confidence:** 100%
 
-[⬅ Previous](./03-setup.md) | [🏠 Index](./README.md) | [Next ➡](./05-installation.md)
+[⬅ Previous](./03-setup.md) | [🏠 Index](./README.md) | [Next ➡](./05-deployment.md)

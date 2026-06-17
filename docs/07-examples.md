@@ -1,4 +1,4 @@
-[⬅ Previous](./05-installation.md) | [🏠 Index](./README.md) | [Next ➡](./07-llm-integration.md)
+[⬅ Previous](./06-installation.md) | [🏠 Index](./README.md) | [Next ➡](./08-llm-integration.md)
 
 # Usage Examples
 
@@ -155,4 +155,4 @@ pyinstaller app_main.py \
 
 **Confidence:** 100%
 
-[⬅ Previous](./05-installation.md) | [🏠 Index](./README.md) | [Next ➡](./07-llm-integration.md)
+[⬅ Previous](./06-installation.md) | [🏠 Index](./README.md) | [Next ➡](./08-llm-integration.md)

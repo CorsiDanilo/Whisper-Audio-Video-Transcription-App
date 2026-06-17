@@ -1,4 +1,4 @@
-[⬅ Previous](./04-cli-commands.md) | [🏠 Index](./README.md) | [Next ➡](./06-examples.md)
+[⬅ Previous](./05-deployment.md) | [🏠 Index](./README.md) | [Next ➡](./07-examples.md)
 
 # Installation
 
@@ -129,4 +129,4 @@ The application generates logs to assist in debugging. If the UI fails to launch
 
 **Confidence:** 100%
 
-[⬅ Previous](./04-cli-commands.md) | [🏠 Index](./README.md) | [Next ➡](./06-examples.md)
+[⬅ Previous](./05-deployment.md) | [🏠 Index](./README.md) | [Next ➡](./07-examples.md)

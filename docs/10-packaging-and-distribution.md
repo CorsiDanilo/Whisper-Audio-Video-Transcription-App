@@ -1,4 +1,4 @@
-[⬅ Previous](./08-transcription-engine.md) | [🏠 Index](./README.md)
+[⬅ Previous](./09-transcription-engine.md) | [🏠 Index](./README.md)
 
 # Packaging and Distribution
 
@@ -136,4 +136,4 @@ This ensures that when the executable runs, it can locate the YAML files relativ
 
 - `hooks/hook-gradio.py`: hooks/hook-gradio.py
 
-[⬅ Previous](./08-transcription-engine.md) | [🏠 Index](./README.md)
+[⬅ Previous](./09-transcription-engine.md) | [🏠 Index](./README.md)

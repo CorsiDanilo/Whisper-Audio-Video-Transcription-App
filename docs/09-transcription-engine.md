@@ -1,4 +1,4 @@
-[⬅ Previous](./07-llm-integration.md) | [🏠 Index](./README.md) | [Next ➡](./09-packaging-and-distribution.md)
+[⬅ Previous](./08-llm-integration.md) | [🏠 Index](./README.md) | [Next ➡](./10-packaging-and-distribution.md)
 
 # Transcription Engine
 
@@ -132,4 +132,4 @@ result = transcribe_file(
 
 - `from faster_whisper import WhisperModel`: from faster_whisper import WhisperModel
 
-[⬅ Previous](./07-llm-integration.md) | [🏠 Index](./README.md) | [Next ➡](./09-packaging-and-distribution.md)
+[⬅ Previous](./08-llm-integration.md) | [🏠 Index](./README.md) | [Next ➡](./10-packaging-and-distribution.md)
