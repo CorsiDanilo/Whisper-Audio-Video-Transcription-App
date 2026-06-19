@@ -1,15 +1,15 @@
 @echo off
 REM Path to the virtual environment
-set VENV_DIR=.venv
+set VENV_DIR=%~dp0.venv
 
 REM Path to the Python script
 set PYTHON_SCRIPT=main.py
 
 REM Activate the virtual environment
-call %VENV_DIR%\Scripts\activate
+call "%VENV_DIR%\Scripts\activate"
 
 REM Esegui PyInstaller con il file spec
-pyinstaller --noconfirm whisper.spec
+"%VENV_DIR%\Scripts\python.exe" -m PyInstaller --noconfirm whisper.spec
 
 REM Verifica se l'operazione di PyInstaller è andata a buon fine
 if errorlevel 1 (
