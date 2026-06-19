@@ -154,7 +154,7 @@ def browse_local_media_file():
         root = tk.Tk()
         root.withdraw()
         root.attributes("-topmost", True)
-        selected_path = filedialog.askopenfilename(
+        selected_paths = filedialog.askopenfilenames(
             title=_("select_media_title"),
             filetypes=[
                 (_("media_files_filter"), "*.avi *.flac *.m4a *.mkv *.mov *.mp3 *.mp4 *.ogg *.opus *.wav *.webm"),
@@ -163,7 +163,9 @@ def browse_local_media_file():
             parent=root,
         )
         root.destroy()
-        return selected_path or gr.update()
+        if selected_paths:
+            return "\n".join(selected_paths)
+        return gr.update()
     except Exception as e:
         logging.error(f"Error selecting media file: {e}")
         gr.Error(_("error_selecting_media").format(str(e)))
@@ -229,7 +231,7 @@ with gr.Blocks() as demo:
         file_path_input = gr.Textbox(
             label=_("media_file_path_label"),
             placeholder=_("media_file_path_placeholder"),
-            lines=1,
+            lines=3,
         )
     browse_file_button = gr.Button(_("browse"), variant="secondary")
     
@@ -444,24 +446,30 @@ with gr.Blocks() as demo:
         outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button]
     )
 
-    def transcribe_wrapper(file_path, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps):
-        try:
-            file_path = validate_local_media_path(file_path)
-        except SecurityError as e:
-            logging.warning("Rejected media path: %s", e)
-            yield _("invalid_file").format(e), None, gr.update(visible=False), gr.update(visible=False)
+    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps):
+        if not file_paths_text or not file_paths_text.strip():
+            yield _("invalid_file").format("No file selected"), None, gr.update(visible=False), gr.update(visible=False)
             return
 
+        raw_paths = [p.strip() for p in file_paths_text.strip().split('\n') if p.strip()]
+        
+        valid_paths = []
+        for path in raw_paths:
+            try:
+                valid_paths.append(str(validate_local_media_path(path)))
+            except SecurityError as e:
+                logging.warning("Rejected media path: %s", e)
+                yield _("invalid_file").format(f"{path}: {e}"), None, gr.update(visible=False), gr.update(visible=False)
+                return
+
         for transcription, output_path, _folder_path in transcribe_file(
-            file_path, device, cpu_threads, num_workers, language,
+            valid_paths, device, cpu_threads, num_workers, language,
             whisper_model, compute_type, temperature, beam_size,
             batch_size, condition_on_previous_text, word_timestamps
         ):
-            # Check if transcription was successful by checking if output_path is generated
             if output_path:
                  yield transcription, output_path, gr.update(visible=True), gr.update(visible=True)
             else:
-                 # Keep them hidden or hide them if they were visible (on error or during streaming)
                  yield transcription, output_path, gr.update(visible=False), gr.update(visible=False)
 
     transcribe_button.click( # Updated outputs to use transcript_file_path and button visibility
