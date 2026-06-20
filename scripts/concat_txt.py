@@ -2,10 +2,10 @@
 Concatenates all .txt files in a directory sorted by modification time (newest first).
 
 Usage:
-    python concat_txt.py /path/to/directory
+    python scripts/concat_txt.py /path/to/directory
 
 Example:
-    python concat_txt.py ./audio/transcripts
+    python scripts/concat_txt.py ./audio/transcripts
 """
 import argparse
 from pathlib import Path
