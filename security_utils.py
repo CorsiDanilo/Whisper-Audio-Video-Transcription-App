@@ -156,15 +156,19 @@ def get_media_duration_seconds(media_path):
         "default=noprint_wrappers=1:nokey=1",
         str(media_path),
     ]
+    kwargs = {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+        "check": True,
+        "timeout": get_ffmpeg_timeout_seconds(),
+    }
+    import sys
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
     try:
-        result = subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-            timeout=get_ffmpeg_timeout_seconds(),
-        )
+        result = subprocess.run(command, **kwargs)
     except FileNotFoundError as exc:
         raise SecurityError("ffprobe is required to inspect uploaded media.") from exc
     except subprocess.TimeoutExpired as exc:

@@ -8,15 +8,19 @@ DEFAULT_VALUES = load_default_values()
 
 
 def _run_ffmpeg(command, action):
+    kwargs = {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+        "check": True,
+        "timeout": get_ffmpeg_timeout_seconds(),
+    }
+    import sys
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
     try:
-        subprocess.run(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-            timeout=get_ffmpeg_timeout_seconds(),
-        )
+        subprocess.run(command, **kwargs)
     except FileNotFoundError:
         logging.error("ffmpeg is not installed or not available on PATH.")
         raise
@@ -67,7 +71,14 @@ def is_video_file(file_path):
         return False
 
 def extract_audio_from_video(video_file, output_audio_file):
-    """Extracts audio from a video file using ffmpeg."""
+    """Extracts audio from a video file using ffmpeg.
+
+    Uses '-map a?' so that ffmpeg does not abort when the video has no audio
+    track — the '?' makes the stream mapping optional.  After the call we
+    verify that a non-empty output file was actually produced; if not the
+    video had no audio and we raise a descriptive RuntimeError so the caller
+    can decide whether to skip or surface the error.
+    """
     try:
         logging.info(f"Extracting audio from video file: {video_file}...")
         command = [
@@ -80,10 +91,18 @@ def extract_audio_from_video(video_file, output_audio_file):
             "-q:a",
             "0",
             "-map",
-            "a",
+            "a?",  # '?' = skip mapping silently if no audio stream exists
             output_audio_file,
         ]
         _run_ffmpeg(command, "Video audio extraction")
+
+        # If ffmpeg exited cleanly but produced no file (or an empty one),
+        # the video simply had no audio track.
+        if not os.path.exists(output_audio_file) or os.path.getsize(output_audio_file) == 0:
+            raise RuntimeError(
+                f"Video has no audio track, skipping: {video_file}"
+            )
+
         logging.info(f"Audio extracted to: {output_audio_file}")
     except Exception as e:
         logging.error(f"Error extracting audio from video: {e}")

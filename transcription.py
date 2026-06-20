@@ -82,76 +82,87 @@ def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whis
         session_transcription = ""
         total_files = len(file_paths)
         for index, file_path_str in enumerate(file_paths, 1):
+            # --- validate path (security check) ---
             try:
                 source_path = validate_local_media_path(file_path_str)
             except SecurityError as e:
                 logging.warning("Rejected transcription input: %s", e)
                 yield f"Invalid file: {e}", None, None
                 continue
-                
-            current_file_path = str(source_path)
+
             file_name = source_path.name
             folder_path = str(source_path.parent)
-            logging.info(f"Processing file {index}/{total_files}: {file_name}")
-            
             header = f"### File {index}/{total_files}: {file_name}\n\n"
-            yield session_transcription + header + "Converting/Preparing audio...", None, folder_path
-            
-            # Prepare the audio file in MP3
-            audio_file = build_local_output_path(current_file_path, ".mp3")
-            file_ext = source_path.suffix.lower()
-            if file_ext != ".mp3":
-                if is_video_file(current_file_path):
-                    extract_audio_from_video(current_file_path, str(audio_file))
-                    current_file_path = str(audio_file)
-                elif is_whatsapp_audio_file(current_file_path):
-                    convert_whatsapp_audio_to_mp3(current_file_path, str(audio_file))
-                    current_file_path = str(audio_file)
-                elif is_audio_file(current_file_path):
-                    convert_audio_to_mp3(current_file_path, str(audio_file))
-                    current_file_path = str(audio_file)
-                else:
-                    yield session_transcription + header + "Invalid file type", None, folder_path
-                    session_transcription += header + "Invalid file type\n\n---\n\n"
-                    continue
+            logging.info(f"Processing file {index}/{total_files}: {file_name}")
 
-            logging.info(f"Transcribing {current_file_path}...")
-            yield session_transcription + header + "Transcribing...", None, folder_path
-            
-            segments, info = batched_model.transcribe(
-                current_file_path,
-                batch_size=batch_size,
-                language=language,
-                beam_size=beam_size,
-                condition_on_previous_text=condition_on_previous_text,
-                word_timestamps=word_timestamps,
-                temperature=temperature
-            )
+            # --- per-file processing: any failure is caught and logged,
+            #     then the loop continues with the next file ---
+            try:
+                current_file_path = str(source_path)
+                yield session_transcription + header + "Converting/Preparing audio...", None, folder_path
 
-            logging.info("File transcribed successfully, generating transcript...")
-            accumulated_transcription = ""
+                # Prepare the audio file in MP3
+                audio_file = build_local_output_path(current_file_path, ".mp3")
+                file_ext = source_path.suffix.lower()
+                if file_ext != ".mp3":
+                    if is_video_file(current_file_path):
+                        extract_audio_from_video(current_file_path, str(audio_file))
+                        current_file_path = str(audio_file)
+                    elif is_whatsapp_audio_file(current_file_path):
+                        convert_whatsapp_audio_to_mp3(current_file_path, str(audio_file))
+                        current_file_path = str(audio_file)
+                    elif is_audio_file(current_file_path):
+                        convert_audio_to_mp3(current_file_path, str(audio_file))
+                        current_file_path = str(audio_file)
+                    else:
+                        error_msg = "Invalid file type"
+                        yield session_transcription + header + error_msg, None, folder_path
+                        session_transcription += header + error_msg + "\n\n---\n\n"
+                        continue
 
-            # Iterate over segments and yield progressively
-            for segment in segments:
-                if word_timestamps:
-                    chunk = "\n".join(f"{word.start:.2f} -> {word.end:.2f} {word.word}" for word in segment.words) + "\n"
-                else:
-                    chunk = segment.text + "\n"
-                
-                accumulated_transcription += chunk
-                # Yield partial result. Output path is None until transcription is complete.
-                yield session_transcription + header + accumulated_transcription, None, folder_path
+                logging.info(f"Transcribing {current_file_path}...")
+                yield session_transcription + header + "Transcribing...", None, folder_path
 
-            logging.info(f"Transcript generated. Saving transcript to folder: {folder_path}...")
-            output_path = build_local_output_path(source_path, "_transcript.txt")
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(accumulated_transcription)
-            logging.info(f"Transcription saved to: {output_path}")
+                segments, info = batched_model.transcribe(
+                    current_file_path,
+                    batch_size=batch_size,
+                    language=language,
+                    beam_size=beam_size,
+                    condition_on_previous_text=condition_on_previous_text,
+                    word_timestamps=word_timestamps,
+                    temperature=temperature
+                )
 
-            # Final yield with output path for the current file
-            yield session_transcription + header + accumulated_transcription, str(output_path), folder_path
-            
-            session_transcription += header + accumulated_transcription + "\n\n---\n\n"
+                logging.info("File transcribed successfully, generating transcript...")
+                accumulated_transcription = ""
+
+                # Iterate over segments and yield progressively
+                for segment in segments:
+                    if word_timestamps:
+                        chunk = "\n".join(f"{word.start:.2f} -> {word.end:.2f} {word.word}" for word in segment.words) + "\n"
+                    else:
+                        chunk = segment.text + "\n"
+
+                    accumulated_transcription += chunk
+                    # Yield partial result. Output path is None until transcription is complete.
+                    yield session_transcription + header + accumulated_transcription, None, folder_path
+
+                logging.info(f"Transcript generated. Saving transcript to folder: {folder_path}...")
+                output_path = build_local_output_path(source_path, "_transcript.txt")
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write(accumulated_transcription)
+                logging.info(f"Transcription saved to: {output_path}")
+
+                # Final yield with output path for the current file
+                yield session_transcription + header + accumulated_transcription, str(output_path), folder_path
+
+                session_transcription += header + accumulated_transcription + "\n\n---\n\n"
+
+            except Exception as file_error:
+                error_msg = f"Skipped (error): {file_error}"
+                logging.error("Error processing file %s: %s", file_name, file_error)
+                yield session_transcription + header + error_msg, None, folder_path
+                session_transcription += header + error_msg + "\n\n---\n\n"
             
     except Exception as e:
         logging.error(f"Error transcribing file: {e}")

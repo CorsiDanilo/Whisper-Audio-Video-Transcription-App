@@ -135,11 +135,11 @@ def reset_fields():
 
 
 def preset_query_summary():
-    return _("preset_summary")
+    return _("preset_summary_val")
 
 
 def preset_query_todo():
-    return _("preset_todo")
+    return _("preset_todo_val")
 
 
 def notify_copy():
@@ -223,7 +223,7 @@ custom_css = """
 }
 """
 
-with gr.Blocks() as demo:
+with gr.Blocks(title="Whisper Utility") as demo:
     setup_logging()
     gr.Markdown(_("title"))
 
