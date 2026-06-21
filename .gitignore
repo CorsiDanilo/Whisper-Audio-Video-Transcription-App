@@ -2,5 +2,5 @@ __pycache__
 dist
 build
 *.log
-config
+secrets
 .docgen-agent

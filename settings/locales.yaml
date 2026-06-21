@@ -1,0 +1,179 @@
+english:
+  # General UI
+  title: "# 🎤 Audio/Video Transcription (Whisper)"
+  browse: "📁 Browse..."
+  quit: "❌ Quit"
+  reset_fields: "🔄 Reset fields"
+  
+  # Configurations section
+  configurations_title: "## ⚙️ Configurations"
+  explanation_accordion: "ℹ️ Explanation"
+  explanation_text: |-
+    - **Device**: Determines the device to use for processing (CPU or GPU).
+    - **CPU Threads**: Determines the number of threads to use for processing (higher values may improve processing speed but require more CPU resources).
+    - **Number of Workers**: Determines the number of workers to use for processing (higher values may improve processing speed but require more memory).
+    - **Language**: Determines the language of the audio file.
+    - **Model Size**: Determines the Whisper model alias. `turbo` is a fast multilingual option; `distil-*` models are faster distilled checkpoints, mainly useful for English speech recognition.
+    - **Condition on Previous Text**: If checked, the model will consider the previous text when transcribing the current text. Disabling it is recommended for `distil-*` models.
+    - **Word-level timestamps**: If checked, the model will provide timestamps for each word in the transcription.
+    - **Computational Type**: Determines the precision of the model's calculations (higher precision is more accurate but slower).
+    - **Temperature**: Determines the randomness of the model's predictions (higher values may introduce more errors but can improve diversity).
+    - **Beam Size**: Determines the number of possible transcription paths to consider (higher values may improve accuracy but require more processing time).
+    - **Batch Size**: Determines the number of audio files to process simultaneously (higher values may improve processing speed but require more memory).
+  config_file_path_label: "Configuration file path"
+  config_file_path_placeholder: "C:\\path\\to\\config.yaml"
+  device_label: "Device"
+  cpu_threads_label: "CPU Threads"
+  num_workers_label: "Number of Workers"
+  language_label: "Language"
+  whisper_model_label: "Whisper Model"
+  compute_type_label: "Compute Type"
+  temperature_label: "Temperature"
+  beam_size_label: "Beam Size"
+  batch_size_label: "Batch Size"
+  condition_on_previous_text_label: "Condition on Previous Text"
+  word_timestamps_label: "Word-level timestamps"
+  save_configurations: "💾 Save configurations"
+  
+  # Media section
+  media_file_path_label: "File Paths"
+  media_file_path_placeholder: "Use 'Browse...' to select files or paste paths here (one per line)"
+  
+  # Transcription section
+  transcription_title: "## 📝 Transcription"
+  transcription_accordion: "📝 Transcribed Text"
+  copy_transcription: "📋 Copy Transcription"
+  transcription_placeholder: "*No text transcribed yet. Please transcribe a file.*"
+  save_transcript_as: "💾 Save As..."
+  transcribe_btn: "🚀 Transcribe"
+  
+  # AI section
+  ai_provider_accordion: "🤖 AI Assistant (Post-Processing)"
+  provider_label: "AI Provider"
+  choose_gemini_model: "Gemini Model"
+  choose_ollama_model: "Ollama Model"
+  choose_lmstudio_model: "LM Studio Model"
+  preset_summary: "📝 Summary"
+  preset_summary_val: "Summarize the transcription"
+  preset_todo: "🔑 To-Do List"
+  preset_todo_val: "Extract the action items and to-do list from the transcription"
+  enter_query_label: "Your question about the text"
+  submit_query_btn: "📤 Ask AI"
+  ai_response_accordion: "💬 AI Response"
+  copy_response: "📋 Copy Response"
+  response_placeholder: "Waiting for a query..."
+  
+  # Popups & System Messages
+  text_copied: "Text copied to clipboard!"
+  error_loading_config: "Error loading configuration: {}"
+  config_must_be_mapping: "Configuration file must contain a mapping."
+  rejected_config_path: "Rejected configuration path: %s"
+  error_saving_settings: "Error saving settings: {}"
+  select_media_title: "Select Audio/Video File"
+  media_files_filter: "Media files"
+  all_files_filter: "All files"
+  error_selecting_media: "Error selecting media file: {}"
+  select_config_title: "Select Configuration File"
+  yaml_files_filter: "YAML files"
+  error_selecting_config: "Error selecting configuration file: {}"
+  quitting_app: "Quitting application..."
+  error_quitting: "Error quitting application: {}"
+  invalid_file: "Invalid file: {}"
+  no_transcript_to_save: "No transcript file available to save. Please transcribe first."
+  rejected_transcript_save: "Rejected transcript save source: %s"
+  transcript_not_available: "Transcript file is not available to save."
+  save_transcript_title: "Save Transcript As"
+  text_files_filter: "Text files"
+  successfully_saved: "Successfully saved to: {}"
+  save_cancelled: "Save cancelled."
+  error_saving_file: "Error saving file: {}"
+
+italian:
+  # General UI
+  title: "# 🎤 Trascrizione Audio/Video con Modello Whisper"
+  browse: "📁 Sfoglia..."
+  quit: "❌ Esci"
+  reset_fields: "🔄 Resetta campi"
+  
+  # Configurations section
+  configurations_title: "## ⚙️ Configurazioni"
+  explanation_accordion: "ℹ️ Spiegazione"
+  explanation_text: |-
+    - **Dispositivo**: Determina il dispositivo da utilizzare per l'elaborazione (CPU o GPU).
+    - **Thread CPU**: Determina il numero di thread da utilizzare (valori più alti possono migliorare la velocità ma richiedono più risorse CPU).
+    - **Numero di Worker**: Determina il numero di worker (valori più alti possono velocizzare ma richiedono più memoria).
+    - **Lingua**: Determina la lingua del file audio.
+    - **Dimensione Modello**: Determina il modello Whisper. `turbo` è un'opzione multilingua veloce; i modelli `distil-*` sono più veloci ma utili principalmente per l'inglese.
+    - **Condiziona su Testo Precedente**: Se selezionato, il modello considererà il testo precedente durante la trascrizione. Si consiglia di disabilitarlo per i modelli `distil-*`.
+    - **Timestamp per parola**: Se selezionato, fornirà timestamp per ogni parola.
+    - **Tipo di Calcolo**: Determina la precisione dei calcoli (precisione maggiore = più accurato ma più lento).
+    - **Temperatura**: Determina la casualità delle previsioni (valori più alti introducono più errori ma possono migliorare la diversità).
+    - **Dimensione Beam**: Determina il numero di percorsi di trascrizione possibili da considerare (valori più alti migliorano l'accuratezza ma richiedono più tempo).
+    - **Dimensione Batch**: Determina il numero di file audio da elaborare contemporaneamente (valori più alti migliorano la velocità ma richiedono più memoria).
+  config_file_path_label: "Percorso file di configurazione"
+  config_file_path_placeholder: "C:\\percorso\\al\\config.yaml"
+  device_label: "Dispositivo"
+  cpu_threads_label: "Thread CPU"
+  num_workers_label: "Numero di Worker"
+  language_label: "Lingua"
+  whisper_model_label: "Modello Whisper"
+  compute_type_label: "Tipo di Calcolo"
+  temperature_label: "Temperatura"
+  beam_size_label: "Dimensione Beam"
+  batch_size_label: "Dimensione Batch"
+  condition_on_previous_text_label: "Condiziona su Testo Precedente"
+  word_timestamps_label: "Timestamp per parola"
+  save_configurations: "💾 Salva configurazioni"
+  
+  # Media section
+  media_file_path_label: "Percorsi file"
+  media_file_path_placeholder: "Usa 'Sfoglia...' per selezionare i file oppure incolla i percorsi (uno per riga)"
+  
+  # Transcription section
+  transcription_title: "## 📝 Trascrizione"
+  transcription_accordion: "📝 Testo Trascritto"
+  copy_transcription: "📋 Copia Trascrizione"
+  transcription_placeholder: "*Nessun testo trascritto. Elabora prima un file.*"
+  save_transcript_as: "💾 Salva con nome..."
+  transcribe_btn: "🚀 Trascrivi"
+  
+  # AI section
+  ai_provider_accordion: "🤖 Assistente AI (Post-Elaborazione)"
+  provider_label: "Provider AI"
+  choose_gemini_model: "Modello Gemini"
+  choose_ollama_model: "Modello Ollama"
+  choose_lmstudio_model: "Modello LM Studio"
+  preset_summary: "📝 Riassunto"
+  preset_summary_val: "Fammi un riassunto della trascrizione"
+  preset_todo: "🔑 Cose da fare"
+  preset_todo_val: "Estrai le cose da fare e la lista dei task dalla trascrizione"
+  enter_query_label: "La tua domanda sul testo"
+  submit_query_btn: "📤 Invia ad AI"
+  ai_response_accordion: "💬 Risposta AI"
+  copy_response: "📋 Copia Risposta"
+  response_placeholder: "In attesa di una domanda..."
+  
+  # Popups & System Messages
+  text_copied: "Testo copiato negli appunti!"
+  error_loading_config: "Errore nel caricamento della configurazione: {}"
+  config_must_be_mapping: "Il file di configurazione deve contenere una mappa."
+  rejected_config_path: "Percorso di configurazione rifiutato: %s"
+  error_saving_settings: "Errore durante il salvataggio delle impostazioni: {}"
+  select_media_title: "Seleziona File Audio/Video"
+  media_files_filter: "File multimediali"
+  all_files_filter: "Tutti i file"
+  error_selecting_media: "Errore durante la selezione del file multimediale: {}"
+  select_config_title: "Seleziona File di Configurazione"
+  yaml_files_filter: "File YAML"
+  error_selecting_config: "Errore durante la selezione del file di configurazione: {}"
+  quitting_app: "Chiusura dell'applicazione..."
+  error_quitting: "Errore durante la chiusura dell'applicazione: {}"
+  invalid_file: "File non valido: {}"
+  no_transcript_to_save: "Nessun file di trascrizione disponibile da salvare. Per favore, trascrivi prima."
+  rejected_transcript_save: "Sorgente di salvataggio della trascrizione rifiutata: %s"
+  transcript_not_available: "Il file di trascrizione non è disponibile per il salvataggio."
+  save_transcript_title: "Salva Trascrizione Come"
+  text_files_filter: "File di testo"
+  successfully_saved: "Salvato con successo in: {}"
+  save_cancelled: "Salvataggio annullato."
+  error_saving_file: "Errore nel salvataggio del file: {}"

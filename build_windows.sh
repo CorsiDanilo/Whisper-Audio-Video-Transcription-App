@@ -30,17 +30,17 @@ fi
 
 # Create directories
 echo "Creating output directories..."
-mkdir -p dist/Whisper/config
-mkdir -p dist/Whisper/default_values
 mkdir -p dist/Whisper/settings
 mkdir -p dist/Whisper/_internal/faster_whisper
 mkdir -p dist/Whisper/_internal/safehttpx
 
 # Copy configuration files
 echo "Copying assets..."
-cp -r config/* dist/Whisper/config/
-cp -r default_values/* dist/Whisper/default_values/
 cp -r settings/* dist/Whisper/settings/
+if [ -d "secrets" ]; then
+    mkdir -p dist/Whisper/secrets
+    cp -r secrets/* dist/Whisper/secrets/
+fi
 
 # Copy internal packages (logic from installer.bat)
 echo "Copying internal packages..."

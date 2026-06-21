@@ -20,9 +20,8 @@ if errorlevel 1 (
 
 REM Copia delle cartelle nella destinazione
 echo Copia delle cartelle...
-xcopy /E /I /Y "config" "dist\Whisper\config"
-xcopy /E /I /Y "default_values" "dist\Whisper\default_values"
 xcopy /E /I /Y "settings" "dist\Whisper\settings"
+if exist "secrets" xcopy /E /I /Y "secrets" "dist\Whisper\secrets"
 xcopy /E /I /Y ".venv\Lib\site-packages\faster_whisper" "dist\Whisper\_internal\faster_whisper"
 xcopy /E /I /Y ".venv\Lib\site-packages\safehttpx" "dist\Whisper\_internal\safehttpx"
 
