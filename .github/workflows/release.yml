@@ -1,0 +1,162 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-cpu
+            requirements: requirements_cpu.txt
+            artifact_base: Whisper-windows-cpu
+            archive_ext: zip
+
+          - os: windows-latest
+            platform: windows-gpu
+            requirements: requirements_gpu.txt
+            artifact_base: Whisper-windows-gpu
+            archive_ext: zip
+
+          - os: macos-latest
+            platform: macos
+            requirements: requirements_macos.txt
+            artifact_base: Whisper-macos
+            archive_ext: zip
+
+          - os: ubuntu-latest
+            platform: linux
+            requirements: requirements_linux.txt
+            artifact_base: Whisper-linux
+            archive_ext: tar.gz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ── System dependencies ─────────────────────────────────────────────────
+
+      - name: System dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install ffmpeg --no-progress -y
+
+      - name: System dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+
+      - name: System dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            ffmpeg \
+            libgirepository1.0-dev \
+            gcc \
+            libcairo2-dev \
+            pkg-config \
+            python3-dev \
+            gir1.2-gtk-3.0 \
+            libwebkit2gtk-4.0-dev
+
+      # ── Python dependencies ─────────────────────────────────────────────────
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ${{ matrix.requirements }}
+
+      # ── PyInstaller build ───────────────────────────────────────────────────
+
+      - name: Build with PyInstaller
+        run: pyinstaller --noconfirm whisper.spec
+
+      # ── Copy runtime assets ─────────────────────────────────────────────────
+
+      - name: Copy runtime assets
+        shell: bash
+        run: |
+          SITE=$(python -c "import site; print(site.getsitepackages()[0])")
+          mkdir -p dist/Whisper/default_values
+          mkdir -p dist/Whisper/settings
+          mkdir -p dist/Whisper/_internal/faster_whisper
+          mkdir -p dist/Whisper/_internal/safehttpx
+          cp -r default_values/. dist/Whisper/default_values/
+          cp -r settings/. dist/Whisper/settings/
+          if [ -d "$SITE/faster_whisper" ]; then
+            cp -r "$SITE/faster_whisper/." dist/Whisper/_internal/faster_whisper/
+          fi
+          if [ -d "$SITE/safehttpx" ]; then
+            cp -r "$SITE/safehttpx/." dist/Whisper/_internal/safehttpx/
+          fi
+
+      # ── Archive ─────────────────────────────────────────────────────────────
+
+      - name: Archive (Windows — zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\Whisper -DestinationPath "${{ matrix.artifact_base }}-${{ github.ref_name }}.zip"
+
+      - name: Archive (macOS — zip)
+        if: runner.os == 'macOS'
+        run: |
+          cd dist
+          zip -r "../${{ matrix.artifact_base }}-${{ github.ref_name }}.zip" Whisper/
+
+      - name: Archive (Linux — tar.gz)
+        if: runner.os == 'Linux'
+        run: |
+          cd dist
+          tar -czf "../${{ matrix.artifact_base }}-${{ github.ref_name }}.tar.gz" Whisper/
+
+      # ── SHA256 checksums ────────────────────────────────────────────────────
+
+      - name: Generate SHA256 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $file = "${{ matrix.artifact_base }}-${{ github.ref_name }}.zip"
+          $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+          "$hash  $file" | Out-File -Encoding ascii "$file.sha256"
+
+      - name: Generate SHA256 (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          FILE="${{ matrix.artifact_base }}-${{ github.ref_name }}.zip"
+          shasum -a 256 "$FILE" > "$FILE.sha256"
+
+      - name: Generate SHA256 (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          FILE="${{ matrix.artifact_base }}-${{ github.ref_name }}.tar.gz"
+          sha256sum "$FILE" > "$FILE.sha256"
+
+      # ── Upload to GitHub Release ────────────────────────────────────────────
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          files: |
+            ${{ matrix.artifact_base }}-${{ github.ref_name }}.${{ matrix.archive_ext }}
+            ${{ matrix.artifact_base }}-${{ github.ref_name }}.${{ matrix.archive_ext }}.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
