@@ -73,7 +73,7 @@ jobs:
             pkg-config \
             python3-dev \
             gir1.2-gtk-3.0 \
-            libwebkit2gtk-4.0-dev
+            libwebkit2gtk-4.1-dev
 
       # ── Python dependencies ─────────────────────────────────────────────────
 
