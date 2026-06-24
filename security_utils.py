@@ -21,9 +21,7 @@ ALLOWED_MEDIA_EXTENSIONS = {
 }
 ALLOWED_CONFIG_EXTENSIONS = {".yaml", ".yml"}
 
-DEFAULT_MAX_UPLOAD_BYTES = 512 * 1024 * 1024
 DEFAULT_MAX_CONFIG_BYTES = 1024 * 1024
-DEFAULT_MAX_MEDIA_DURATION_SECONDS = 2 * 60 * 60
 DEFAULT_FFMPEG_TIMEOUT_SECONDS = 5 * 60
 
 
@@ -51,19 +49,8 @@ def _env_bool(name, default=False):
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def get_max_upload_bytes():
-    return _env_int("WHISPER_MAX_UPLOAD_BYTES", DEFAULT_MAX_UPLOAD_BYTES)
-
-
 def get_max_config_bytes():
     return _env_int("WHISPER_MAX_CONFIG_BYTES", DEFAULT_MAX_CONFIG_BYTES)
-
-
-def get_max_media_duration_seconds():
-    return _env_int(
-        "WHISPER_MAX_MEDIA_DURATION_SECONDS",
-        DEFAULT_MAX_MEDIA_DURATION_SECONDS,
-    )
 
 
 def get_ffmpeg_timeout_seconds():
@@ -136,86 +123,30 @@ def validate_extension(path, allowed_extensions):
     return suffix
 
 
-def validate_file_size(path, max_bytes):
-    size = Path(path).stat().st_size
-    if size <= 0:
-        raise SecurityError("Uploaded file is empty.")
-    if size > max_bytes:
-        raise SecurityError("Uploaded file is too large.")
-    return size
 
 
-def get_media_duration_seconds(media_path):
-    command = [
-        "ffprobe",
-        "-v",
-        "error",
-        "-show_entries",
-        "format=duration",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
-        str(media_path),
-    ]
-    kwargs = {
-        "stdout": subprocess.PIPE,
-        "stderr": subprocess.PIPE,
-        "text": True,
-        "check": True,
-        "timeout": get_ffmpeg_timeout_seconds(),
-    }
-    import sys
-    if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
 
-    try:
-        result = subprocess.run(command, **kwargs)
-    except FileNotFoundError as exc:
-        raise SecurityError("ffprobe is required to inspect uploaded media.") from exc
-    except subprocess.TimeoutExpired as exc:
-        raise SecurityError("Media duration inspection timed out.") from exc
-    except subprocess.CalledProcessError as exc:
-        raise SecurityError("Unable to inspect uploaded media duration.") from exc
-
-    try:
-        duration = float(result.stdout.strip())
-    except ValueError as exc:
-        raise SecurityError("Unable to inspect uploaded media duration.") from exc
-    if duration < 0:
-        raise SecurityError("Invalid uploaded media duration.")
-    return duration
-
-
-def validate_media_duration(path):
-    duration = get_media_duration_seconds(path)
-    if duration > get_max_media_duration_seconds():
-        raise SecurityError("Uploaded media duration exceeds the configured limit.")
-    return duration
-
-
-def validate_media_constraints(path, inspect_duration=True):
+def validate_media_constraints(path):
     resolved = Path(path).resolve()
     if not resolved.is_file():
         raise SecurityError("Uploaded file does not exist.")
     validate_extension(resolved, ALLOWED_MEDIA_EXTENSIONS)
-    validate_file_size(resolved, get_max_upload_bytes())
-    if inspect_duration:
-        validate_media_duration(resolved)
     return resolved
 
 
-def validate_controlled_media_path(path, inspect_duration=True):
+def validate_controlled_media_path(path):
     resolved = _coerce_path(path)
     ensure_within(
         resolved,
         get_gradio_temp_dir(),
         "Media input is outside Gradio temporary storage.",
     )
-    return validate_media_constraints(resolved, inspect_duration=inspect_duration)
+    return validate_media_constraints(resolved)
 
 
-def validate_local_media_path(path, inspect_duration=True):
+def validate_local_media_path(path):
     resolved = _coerce_path(path)
-    return validate_media_constraints(resolved, inspect_duration=inspect_duration)
+    return validate_media_constraints(resolved)
 
 
 def validate_controlled_config_path(path):
@@ -247,7 +178,7 @@ def validate_controlled_transcript_path(path):
 
 
 def build_contained_output_path(input_path, suffix):
-    source = validate_controlled_media_path(input_path, inspect_duration=False)
+    source = validate_controlled_media_path(input_path)
     safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", source.stem).strip("._") or "upload"
     output = ensure_within(
         source.with_name(f"{safe_stem}{suffix}"),
@@ -263,7 +194,7 @@ def build_contained_output_path(input_path, suffix):
 
 
 def build_local_output_path(input_path, suffix):
-    source = validate_local_media_path(input_path, inspect_duration=False)
+    source = validate_local_media_path(input_path)
     safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", source.stem).strip("._") or "upload"
     return source.with_name(f"{safe_stem}{suffix}")
 
