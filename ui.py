@@ -15,7 +15,7 @@ configure_gradio_temp_dir()
 import gradio as gr  # noqa: E402
 from transcription import transcribe_file  # noqa: E402
 from config import load_default_values, load_default_config, get_gemini_api_key, get_translation as _  # noqa: E402
-from llms import query_gemini, list_ollama_models, list_lmstudio_models  # noqa: E402
+from llms import query_gemini, list_ollama_models, list_lmstudio_models, get_sorted_gemini_models  # noqa: E402
 from config import setup_logging  # noqa: E402
 
 default_values = load_default_values()
@@ -280,19 +280,44 @@ with gr.Blocks(title="Whisper Utility") as demo:
     user_query = None
     gemini_response = None
 
-    has_gemini = get_gemini_api_key() is not None
+    gemini_api_key = get_gemini_api_key()
+    gemini_models = get_sorted_gemini_models(gemini_api_key)
+    has_gemini = len(gemini_models) > 0
 
     with gr.Accordion(_("ai_provider_accordion"), open=True):
-        # Provider selection: if Gemini API key present, allow all providers; otherwise only local providers
-        if has_gemini:
-            provider = gr.Radio(choices=["Gemini", "Ollama", "LM Studio"], value="Gemini", label=_("provider_label"))
-        else:
-            provider = gr.Radio(choices=["Ollama", "LM Studio"], value="Ollama", label=_("provider_label"))
+        # Provider selection: if Gemini API key and models are present, allow all providers; otherwise only local providers
+        provider_choices = ["Google", "Ollama", "LM Studio"] if has_gemini else ["Ollama", "LM Studio"]
+        provider = gr.Radio(
+            choices=provider_choices,
+            value="Google" if has_gemini else "Ollama",
+            label=_("provider_label")
+        )
 
-        # Gemini model selector (only meaningful when using Gemini)
-        gemini_model = gr.Radio(
-            choices=default_values['gemini']['models'],
-            value=default_config_values["gemini_model"],
+        google_brand_radio = gr.Radio(
+            choices=["Gemini", "Gemma"],
+            value="Gemini",
+            label=_("model_family_label"),
+            visible=has_gemini,
+        )
+
+
+        initial_filtered_models = [m for m in gemini_models if "gemini" in m.lower()]
+        if not initial_filtered_models and gemini_models:
+            initial_filtered_models = [m for m in gemini_models if "gemma" in m.lower()]
+
+        default_val = None
+        for m in initial_filtered_models:
+            if "gemini-flash-latest" in m.lower():
+                default_val = m
+                break
+        if not default_val and initial_filtered_models:
+            default_val = initial_filtered_models[0]
+
+        # Gemini model selector (only meaningful when using Gemini/Google)
+        gemini_model = gr.Dropdown(
+            choices=initial_filtered_models,
+            value=default_val,
+            allow_custom_value=True,
             label=_("choose_gemini_model"),
             visible=has_gemini,
         )
@@ -364,9 +389,10 @@ with gr.Blocks(title="Whisper Utility") as demo:
     )
 
     def _provider_change(p):
-        # show Gemini model choices only when Gemini selected
+        # show Gemini model choices only when Google selected
         if str(p).lower().startswith('g'):
             return (
+                gr.update(visible=True),
                 gr.update(visible=True),
                 gr.update(visible=False, choices=[], value=""),
                 gr.update(visible=False, choices=[], value=""),
@@ -377,6 +403,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
             value = models[0] if models and models[0] != NO_MODELS_FOUND else ""
             return (
                 gr.update(visible=False),
+                gr.update(visible=False),
                 gr.update(visible=True, choices=models, value=value),
                 gr.update(visible=False, choices=[], value=""),
             )
@@ -386,11 +413,30 @@ with gr.Blocks(title="Whisper Utility") as demo:
         lm_value = lm_models[0] if lm_models and lm_models[0] != NO_MODELS_FOUND else ""
         return (
             gr.update(visible=False),
+            gr.update(visible=False),
             gr.update(visible=False, choices=[], value=""),
             gr.update(visible=True, choices=lm_models, value=lm_value),
         )
 
-    provider.change(fn=_provider_change, inputs=[provider], outputs=[gemini_model, ollama_model, lmstudio_model])
+    provider.change(fn=_provider_change, inputs=[provider], outputs=[google_brand_radio, gemini_model, ollama_model, lmstudio_model])
+
+    def _update_google_models(brand):
+        filtered = [m for m in gemini_models if brand.lower() in m.lower()]
+        val = None
+        if brand.lower() == "gemini":
+            for m in filtered:
+                if "gemini-flash-latest" in m.lower():
+                    val = m
+                    break
+        if not val and filtered:
+            val = filtered[0]
+        return gr.update(choices=filtered, value=val)
+
+    google_brand_radio.change(
+        fn=_update_google_models,
+        inputs=[google_brand_radio],
+        outputs=[gemini_model],
+    )
 
     submit_query_button.click(
         fn=query_gemini,

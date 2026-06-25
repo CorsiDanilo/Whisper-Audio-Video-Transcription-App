@@ -93,7 +93,6 @@ def query_ollama(user_input, transcription, ollama_model):
     """
     try:
         prompt = (
-            f"System prompt:\n\n{SYSTEM_PROMPT}\n\n"
             f"# Transcription\n{transcription}\n\n"
             f"User prompt: \n{user_input}"
         )
@@ -102,6 +101,7 @@ def query_ollama(user_input, transcription, ollama_model):
         payload = {
             "model": ollama_model,
             "prompt": prompt,
+            "system": SYSTEM_PROMPT,
         }
         resp = requests.post(url, json=payload, timeout=30, stream=True)
         resp.raise_for_status()
@@ -310,3 +310,76 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
     except Exception as e:
         logging.error(f"Error querying AI provider: {e}")
         yield f"Error querying AI provider: {e}"
+
+
+def get_sorted_gemini_models(api_key: str) -> list[str]:
+    """
+    Recupera tutti i modelli Gemini e Gemma disponibili tramite API
+    e li ordina posizionando il più recente all'inizio.
+    """
+    if not api_key:
+        return []
+        
+    try:
+        import re
+        client = genai.Client(api_key=api_key)
+        retrieved_models = []
+        
+        # 1. Recupera i modelli dall'API
+        for model in client.models.list():
+            name_lower = model.name.lower()
+            # Includi solo modelli generativi per testo/visione che siano Gemini o Gemma
+            if model.supported_actions and "generateContent" in model.supported_actions:
+                if "gemini" in name_lower or "gemma" in name_lower:
+                    # Escludi esplicitamente modelli di embeddings, audio, image, tts, video, tool, robotics, computer
+                    exclude_keywords = ["embed", "audio", "image", "tts", "video", "tool", "robotics", "computer"]
+                    if any(kw in name_lower for kw in exclude_keywords):
+                        continue
+                    clean_name = model.name.replace("models/", "")
+                    retrieved_models.append(clean_name)
+                    
+        if not retrieved_models:
+            return []
+
+        # 2. Algoritmo di ordinamento semantico (Latest-First)
+        def get_sort_key(name):
+            name_lower = name.lower()
+            
+            # Priorità per i modelli 'latest' (0 = prima, 1 = dopo)
+            is_latest = 0 if "latest" in name_lower else 1
+            
+            # Priorità del brand (Gemini prima di Gemma)
+            brand_priority = 1 if "gemini" in name_lower else 2
+            
+            # Estrazione della versione numerica principale
+            version = 1.0
+            brand_match = re.search(r'(?:gemini|gemma)-?(\d+(?:\.\d+)?)', name_lower)
+            if brand_match:
+                val_str = brand_match.group(1)
+                match_str = brand_match.group(0)
+                idx = name_lower.find(match_str) + len(match_str)
+                if idx < len(name_lower) and name_lower[idx] == 'b':
+                    version = 1.0
+                else:
+                    version = float(val_str)
+                    
+            # Priorità del tipo di modello (preferiamo 'flash' per il default, poi 'pro', poi altri)
+            flavor_priority = 3
+            if "flash" in name_lower:
+                flavor_priority = 1
+            elif "pro" in name_lower:
+                flavor_priority = 2
+                
+            # Restituiamo una tupla per ordinare:
+            # - is_latest (latest in cima)
+            # - version decrescente (-version)
+            # - brand_priority crescente (Gemini prima di Gemma)
+            # - flavor_priority crescente (Flash prima di Pro)
+            # - nome alfabetico decrescente per tie-break
+            return (is_latest, -version, brand_priority, flavor_priority, name_lower)
+
+        return sorted(retrieved_models, key=get_sort_key)
+        
+    except Exception as e:
+        logging.error(f"Impossibile connettersi a Gemini API o recuperare i modelli: {e}")
+        return []

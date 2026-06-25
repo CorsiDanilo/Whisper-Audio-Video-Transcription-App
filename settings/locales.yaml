@@ -89,6 +89,8 @@ english:
   successfully_saved: "Successfully saved to: {}"
   save_cancelled: "Save cancelled."
   error_saving_file: "Error saving file: {}"
+  model_family_label: "Model Family"
+
 
 italian:
   # General UI
@@ -181,3 +183,5 @@ italian:
   successfully_saved: "Salvato con successo in: {}"
   save_cancelled: "Salvataggio annullato."
   error_saving_file: "Errore nel salvataggio del file: {}"
+  model_family_label: "Famiglia Modelli"
+
