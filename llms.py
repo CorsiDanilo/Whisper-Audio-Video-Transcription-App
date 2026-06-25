@@ -35,6 +35,14 @@ SYSTEM_PROMPT = (
     "Limitati solo a rispondere alla richiesta dell'utente."
 )
 
+SYSTEM_PROMPT_FIX_TEXT = (
+    "Sei un assistente specializzato nella correzione e formattazione del testo. "
+    "Usa TUTTI i token a tua disposizione per massimizzare l'output e restituire il testo nella sua completezza. "
+    "Correggi tutti gli errori di battitura, grammatica, punteggiatura e formattazione. "
+    "NON omettere, tagliare o riassumere nessuna parte del testo originale: ogni parola deve essere presente nell'output. "
+    "Restituisci esclusivamente il testo corretto, senza commenti, prefazioni o spiegazioni."
+)
+
 
 
 def initialize_client():
@@ -85,7 +93,7 @@ def get_gemini_config(system_instruction=None):
 
 
 
-def query_ollama(user_input, transcription, ollama_model):
+def query_ollama(user_input, transcription, ollama_model, fix_text=False):
     """Query a local Ollama server with streaming.
 
     Yields the accumulated text progressively as Ollama streams NDJSON
@@ -97,11 +105,12 @@ def query_ollama(user_input, transcription, ollama_model):
             f"User prompt: \n{user_input}"
         )
 
+        sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
         url = OLLAMA_ENDPOINT.rstrip("/") + "/api/generate"
         payload = {
             "model": ollama_model,
             "prompt": prompt,
-            "system": SYSTEM_PROMPT,
+            "system": sys_prompt,
         }
         resp = requests.post(url, json=payload, timeout=30, stream=True)
         resp.raise_for_status()
@@ -182,7 +191,7 @@ def list_ollama_models():
         return []
 
 
-def query_lmstudio(user_input, transcription, lmstudio_model):
+def query_lmstudio(user_input, transcription, lmstudio_model, fix_text=False):
     """Query a local LM Studio server using the OpenAI-compatible streaming API.
 
     Yields the accumulated text progressively by parsing SSE delta chunks.
@@ -192,13 +201,14 @@ def query_lmstudio(user_input, transcription, lmstudio_model):
             yield "Error querying LM Studio: no model selected."
             return
 
+        sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
         url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/chat/completions"
         payload = {
             "model": lmstudio_model,
             "messages": [
                 {
                     "role": "system",
-                    "content": SYSTEM_PROMPT,
+                    "content": sys_prompt,
                 },
                 {
                     "role": "user",
@@ -271,7 +281,7 @@ def list_lmstudio_models():
         return []
 
 
-def query_gemini(user_input, transcription, gemini_model, provider="Gemini", ollama_model=None, lmstudio_model=None):
+def query_gemini(user_input, transcription, gemini_model, provider="Gemini", ollama_model=None, lmstudio_model=None, fix_text=False):
     """Dispatch query to the selected provider and stream the response.
 
     This is a generator: it yields the progressively accumulated text so
@@ -281,12 +291,12 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
     try:
         if provider and str(provider).lower().startswith('olla'):
             model_name = ollama_model or (gemini_model if gemini_model else 'llama2')
-            yield from query_ollama(user_input, transcription, model_name)
+            yield from query_ollama(user_input, transcription, model_name, fix_text=fix_text)
             return
 
         if provider and str(provider).lower().startswith('lm'):
             model_name = lmstudio_model or (gemini_model if gemini_model else "local-model")
-            yield from query_lmstudio(user_input, transcription, model_name)
+            yield from query_lmstudio(user_input, transcription, model_name, fix_text=fix_text)
             return
 
         # Use Gemini
@@ -295,8 +305,9 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
             yield "Error: Gemini API key not found."
             return
 
+        sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
         user_prompt = f"# Transcription\n{transcription}\n\nUser prompt: \n{user_input}"
-        config = get_gemini_config(system_instruction=SYSTEM_PROMPT)
+        config = get_gemini_config(system_instruction=sys_prompt)
 
         accumulated = ""
         for chunk in client.models.generate_content_stream(

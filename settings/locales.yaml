@@ -59,6 +59,8 @@ english:
   preset_summary_val: "Summarize the transcription"
   preset_todo: "🔑 To-Do List"
   preset_todo_val: "Extract the action items and to-do list from the transcription"
+  preset_fix: "✏️ Fix Text"
+  preset_fix_val: "Fix the transcription: correct all typos, grammar and formatting errors. Return only the corrected text, with no comments or explanations."
   enter_query_label: "Your question about the text"
   submit_query_btn: "📤 Ask AI"
   ai_response_accordion: "💬 AI Response"
@@ -153,6 +155,8 @@ italian:
   preset_summary_val: "Fammi un riassunto della trascrizione"
   preset_todo: "🔑 Cose da fare"
   preset_todo_val: "Estrai le cose da fare e la lista dei task dalla trascrizione"
+  preset_fix: "✏️ Correggi Testo"
+  preset_fix_val: "Correggi la trascrizione: sistema tutti gli errori di battitura, grammatica e formattazione. Restituisci solo il testo corretto, senza commenti o spiegazioni."
   enter_query_label: "La tua domanda sul testo"
   submit_query_btn: "📤 Invia ad AI"
   ai_response_accordion: "💬 Risposta AI"
@@ -184,4 +188,3 @@ italian:
   save_cancelled: "Salvataggio annullato."
   error_saving_file: "Errore nel salvataggio del file: {}"
   model_family_label: "Famiglia Modelli"
-

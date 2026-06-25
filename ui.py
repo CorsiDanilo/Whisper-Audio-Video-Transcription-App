@@ -142,6 +142,10 @@ def preset_query_todo():
     return _("preset_todo_val")
 
 
+def preset_query_fix():
+    return _("preset_fix_val")
+
+
 def notify_copy():
     gr.Info(_("text_copied"))
 
@@ -355,7 +359,9 @@ with gr.Blocks(title="Whisper Utility") as demo:
         with gr.Row():
             preset_summary_button = gr.Button(_("preset_summary"), variant="secondary")
             preset_todo_button = gr.Button(_("preset_todo"), variant="secondary")
+            preset_fix_button = gr.Button(_("preset_fix"), variant="secondary")
 
+        fix_text_mode = gr.State(False)
         user_query = gr.Textbox(label=_("enter_query_label"))
 
         submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
@@ -364,13 +370,19 @@ with gr.Blocks(title="Whisper Utility") as demo:
         fn=preset_query_summary,
         inputs=[],
         outputs=[user_query],
-    )
+    ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
     preset_todo_button.click(
         fn=preset_query_todo,
         inputs=[],
         outputs=[user_query],
-    )
+    ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
+
+    preset_fix_button.click(
+        fn=preset_query_fix,
+        inputs=[],
+        outputs=[user_query],
+    ).then(fn=lambda: True, inputs=[], outputs=[fix_text_mode])
 
     with gr.Accordion(_("ai_response_accordion")):
         copy_response_button = gr.Button(_("copy_response"), variant="secondary", size="sm")
@@ -440,7 +452,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
 
     submit_query_button.click(
         fn=query_gemini,
-        inputs=[user_query, output_text, gemini_model, provider, ollama_model, lmstudio_model],
+        inputs=[user_query, output_text, gemini_model, provider, ollama_model, lmstudio_model, fix_text_mode],
         outputs=[gemini_response],
         stream_every=0.05,  # flush UI at most every 50 ms
     )
@@ -490,7 +502,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
         fn=reset_fields,
         inputs=[],
         outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button]
-    )
+    ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
     def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps):
         if not file_paths_text or not file_paths_text.strip():
