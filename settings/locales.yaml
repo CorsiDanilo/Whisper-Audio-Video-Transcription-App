@@ -4,6 +4,8 @@ english:
   browse: "📁 Browse..."
   quit: "❌ Quit"
   reset_fields: "🔄 Reset fields"
+  tray_show_hide: "👁️ Show / Hide App"
+  tray_exit: "❌ Exit"
   
   # Configurations section
   configurations_title: "## ⚙️ Configurations"
@@ -94,6 +96,8 @@ italian:
   browse: "📁 Sfoglia..."
   quit: "❌ Esci"
   reset_fields: "🔄 Resetta campi"
+  tray_show_hide: "👁️ Mostra / Nascondi App"
+  tray_exit: "❌ Esci"
   
   # Configurations section
   configurations_title: "## ⚙️ Configurazioni"
