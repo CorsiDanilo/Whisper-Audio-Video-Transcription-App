@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.1] - 2026-06-25
+
+### Added
+
+- **Fix Text** preset button (✏️ Correggi Testo) added to the AI Assistant section in **whisper-utility** and **video-analyzer-utility**, matching the existing feature in text-extractor-utility.
+- When Fix Text is selected and a query is submitted to the LLM, a dedicated system prompt instructs the model to use **all available tokens** to maximise output and return the full corrected text without omissions or truncation.
+- `SYSTEM_PROMPT_FIX_TEXT` constant added to `llms.py` (whisper-utility), `llm_vision.py` (video-analyzer-utility), and `config.py` (text-extractor-utility).
+- `fix_text_mode` Gradio state added to all three UIs; automatically set to `True` when Fix Text preset is clicked and reset to `False` on other presets or field reset.
+- Locale keys `preset_fix` and `preset_fix_val` added (English + Italian) to `settings/locales.yaml` in whisper-utility and video-analyzer-utility.
+
 ## [1.0.0] - 2026-06-21
 
 ### Added
