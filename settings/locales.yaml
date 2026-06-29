@@ -92,6 +92,13 @@ english:
   save_cancelled: "Save cancelled."
   error_saving_file: "Error saving file: {}"
   model_family_label: "Model Family"
+  transcription_in_progress: "⏳ Transcription in progress..."
+  llm_checking_model: "⏳ Checking model status..."
+  llm_model_loading: "⏳ Waiting for model to load... ({elapsed}s)"
+  llm_model_ready: "⏳ Model ready. Sending request..."
+  llm_model_sending: "⏳ Model may be loading. Sending request..."
+  llm_model_timeout_lmstudio: "❌ Error: model not found in LM Studio. Please load it before proceeding."
+  llm_waiting_gemini: "⏳ Sending request to Gemini..."
 
 
 italian:
@@ -188,3 +195,10 @@ italian:
   save_cancelled: "Salvataggio annullato."
   error_saving_file: "Errore nel salvataggio del file: {}"
   model_family_label: "Famiglia Modelli"
+  transcription_in_progress: "⏳ Trascrizione in corso..."
+  llm_checking_model: "⏳ Verifica stato modello..."
+  llm_model_loading: "⏳ In attesa che il modello venga caricato... ({elapsed}s)"
+  llm_model_ready: "⏳ Modello pronto. Invio richiesta..."
+  llm_model_sending: "⏳ Il modello potrebbe essere in caricamento. Invio richiesta..."
+  llm_model_timeout_lmstudio: "❌ Errore: il modello non è presente in LM Studio. Assicurarsi che sia caricato prima di procedere."
+  llm_waiting_gemini: "⏳ Invio richiesta a Gemini..."

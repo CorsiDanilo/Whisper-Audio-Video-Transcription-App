@@ -509,6 +509,8 @@ with gr.Blocks(title="Whisper Utility") as demo:
             yield _("invalid_file").format("No file selected"), None, gr.update(visible=False), gr.update(visible=False)
             return
 
+        yield _("transcription_in_progress"), None, gr.update(visible=False), gr.update(visible=False)
+
         raw_paths = [p.strip() for p in file_paths_text.strip().split('\n') if p.strip()]
         
         valid_paths = []

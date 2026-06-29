@@ -2,7 +2,8 @@ import logging
 import requests
 import json
 import os
-from config import load_default_values, get_gemini_api_key
+import time
+from config import load_default_values, get_gemini_api_key, get_translation as _
 from google import genai
 from google.genai import types
 
@@ -28,6 +29,50 @@ LMSTUDIO_CONNECT_TIMEOUT = _env_int("LMSTUDIO_CONNECT_TIMEOUT", 5)
 LMSTUDIO_READ_TIMEOUT = _env_int("LMSTUDIO_READ_TIMEOUT", LMSTUDIO_TIMEOUT)
 
 default_values = load_default_values()
+
+def _is_model_loaded_ollama(model_name: str) -> bool:
+    try:
+        url = OLLAMA_ENDPOINT.rstrip("/") + "/api/ps"
+        resp = requests.get(url, timeout=3)
+        if resp.status_code == 200:
+            data = resp.json()
+            loaded = [m.get("name", "") for m in data.get("models", [])]
+            return any(model_name in name for name in loaded)
+    except Exception:
+        pass
+    return False
+
+def _is_model_loaded_lmstudio(model_name: str) -> bool:
+    try:
+        url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/models"
+        resp = requests.get(url, timeout=3)
+        if resp.status_code == 200:
+            data = resp.json()
+            ids = [m.get("id", "") for m in data.get("data", [])]
+            return any(model_name in mid for mid in ids)
+    except Exception:
+        pass
+    return False
+
+def _trigger_lmstudio_load(model_name: str) -> None:
+    try:
+        url = LMSTUDIO_ENDPOINT.rstrip("/") + "/api/v1/models/load"
+        payload = {"model": model_name}
+        resp = requests.post(url, json=payload, timeout=5)
+        if resp.status_code == 200:
+            logging.info(f"Triggered load for model {model_name} on LM Studio (/api/v1/models/load)")
+            return
+    except Exception:
+        pass
+    try:
+        url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/models/load"
+        payload = {"model": model_name}
+        resp = requests.post(url, json=payload, timeout=5)
+        if resp.status_code == 200:
+            logging.info(f"Triggered load for model {model_name} on LM Studio (/v1/models/load)")
+            return
+    except Exception:
+        pass
 
 SYSTEM_PROMPT = (
     "Rispondi in modo chiaro e utile basandoti sulla trascrizione fornita. \n"
@@ -100,6 +145,23 @@ def query_ollama(user_input, transcription, ollama_model, fix_text=False):
     lines with partial ``response`` fields.
     """
     try:
+        yield _("llm_checking_model")
+        
+        ready = False
+        elapsed = 0
+        while elapsed < 60:
+            if _is_model_loaded_ollama(ollama_model):
+                ready = True
+                break
+            yield _("llm_model_loading").format(elapsed=elapsed)
+            time.sleep(2)
+            elapsed += 2
+            
+        if not ready:
+            yield _("llm_model_sending")
+        else:
+            yield _("llm_model_ready")
+
         prompt = (
             f"# Transcription\n{transcription}\n\n"
             f"User prompt: \n{user_input}"
@@ -112,7 +174,7 @@ def query_ollama(user_input, transcription, ollama_model, fix_text=False):
             "prompt": prompt,
             "system": sys_prompt,
         }
-        resp = requests.post(url, json=payload, timeout=30, stream=True)
+        resp = requests.post(url, json=payload, timeout=120, stream=True)
         resp.raise_for_status()
         accumulated = ""
         for line in resp.iter_lines(decode_unicode=True):
@@ -200,6 +262,26 @@ def query_lmstudio(user_input, transcription, lmstudio_model, fix_text=False):
         if not lmstudio_model:
             yield "Error querying LM Studio: no model selected."
             return
+
+        yield _("llm_checking_model")
+        
+        _trigger_lmstudio_load(lmstudio_model)
+        
+        ready = False
+        elapsed = 0
+        while elapsed < 60:
+            if _is_model_loaded_lmstudio(lmstudio_model):
+                ready = True
+                break
+            yield _("llm_model_loading").format(elapsed=elapsed)
+            time.sleep(2)
+            elapsed += 2
+            
+        if not ready:
+            yield _("llm_model_timeout_lmstudio")
+            return
+
+        yield _("llm_model_ready")
 
         sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
         url = LMSTUDIO_ENDPOINT.rstrip("/") + "/v1/chat/completions"
@@ -304,6 +386,8 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
         if not client:
             yield "Error: Gemini API key not found."
             return
+
+        yield _("llm_waiting_gemini")
 
         sys_prompt = SYSTEM_PROMPT_FIX_TEXT if fix_text else SYSTEM_PROMPT
         user_prompt = f"# Transcription\n{transcription}\n\nUser prompt: \n{user_input}"

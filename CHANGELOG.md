@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.0] - 2026-06-29
+
+### Added
+
+- **Local Model Readiness Polling**: Added readiness verification for Ollama and LM Studio. The system polls the respective local endpoints (`/api/ps` for Ollama and `/v1/models` for LM Studio) every 2s for up to 60s before executing LLM assistant queries.
+- **Dynamic LM Studio Model Loading**: Added automatic model loading triggers calling `/api/v1/models/load` (with `/v1/models/load` fallback) to dynamically load LM Studio models on request.
+- **Progress Indicators**: Integrated UI status messages (e.g., `⏳ checking model status...`, `⏳ model loading...`, `⏳ sending request...`) to improve visibility of background operations.
+- **Ollama Timeout**: Increased Ollama API connection/read timeout to 120s to prevent failures during dynamic loading.
+- **Localized Status Strings**: Added new keys for all status indicators to `settings/locales.yaml` in English and Italian.
+
 ## [1.0.1] - 2026-06-25
 
 ### Added
