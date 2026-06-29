@@ -4,3 +4,4 @@ build
 *.log
 secrets
 .docgen-agent
+TODO.md
