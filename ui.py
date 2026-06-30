@@ -356,6 +356,13 @@ with gr.Blocks(title="Whisper Utility") as demo:
             visible=False,
         )
 
+        # Response language selector for AI assistant
+        response_language = gr.Radio(
+            choices=["Italiano", "English"],
+            value="Italiano",
+            label=_("response_language_label"),
+        )
+
         with gr.Row():
             preset_summary_button = gr.Button(_("preset_summary"), variant="secondary")
             preset_todo_button = gr.Button(_("preset_todo"), variant="secondary")
@@ -452,7 +459,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
 
     submit_query_button.click(
         fn=query_gemini,
-        inputs=[user_query, output_text, gemini_model, provider, ollama_model, lmstudio_model, fix_text_mode],
+        inputs=[user_query, output_text, gemini_model, provider, ollama_model, lmstudio_model, fix_text_mode, response_language],
         outputs=[gemini_response],
         stream_every=0.05,  # flush UI at most every 50 ms
     )

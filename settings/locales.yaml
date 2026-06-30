@@ -52,6 +52,7 @@ english:
   # AI section
   ai_provider_accordion: "🤖 AI Assistant (Post-Processing)"
   provider_label: "AI Provider"
+  response_language_label: "Response Language"
   choose_gemini_model: "Gemini Model"
   choose_ollama_model: "Ollama Model"
   choose_lmstudio_model: "LM Studio Model"
@@ -155,6 +156,7 @@ italian:
   # AI section
   ai_provider_accordion: "🤖 Assistente AI (Post-Elaborazione)"
   provider_label: "Provider AI"
+  response_language_label: "Lingua di Risposta"
   choose_gemini_model: "Modello Gemini"
   choose_ollama_model: "Modello Ollama"
   choose_lmstudio_model: "Modello LM Studio"

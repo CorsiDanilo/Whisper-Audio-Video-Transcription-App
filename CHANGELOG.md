@@ -1,6 +1,16 @@
 # Changelog
 
+## [1.2.0] - 2026-06-30
+
+### Added
+
+- **AI Assistant Response Language Selector**: Added a language radio button (`Italiano` / `English`, default: `Italiano`) inside the 🤖 AI Assistant (Post-Processing) section. The selected language controls the language in which the LLM (Gemini, Ollama, LM Studio) is instructed to reply, independently from the UI display language.
+- English system prompt variants (`SYSTEM_PROMPT_EN`, `SYSTEM_PROMPT_FIX_TEXT_EN`) added to `llms.py`.
+- `response_language` parameter added to `query_gemini`, `query_ollama`, and `query_lmstudio` in `llms.py`.
+- Locale key `response_language_label` added (English + Italian) to `settings/locales.yaml`.
+
 ## [1.1.0] - 2026-06-29
+
 
 ### Added
 
