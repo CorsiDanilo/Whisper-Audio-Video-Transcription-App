@@ -131,6 +131,7 @@ def reset_fields():
         _("response_placeholder"),
         gr.update(visible=False), # save_transcript_button
         gr.update(visible=False), # submit_query_button
+        ".txt",                   # output_format
     )
 
 
@@ -150,7 +151,8 @@ def notify_copy():
     gr.Info(_("text_copied"))
 
 
-def browse_local_media_file():
+def browse_local_files(existing_paths=""):
+    """Open a native file dialog to select files."""
     try:
         import tkinter as tk
         from tkinter import filedialog
@@ -158,7 +160,8 @@ def browse_local_media_file():
         root = tk.Tk()
         root.withdraw()
         root.attributes("-topmost", True)
-        selected_paths = filedialog.askopenfilenames(
+
+        files = filedialog.askopenfilenames(
             title=_("select_media_title"),
             filetypes=[
                 (_("media_files_filter"), "*.avi *.flac *.m4a *.mkv *.mov *.mp3 *.mp4 *.ogg *.opus *.wav *.webm"),
@@ -167,11 +170,54 @@ def browse_local_media_file():
             parent=root,
         )
         root.destroy()
-        if selected_paths:
-            return "\n".join(selected_paths)
+
+        if files:
+            new_paths = "\n".join(list(files))
+            existing = existing_paths.strip() if existing_paths else ""
+            if existing:
+                return f"{existing}\n{new_paths}"
+            return new_paths
         return gr.update()
     except Exception as e:
-        logging.error(f"Error selecting media file: {e}")
+        logging.error(f"Error selecting files: {e}")
+        gr.Error(_("error_selecting_media").format(str(e)))
+        return gr.update()
+
+def browse_local_folders(existing_paths=""):
+    """Open a native folder dialog and recursively get all files inside."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        import os
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+
+        folder = filedialog.askdirectory(
+            title=_("dialog_select_type_title"),
+            parent=root,
+        )
+        root.destroy()
+
+        if folder:
+            SUPPORTED_EXTS = {".avi", ".flac", ".m4a", ".mkv", ".mov", ".mp3", ".mp4", ".ogg", ".opus", ".wav", ".webm"}
+            expanded_paths = []
+            for root_dir, dirs, files in os.walk(folder):
+                for f in files:
+                    ext = os.path.splitext(f)[1].lower()
+                    if ext in SUPPORTED_EXTS:
+                        expanded_paths.append(os.path.join(root_dir, f))
+            
+            if expanded_paths:
+                new_paths = "\n".join(expanded_paths)
+                existing = existing_paths.strip() if existing_paths else ""
+                if existing:
+                    return f"{existing}\n{new_paths}"
+                return new_paths
+        return gr.update()
+    except Exception as e:
+        logging.error(f"Error selecting folders: {e}")
         gr.Error(_("error_selecting_media").format(str(e)))
         return gr.update()
 
@@ -237,7 +283,9 @@ with gr.Blocks(title="Whisper Utility") as demo:
             placeholder=_("media_file_path_placeholder"),
             lines=3,
         )
-    browse_file_button = gr.Button(_("browse"), variant="secondary")
+    with gr.Row():
+        browse_files_btn = gr.Button(_("dialog_btn_files"), variant="secondary")
+        browse_folders_btn = gr.Button(_("dialog_btn_folder"), variant="secondary")
     
     with gr.Row():
         gr.Markdown(_("configurations_title"))
@@ -267,6 +315,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
     with gr.Row():
         condition_on_previous_text = gr.Checkbox(value=default_config_values["condition_on_previous_text"], label=_("condition_on_previous_text_label"))
         word_timestamps = gr.Checkbox(value=default_config_values["word_timestamps"], label=_("word_timestamps_label"))
+        output_format = gr.Radio(choices=[".txt", ".md"], value=".txt", label=_("output_format_label"))
         save_configurations = gr.Button(_("save_configurations"), variant="secondary")
     
     with gr.Row():
@@ -277,7 +326,9 @@ with gr.Blocks(title="Whisper Utility") as demo:
 
     transcript_file_path = gr.State()
     save_transcript_button = gr.Button(_("save_transcript_as"), variant="primary", visible=False)
-    transcribe_button = gr.Button(_("transcribe_btn"), variant="secondary")
+    with gr.Row():
+        transcribe_button = gr.Button(_("transcribe_btn"), variant="secondary")
+        stop_transcribe_btn = gr.Button(_("stop_btn"), variant="stop", visible=False)
 
     # Ensure UI elements exist for AI querying
     gemini_model = None
@@ -371,7 +422,9 @@ with gr.Blocks(title="Whisper Utility") as demo:
         fix_text_mode = gr.State(False)
         user_query = gr.Textbox(label=_("enter_query_label"))
 
-        submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
+        with gr.Row():
+            submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
+            stop_query_btn = gr.Button(_("stop_btn"), variant="stop", visible=False)
 
     preset_summary_button.click(
         fn=preset_query_summary,
@@ -395,9 +448,14 @@ with gr.Blocks(title="Whisper Utility") as demo:
         copy_response_button = gr.Button(_("copy_response"), variant="secondary", size="sm")
         gemini_response = gr.Markdown(_("response_placeholder"), container=True, line_breaks=True, elem_classes="scrollable-markdown")
 
-    browse_file_button.click(
-        fn=browse_local_media_file,
-        inputs=[],
+    browse_files_btn.click(
+        fn=browse_local_files,
+        inputs=[file_path_input],
+        outputs=[file_path_input],
+    )
+    browse_folders_btn.click(
+        fn=browse_local_folders,
+        inputs=[file_path_input],
         outputs=[file_path_input],
     )
 
@@ -457,11 +515,27 @@ with gr.Blocks(title="Whisper Utility") as demo:
         outputs=[gemini_model],
     )
 
-    submit_query_button.click(
+    query_start = submit_query_button.click(
+        fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
+        inputs=[],
+        outputs=[submit_query_button, stop_query_btn]
+    )
+    query_event = query_start.then(
         fn=query_gemini,
         inputs=[user_query, output_text, gemini_model, provider, ollama_model, lmstudio_model, fix_text_mode, response_language],
         outputs=[gemini_response],
         stream_every=0.05,  # flush UI at most every 50 ms
+    )
+    query_event.then(
+        fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+        inputs=[],
+        outputs=[submit_query_button, stop_query_btn]
+    )
+    stop_query_btn.click(
+        fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+        inputs=[],
+        outputs=[submit_query_button, stop_query_btn],
+        cancels=[query_event]
     )
     with gr.Row():
         reset_button = gr.Button(_("reset_fields"), variant="secondary")
@@ -508,42 +582,77 @@ with gr.Blocks(title="Whisper Utility") as demo:
     reset_button.click(
         fn=reset_fields,
         inputs=[],
-        outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button]
+        outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button, output_format]
     ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
-    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps):
+    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt"):
         if not file_paths_text or not file_paths_text.strip():
-            yield _("invalid_file").format("No file selected"), None, gr.update(visible=False), gr.update(visible=False)
+            yield _("invalid_file").format("No file selected"), None, gr.update(visible=False), gr.update(visible=False), gr.update()
             return
 
-        yield _("transcription_in_progress"), None, gr.update(visible=False), gr.update(visible=False)
+        yield _("transcription_in_progress"), None, gr.update(visible=False), gr.update(visible=False), gr.update()
 
         raw_paths = [p.strip() for p in file_paths_text.strip().split('\n') if p.strip()]
         
+        SUPPORTED_EXTS = {".avi", ".flac", ".m4a", ".mkv", ".mov", ".mp3", ".mp4", ".ogg", ".opus", ".wav", ".webm"}
+        expanded_paths = []
+        for p in raw_paths:
+            if os.path.isdir(p):
+                for root_dir, dirs, files in os.walk(p):
+                    for f in files:
+                        ext = os.path.splitext(f)[1].lower()
+                        if ext in SUPPORTED_EXTS:
+                            expanded_paths.append(os.path.join(root_dir, f))
+            else:
+                expanded_paths.append(p)
+
+        file_paths_text_new = "\n".join(expanded_paths)
+
+        if not expanded_paths:
+            yield _("invalid_file").format("No valid files found"), None, gr.update(visible=False), gr.update(visible=False), file_paths_text
+            return
+
         valid_paths = []
-        for path in raw_paths:
+        for path in expanded_paths:
             try:
                 valid_paths.append(str(validate_local_media_path(path)))
             except SecurityError as e:
                 logging.warning("Rejected media path: %s", e)
-                yield _("invalid_file").format(f"{path}: {e}"), None, gr.update(visible=False), gr.update(visible=False)
+                yield _("invalid_file").format(f"{path}: {e}"), None, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                 return
 
         for transcription, output_path, _folder_path in transcribe_file(
             valid_paths, device, cpu_threads, num_workers, language,
             whisper_model, compute_type, temperature, beam_size,
-            batch_size, condition_on_previous_text, word_timestamps
+            batch_size, condition_on_previous_text, word_timestamps,
+            output_format
         ):
             if output_path:
-                 yield transcription, output_path, gr.update(visible=True), gr.update(visible=True)
+                 yield transcription, output_path, gr.update(visible=True), gr.update(visible=True), file_paths_text_new
             else:
-                 yield transcription, output_path, gr.update(visible=False), gr.update(visible=False)
+                 yield transcription, output_path, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
 
-    transcribe_button.click( # Updated outputs to use transcript_file_path and button visibility
+    proc_start = transcribe_button.click(
+        fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
+        inputs=[],
+        outputs=[transcribe_button, stop_transcribe_btn]
+    )
+    proc_event = proc_start.then( # Updated outputs to use transcript_file_path and button visibility
         fn=transcribe_wrapper,
-        inputs=[file_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps],
-        outputs=[output_text, transcript_file_path, save_transcript_button, submit_query_button],
+        inputs=[file_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format],
+        outputs=[output_text, transcript_file_path, save_transcript_button, submit_query_button, file_path_input],
         stream_every=0.1
+    )
+    proc_event.then(
+        fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+        inputs=[],
+        outputs=[transcribe_button, stop_transcribe_btn]
+    )
+    stop_transcribe_btn.click(
+        fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+        inputs=[],
+        outputs=[transcribe_button, stop_transcribe_btn],
+        cancels=[proc_event]
     )
 
     quit_button.click(
@@ -552,7 +661,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
         outputs=[]
     )
 
-    def save_transcript_wrapper(file_path):
+    def save_transcript_wrapper(file_path, output_format=".txt"):
         if not file_path:
             gr.Warning(_("no_transcript_to_save"))
             return
@@ -580,8 +689,11 @@ with gr.Blocks(title="Whisper Utility") as demo:
             target_path = filedialog.asksaveasfilename(
                 title=_("save_transcript_title"),
                 initialfile=initial_file,
-                defaultextension=".txt",
-                filetypes=[(_("text_files_filter"), "*.txt"), (_("all_files_filter"), "*.*")],
+                defaultextension=output_format,
+                filetypes=[
+                    (_("markdown_files_filter") if output_format == ".md" else _("text_files_filter"), f"*{output_format}"),
+                    (_("all_files_filter"), "*.*")
+                ],
                 parent=root
             )
             
@@ -598,7 +710,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
 
     save_transcript_button.click(
         fn=save_transcript_wrapper,
-        inputs=[transcript_file_path], 
+        inputs=[transcript_file_path, output_format], 
         outputs=[]
     )
 

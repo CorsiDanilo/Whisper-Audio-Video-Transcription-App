@@ -170,8 +170,8 @@ def validate_local_config_path(path):
 
 def validate_controlled_transcript_path(path):
     resolved = _coerce_path(path)
-    if resolved.suffix.lower() != ".txt":
-        raise SecurityError("Transcript path must be a text file.")
+    if resolved.suffix.lower() not in [".txt", ".md"]:
+        raise SecurityError("Transcript path must be a text or markdown file.")
     if not resolved.is_file():
         raise SecurityError("Transcript file does not exist.")
     return resolved

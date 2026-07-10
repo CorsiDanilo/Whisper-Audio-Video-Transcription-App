@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.0] - 2026-07-10
+
+### Added
+
+- **File/Folder Selection Refactor**: Replaced old selection method with two dedicated buttons: "Sfoglia Audio/Video..." and "Sfoglia Cartella...". Selecting a folder will recursively find all supported audio and video files inside it and add them to the file list.
+- **Output Format Selection**: Added options to choose between `.txt` (raw text transcription) and `.md` (retains headers, bold, paragraphs, and markdown syntax).
+- **Execution Interruption (Stop Buttons)**: Added dedicated "Stop" buttons next to the transcription and AI assistant query actions, allowing real-time cancellation of ongoing tasks.
+- **Gradio Upgrade**: Upgraded Gradio to version `6.20.0` to resolve Starlette/Gradio deprecation warnings and improve robustness.
+
 ## [1.2.0] - 2026-06-30
 
 ### Added

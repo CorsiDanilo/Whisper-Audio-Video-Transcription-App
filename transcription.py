@@ -55,7 +55,7 @@ def load_model(model_size, compute_type, device, cpu_threads, num_workers):
         logging.error(f"Error loading model: {e}")
         return None
 
-def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps):
+def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt"):
     """
     Transcribe the provided files:
       - Convert the file (video/WhatsApp/audio) to MP3 if necessary.
@@ -136,19 +136,48 @@ def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whis
                 logging.info("File transcribed successfully, generating transcript...")
                 accumulated_transcription = ""
 
-                # Iterate over segments and yield progressively
-                for segment in segments:
-                    if word_timestamps:
-                        chunk = "\n".join(f"{word.start:.2f} -> {word.end:.2f} {word.word}" for word in segment.words) + "\n"
-                    else:
-                        chunk = segment.text + "\n"
+                if output_format == ".md" and not word_timestamps:
+                    # Group segments into paragraphs based on pause length or sentence ending
+                    prev_end = None
+                    paragraph_words = []
+                    paragraphs = []
+                    for segment in segments:
+                        text = segment.text.strip()
+                        if not text:
+                            continue
+                        
+                        start_new = False
+                        if prev_end is not None and (segment.start - prev_end) > 2.0:
+                            start_new = True
+                        elif len(paragraph_words) >= 60 and text[-1] in {".", "?", "!"}:
+                            start_new = True
+                        
+                        if start_new and paragraph_words:
+                            paragraphs.append(" ".join(paragraph_words))
+                            paragraph_words = []
+                        
+                        paragraph_words.append(text)
+                        prev_end = segment.end
+                        
+                        accumulated_transcription = "\n\n".join(paragraphs + [" ".join(paragraph_words)])
+                        yield session_transcription + header + accumulated_transcription, None, folder_path
+                else:
+                    # Iterate over segments and yield progressively
+                    for segment in segments:
+                        if word_timestamps:
+                            if output_format == ".md":
+                                chunk = "\n".join(f"* **[{word.start:.2f}s -> {word.end:.2f}s]** {word.word}" for word in segment.words) + "\n"
+                            else:
+                                chunk = "\n".join(f"{word.start:.2f} -> {word.end:.2f} {word.word}" for word in segment.words) + "\n"
+                        else:
+                            chunk = segment.text + "\n"
 
-                    accumulated_transcription += chunk
-                    # Yield partial result. Output path is None until transcription is complete.
-                    yield session_transcription + header + accumulated_transcription, None, folder_path
+                        accumulated_transcription += chunk
+                        # Yield partial result. Output path is None until transcription is complete.
+                        yield session_transcription + header + accumulated_transcription, None, folder_path
 
                 logging.info(f"Transcript generated. Saving transcript to folder: {folder_path}...")
-                output_path = build_local_output_path(source_path, "_transcript.txt")
+                output_path = build_local_output_path(source_path, f"_transcript{output_format}")
                 with open(output_path, "w", encoding="utf-8") as f:
                     f.write(accumulated_transcription)
                 logging.info(f"Transcription saved to: {output_path}")
