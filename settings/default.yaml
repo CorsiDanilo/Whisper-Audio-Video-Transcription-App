@@ -11,3 +11,5 @@ batch_size: 8
 condition_on_previous_text: true
 word_timestamps: false
 gemini_model: "gemini-flash-latest"
+lmstudio_timeout: 300
+ollama_timeout: 300

@@ -3,7 +3,7 @@ import requests
 import json
 import os
 import time
-from config import load_default_values, get_gemini_api_key, get_translation as _
+from config import load_default_values, load_default_config, get_gemini_api_key, get_translation as _
 from google import genai
 from google.genai import types
 
@@ -19,14 +19,31 @@ def _env_int(name, default):
         return default
 
 
+def _get_timeout_setting(cfg_key, env_keys, default_sec=300):
+    try:
+        cfg = load_default_config()
+        if cfg and cfg_key in cfg:
+            return int(cfg[cfg_key])
+    except Exception:
+        pass
+    for env in env_keys:
+        val = os.getenv(env)
+        if val:
+            try:
+                return int(val)
+            except ValueError:
+                pass
+    return default_sec
+
+
 OLLAMA_ENDPOINT = os.getenv("OLLAMA_ENDPOINT", "http://127.0.0.1:11434")
 LMSTUDIO_ENDPOINT = os.getenv("LMSTUDIO_ENDPOINT", "http://127.0.0.1:1234")
 
-# LM Studio can be slow with larger local models. Allow separate connect/read
-# timeouts and keep backward compatibility with LMSTUDIO_TIMEOUT.
-LMSTUDIO_TIMEOUT = _env_int("LMSTUDIO_TIMEOUT", 120)
+# LM Studio & Ollama timeouts. Allow separate connect/read timeouts or default config.
+LMSTUDIO_TIMEOUT = _get_timeout_setting("lmstudio_timeout", ["LMSTUDIO_TIMEOUT", "LMSTUDIO_READ_TIMEOUT"], 300)
 LMSTUDIO_CONNECT_TIMEOUT = _env_int("LMSTUDIO_CONNECT_TIMEOUT", 5)
-LMSTUDIO_READ_TIMEOUT = _env_int("LMSTUDIO_READ_TIMEOUT", LMSTUDIO_TIMEOUT)
+LMSTUDIO_READ_TIMEOUT = _get_timeout_setting("lmstudio_timeout", ["LMSTUDIO_READ_TIMEOUT", "LMSTUDIO_TIMEOUT"], LMSTUDIO_TIMEOUT)
+OLLAMA_READ_TIMEOUT = _get_timeout_setting("ollama_timeout", ["OLLAMA_READ_TIMEOUT", "OLLAMA_TIMEOUT"], 300)
 
 default_values = load_default_values()
 
@@ -200,7 +217,7 @@ def query_ollama(user_input, transcription, ollama_model, fix_text=False, respon
             "prompt": prompt,
             "system": sys_prompt,
         }
-        resp = requests.post(url, json=payload, timeout=120, stream=True)
+        resp = requests.post(url, json=payload, timeout=(5, OLLAMA_READ_TIMEOUT), stream=True)
         resp.raise_for_status()
         accumulated = ""
         for line in resp.iter_lines(decode_unicode=True):
