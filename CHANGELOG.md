@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.2] - 2026-07-24
+
+### Added
+- **Dedicated Status Badge & Live Indicators**: Added a prominent status badge (`status_badge`) at the top of the interface displaying real-time color-coded states (`⚪ Status: Waiting`, `🟡 Status: Audio/video transcription in progress...`, `🟢 Status: Completed successfully`, `🔴 Status: Transcription interrupted`).
+- **Phase Progress Tracking (`gr.Progress`)**: Integrated dynamic phase progress bars to track file expansion, audio conversion/extraction, Whisper transcription steps, and AI assistant query generation.
+- **Completion Toast Notifications & Audio Chime**: Triggered native popup toast notifications (`gr.Info`) and a 3-tone Web Audio API sound chime upon completion of transcription or assistant queries.
+- **Centralized Output Directory for MP3 Files**: All extracted audio, converted `.mp3` files (from WhatsApp `.opus` or video containers), and copied source `.mp3` files are saved directly into the designated timestamped output directory (`output_dir`), preserving folder hierarchy relative to `common_root`.
+- **Complete Externalized Localization**: All status messages, progress labels, and completion toasts are fully localized in `settings/locales.yaml` for English and Italian.
+- **Full Field Reset**: Updated the Reset button to reset all UI fields, including returning the status badge to `⚪ Status: Waiting`.
+
 ## [1.3.1] - 2026-07-24
 
 ### Added

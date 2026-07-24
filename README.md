@@ -11,10 +11,9 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🎥 Extracts audio from video files automatically
 - 🔍 High-precision transcription with options for beam search and other configurations
 - 🖥️ Simple UI built with Gradio for easy access and use
-- ⬇️ Save transcripts in `.txt` or `.md` format with custom output folder selection (`YYYY-MM-DD_HH-MM-SS_transcription`), preserving folder structure and producing combined session files
-- 🎛️ Tuning the model parameters via the interface
-- 🤖 Ask an AI about the transcript (Gemini, local Ollama, or LM Studio)
-- ✅ Copy success notifications for transcriptions and AI responses
+- 📊 **Dedicated Status Badge & Progress Tracking**: Real-time color-coded status badge (`⚪ Waiting`, `🟡 Transcribing...`, `🟢 Completed`, `🔴 Interrupted`) with phase progress bars and Web Audio sound notifications upon completion.
+- 🌐 **Fully Localized UI**: Complete bilingual support (English and Italian) backed by `settings/locales.yaml` for all controls, labels, progress indicators, and status messages.
+- ⬇️ Save transcripts and converted/extracted `.mp3` audio files in custom timestamped output folders (`YYYY-MM-DD_HH-MM-SS_transcription`), preserving folder structure and producing combined session files.
 
 ## Demo
 💻 You can try the Colab version [here](https://colab.research.google.com/github/CorsiDanilo/Whisper-Audio-Video-Transcription-App/blob/main/whisper.ipynb) (remember to select GPU in 'Runtime Type' for faster execution ⚡)
@@ -109,7 +108,7 @@ By default Gradio binds to `127.0.0.1`. To expose or share it, set `WHISPER_GRAD
 
 Media and configuration files are read from the local paths you select and checked before processing. Optional limits: `WHISPER_MAX_UPLOAD_BYTES`, `WHISPER_MAX_MEDIA_DURATION_SECONDS`, `WHISPER_MAX_CONFIG_BYTES`, and `WHISPER_FFMPEG_TIMEOUT_SECONDS`.
 
-💡 **REMEMBER**: The transcript and any generated MP3 sidecar are saved next to the source file. The app still uses temporary storage for internal UI/config handling.
+💡 **REMEMBER**: Transcripts and generated/copied MP3 files are automatically saved inside the timestamped output directory (`YYYY-MM-DD_HH-MM-SS_transcription`), preserving relative subfolder structures.
 
 ## 🎛️ Interface Guide
 - **Choose an audio or video file path**: Use the path field or the `Browse` button to select a local media file.

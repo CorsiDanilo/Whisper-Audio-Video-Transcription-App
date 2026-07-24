@@ -124,6 +124,16 @@ english:
     it before proceeding.'
   llm_waiting_gemini: ⏳ Sending request to Gemini...
   stop_btn: 🛑 Stop
+  status_waiting: '### ⚪ **Status:** *Waiting*'
+  status_transcribing: '### 🟡 **Status:** *Audio/video transcription in progress...*'
+  status_generating_ai: '### 🟡 **Status:** *Generating AI response...*'
+  status_completed: '### 🟢 **Status:** *Completed successfully*'
+  status_interrupted: '### 🔴 **Status:** *Transcription interrupted*'
+  status_ai_interrupted: '### 🔴 **Status:** *AI request interrupted*'
+  toast_completed_whisper: 'Audio/video transcription completed successfully!'
+  progress_prep_transcription: 'Preparing transcription...'
+  progress_loading_whisper: 'Loading Whisper model and processing...'
+  progress_transcription_completed: 'Transcription completed!'
 italian:
   title: '# 🎤 Trascrizione Audio/Video con Modello Whisper'
   browse: 📁 Sfoglia...
@@ -253,3 +263,13 @@ italian:
     che sia caricato prima di procedere.'
   llm_waiting_gemini: ⏳ Invio richiesta a Gemini...
   stop_btn: 🛑 Interrompi
+  status_waiting: '### ⚪ **Stato:** *In attesa*'
+  status_transcribing: '### 🟡 **Stato:** *Trascrizione audio/video in corso...*'
+  status_generating_ai: '### 🟡 **Stato:** *Generazione risposta AI...*'
+  status_completed: '### 🟢 **Stato:** *Completato con successo*'
+  status_interrupted: '### 🔴 **Stato:** *Trascrizione interrotta*'
+  status_ai_interrupted: '### 🔴 **Stato:** *Richiesta AI interrotta*'
+  toast_completed_whisper: 'Trascrizione audio/video completata con successo!'
+  progress_prep_transcription: 'Preparazione trascrizione...'
+  progress_loading_whisper: 'Caricamento modello Whisper ed elaborazione...'
+  progress_transcription_completed: 'Trascrizione completata!'

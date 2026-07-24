@@ -133,6 +133,7 @@ def reset_fields():
         gr.update(visible=False), # save_transcript_button
         gr.update(visible=False), # submit_query_button
         ".txt",                   # output_format
+        _("status_waiting"),      # status_badge
     )
 
 
@@ -347,9 +348,41 @@ custom_css = """
 }
 """
 
-with gr.Blocks(title="Whisper Utility") as demo:
+js_head_script = """
+<script>
+function playCompletionSound() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.12);
+        osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.24);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+    } catch (e) {
+        console.error("Audio chime error:", e);
+    }
+}
+</script>
+"""
+
+def set_status_completed():
+    gr.Info(_("toast_completed_whisper"))
+    return _("status_completed")
+
+with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     setup_logging()
     gr.Markdown(_("title"))
+    status_badge = gr.Markdown(_("status_waiting"), elem_id="status_badge")
 
     with gr.Row():
         file_path_input = gr.Textbox(
@@ -400,7 +433,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
         condition_on_previous_text = gr.Checkbox(value=default_config_values["condition_on_previous_text"], label=_("condition_on_previous_text_label"))
         word_timestamps = gr.Checkbox(value=default_config_values["word_timestamps"], label=_("word_timestamps_label"))
         output_format = gr.Radio(choices=[".txt", ".md"], value=".txt", label=_("output_format_label"))
-        save_configurations = gr.Button(_("save_configurations"), variant="secondary")
+    save_configurations = gr.Button(_("save_configurations"), variant="secondary")
     
     with gr.Row():
         gr.Markdown(_("transcription_title"))
@@ -606,9 +639,9 @@ with gr.Blocks(title="Whisper Utility") as demo:
     )
 
     query_start = submit_query_button.click(
-        fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
+        fn=lambda: (gr.update(visible=False), gr.update(visible=True), _("status_generating_ai")),
         inputs=[],
-        outputs=[submit_query_button, stop_query_btn]
+        outputs=[submit_query_button, stop_query_btn, status_badge]
     )
     query_event = query_start.then(
         fn=query_gemini,
@@ -617,14 +650,22 @@ with gr.Blocks(title="Whisper Utility") as demo:
         stream_every=0.05,  # flush UI at most every 50 ms
     )
     query_event.then(
+        fn=set_status_completed,
+        inputs=[],
+        outputs=[status_badge]
+    ).then(
         fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
         inputs=[],
         outputs=[submit_query_button, stop_query_btn]
+    ).then(
+        fn=None,
+        inputs=[],
+        js="() => { playCompletionSound(); }"
     )
     stop_query_btn.click(
-        fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+        fn=lambda: (gr.update(visible=True), gr.update(visible=False), _("status_ai_interrupted")),
         inputs=[],
-        outputs=[submit_query_button, stop_query_btn],
+        outputs=[submit_query_button, stop_query_btn, status_badge],
         cancels=[query_event]
     )
     with gr.Row():
@@ -672,14 +713,15 @@ with gr.Blocks(title="Whisper Utility") as demo:
     reset_button.click(
         fn=reset_fields,
         inputs=[],
-        outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button, output_format]
+        outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button, output_format, status_badge]
     ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
-    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir_override=""):
+    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir_override="", progress=gr.Progress(track_tqdm=True)):
         if not file_paths_text or not file_paths_text.strip():
             yield _("invalid_file").format("No file selected"), None, gr.update(visible=False), gr.update(visible=False), gr.update()
             return
 
+        progress(0.05, desc=_("progress_prep_transcription"))
         yield _("transcription_in_progress"), None, gr.update(visible=False), gr.update(visible=False), gr.update()
 
         raw_paths = [p.strip() for p in file_paths_text.strip().split('\n') if p.strip()]
@@ -718,6 +760,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
         session_transcription = ""
         last_output_path = None
 
+        progress(0.15, desc=_("progress_loading_whisper"))
         for transcription, output_path, _folder_path in transcribe_file(
             valid_paths, device, cpu_threads, num_workers, language,
             whisper_model, compute_type, temperature, beam_size,
@@ -726,15 +769,14 @@ with gr.Blocks(title="Whisper Utility") as demo:
         ):
             if output_path:
                 last_output_path = output_path
-                # Accumulate full session text from the output
                 yield transcription, output_path, gr.update(visible=True), gr.update(visible=True), file_paths_text_new
             else:
                 yield transcription, output_path, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
 
+        progress(1.0, desc=_("progress_transcription_completed"))
         # Save combined transcription file at session end
         if expanded_paths and last_output_path:
             try:
-                # Re-read the full session text from the final transcription value
                 combined_file = output_dir / f"{timestamp_str}_transcription{output_format}"
                 with open(combined_file, "w", encoding="utf-8") as f:
                     f.write(transcription)
@@ -743,25 +785,33 @@ with gr.Blocks(title="Whisper Utility") as demo:
                 logging.error(f"Error saving combined transcription: {e}", exc_info=True)
 
     proc_start = transcribe_button.click(
-        fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
+        fn=lambda: (gr.update(visible=False), gr.update(visible=True), _("status_transcribing")),
         inputs=[],
-        outputs=[transcribe_button, stop_transcribe_btn]
+        outputs=[transcribe_button, stop_transcribe_btn, status_badge]
     )
-    proc_event = proc_start.then( # Updated outputs to use transcript_file_path and button visibility
+    proc_event = proc_start.then(
         fn=transcribe_wrapper,
         inputs=[file_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format, output_dir_display],
         outputs=[output_text, transcript_file_path, save_transcript_button, submit_query_button, file_path_input],
         stream_every=0.1
     )
     proc_event.then(
+        fn=set_status_completed,
+        inputs=[],
+        outputs=[status_badge]
+    ).then(
         fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
         inputs=[],
         outputs=[transcribe_button, stop_transcribe_btn]
+    ).then(
+        fn=None,
+        inputs=[],
+        js="() => { playCompletionSound(); }"
     )
     stop_transcribe_btn.click(
-        fn=lambda: (gr.update(visible=True), gr.update(visible=False)),
+        fn=lambda: (gr.update(visible=True), gr.update(visible=False), _("status_interrupted")),
         inputs=[],
-        outputs=[transcribe_button, stop_transcribe_btn],
+        outputs=[transcribe_button, stop_transcribe_btn, status_badge],
         cancels=[proc_event]
     )
 

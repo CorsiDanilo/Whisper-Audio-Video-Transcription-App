@@ -102,8 +102,12 @@ def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whis
                 current_file_path = str(source_path)
                 yield session_transcription + header + "Converting/Preparing audio...", None, folder_path
 
-                # Prepare the audio file in MP3
-                audio_file = build_local_output_path(current_file_path, ".mp3")
+                # Prepare the audio file in MP3 in output_dir
+                if output_dir and common_root:
+                    audio_file = build_output_path_in_dir(source_path, output_dir, common_root, ".mp3")
+                else:
+                    audio_file = build_local_output_path(current_file_path, ".mp3")
+
                 file_ext = source_path.suffix.lower()
                 if file_ext != ".mp3":
                     if is_video_file(current_file_path):
@@ -120,6 +124,14 @@ def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whis
                         yield session_transcription + header + error_msg, None, folder_path
                         session_transcription += header + error_msg + "\n\n---\n\n"
                         continue
+                else:
+                    if output_dir and common_root and source_path.resolve() != audio_file.resolve():
+                        try:
+                            import shutil
+                            shutil.copy2(source_path, audio_file)
+                            current_file_path = str(audio_file)
+                        except Exception as e:
+                            logging.warning(f"Could not copy MP3 to output directory: {e}")
 
                 logging.info(f"Transcribing {current_file_path}...")
                 yield session_transcription + header + "Transcribing...", None, folder_path
