@@ -4,6 +4,7 @@ import signal
 import yaml
 from security_utils import (
     SecurityError,
+    build_output_path_in_dir,
     cleanup_temp_storage,
     configure_gradio_temp_dir,
     validate_controlled_transcript_path,
@@ -246,6 +247,79 @@ def browse_local_config_file():
         return gr.update()
 
 
+def browse_output_folder(file_paths_text="", current_override=""):
+    """Open a folder dialog to choose the output directory.
+    Default points to the common root of the selected files."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        from pathlib import Path
+
+        default_dir = ""
+        if current_override and os.path.isdir(current_override):
+            default_dir = current_override
+        elif file_paths_text and file_paths_text.strip():
+            paths = [p.strip() for p in file_paths_text.strip().split("\n") if p.strip()]
+            if paths:
+                try:
+                    common = os.path.commonpath(paths)
+                    default_dir = common if os.path.isdir(common) else str(Path(common).parent)
+                except ValueError:
+                    default_dir = str(Path(paths[0]).parent)
+
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+
+        folder = filedialog.askdirectory(
+            title=_("dialog_select_output_folder_title"),
+            initialdir=default_dir or os.path.expanduser("~"),
+            parent=root,
+        )
+        root.destroy()
+
+        if folder:
+            return folder
+        return gr.update()
+    except Exception as e:
+        logging.error(f"Error selecting output folder: {e}")
+        return gr.update()
+
+
+def _compute_output_dir(expanded_paths, output_dir_override=""):
+    """Compute the timestamped output directory and common root.
+
+    Returns:
+        (common_root: Path, output_dir: Path, timestamp_str: str)
+    """
+    from pathlib import Path
+    import datetime
+
+    timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    folder_name = f"{timestamp_str}_transcription"
+
+    if output_dir_override and os.path.isdir(output_dir_override):
+        base = Path(output_dir_override)
+    else:
+        try:
+            common = os.path.commonpath(expanded_paths)
+            base = Path(common) if os.path.isdir(common) else Path(common).parent
+        except ValueError:
+            base = Path(expanded_paths[0]).parent
+
+    output_dir = base / folder_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        common_root = Path(os.path.commonpath(expanded_paths))
+        if not common_root.is_dir():
+            common_root = common_root.parent
+    except ValueError:
+        common_root = Path(expanded_paths[0]).parent
+
+    return common_root, output_dir, timestamp_str
+
+
 def quit_app():
     try:
         logging.info(_("quitting_app"))
@@ -286,6 +360,16 @@ with gr.Blocks(title="Whisper Utility") as demo:
     with gr.Row():
         browse_files_btn = gr.Button(_("dialog_btn_files"), variant="secondary")
         browse_folders_btn = gr.Button(_("dialog_btn_folder"), variant="secondary")
+
+    with gr.Row():
+        output_dir_display = gr.Textbox(
+            label=_("output_dir_label"),
+            placeholder=_("output_dir_placeholder"),
+            lines=1,
+            interactive=True,
+        )
+    with gr.Row():
+        choose_output_dir_btn = gr.Button(_("choose_output_dir_btn"), variant="secondary")
     
     with gr.Row():
         gr.Markdown(_("configurations_title"))
@@ -459,6 +543,12 @@ with gr.Blocks(title="Whisper Utility") as demo:
         outputs=[file_path_input],
     )
 
+    choose_output_dir_btn.click(
+        fn=browse_output_folder,
+        inputs=[file_path_input, output_dir_display],
+        outputs=[output_dir_display],
+    )
+
     browse_config_button.click(
         fn=browse_local_config_file,
         inputs=[],
@@ -585,7 +675,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
         outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button, output_format]
     ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
-    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt"):
+    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir_override=""):
         if not file_paths_text or not file_paths_text.strip():
             yield _("invalid_file").format("No file selected"), None, gr.update(visible=False), gr.update(visible=False), gr.update()
             return
@@ -621,16 +711,36 @@ with gr.Blocks(title="Whisper Utility") as demo:
                 yield _("invalid_file").format(f"{path}: {e}"), None, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
                 return
 
+        # Compute timestamped output directory
+        from pathlib import Path
+        common_root, output_dir, timestamp_str = _compute_output_dir(expanded_paths, output_dir_override or "")
+
+        session_transcription = ""
+        last_output_path = None
+
         for transcription, output_path, _folder_path in transcribe_file(
             valid_paths, device, cpu_threads, num_workers, language,
             whisper_model, compute_type, temperature, beam_size,
             batch_size, condition_on_previous_text, word_timestamps,
-            output_format
+            output_format, output_dir=output_dir, common_root=common_root
         ):
             if output_path:
-                 yield transcription, output_path, gr.update(visible=True), gr.update(visible=True), file_paths_text_new
+                last_output_path = output_path
+                # Accumulate full session text from the output
+                yield transcription, output_path, gr.update(visible=True), gr.update(visible=True), file_paths_text_new
             else:
-                 yield transcription, output_path, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
+                yield transcription, output_path, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
+
+        # Save combined transcription file at session end
+        if expanded_paths and last_output_path:
+            try:
+                # Re-read the full session text from the final transcription value
+                combined_file = output_dir / f"{timestamp_str}_transcription{output_format}"
+                with open(combined_file, "w", encoding="utf-8") as f:
+                    f.write(transcription)
+                logging.info(f"Combined transcription saved to {combined_file}")
+            except Exception as e:
+                logging.error(f"Error saving combined transcription: {e}", exc_info=True)
 
     proc_start = transcribe_button.click(
         fn=lambda: (gr.update(visible=False), gr.update(visible=True)),
@@ -639,7 +749,7 @@ with gr.Blocks(title="Whisper Utility") as demo:
     )
     proc_event = proc_start.then( # Updated outputs to use transcript_file_path and button visibility
         fn=transcribe_wrapper,
-        inputs=[file_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format],
+        inputs=[file_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format, output_dir_display],
         outputs=[output_text, transcript_file_path, save_transcript_button, submit_query_button, file_path_input],
         stream_every=0.1
     )

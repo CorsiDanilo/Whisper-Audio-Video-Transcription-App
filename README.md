@@ -11,7 +11,7 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🎥 Extracts audio from video files automatically
 - 🔍 High-precision transcription with options for beam search and other configurations
 - 🖥️ Simple UI built with Gradio for easy access and use
-- ⬇️ Download the transcript in `.txt` format
+- ⬇️ Save transcripts in `.txt` or `.md` format with custom output folder selection (`YYYY-MM-DD_HH-MM-SS_transcription`), preserving folder structure and producing combined session files
 - 🎛️ Tuning the model parameters via the interface
 - 🤖 Ask an AI about the transcript (Gemini, local Ollama, or LM Studio)
 - ✅ Copy success notifications for transcriptions and AI responses

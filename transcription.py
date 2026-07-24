@@ -40,6 +40,7 @@ from audio_processing import is_video_file, extract_audio_from_video, is_whatsap
 from security_utils import (
     SecurityError,
     build_local_output_path,
+    build_output_path_in_dir,
     remove_controlled_tree,
     validate_local_media_path,
 )
@@ -55,7 +56,7 @@ def load_model(model_size, compute_type, device, cpu_threads, num_workers):
         logging.error(f"Error loading model: {e}")
         return None
 
-def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt"):
+def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir=None, common_root=None):
     """
     Transcribe the provided files:
       - Convert the file (video/WhatsApp/audio) to MP3 if necessary.
@@ -177,7 +178,12 @@ def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whis
                         yield session_transcription + header + accumulated_transcription, None, folder_path
 
                 logging.info(f"Transcript generated. Saving transcript to folder: {folder_path}...")
-                output_path = build_local_output_path(source_path, f"_transcript{output_format}")
+                if output_dir is not None and common_root is not None:
+                    output_path = build_output_path_in_dir(
+                        source_path, output_dir, common_root, f"_transcription{output_format}"
+                    )
+                else:
+                    output_path = build_local_output_path(source_path, f"_transcription{output_format}")
                 with open(output_path, "w", encoding="utf-8") as f:
                     f.write(accumulated_transcription)
                 logging.info(f"Transcription saved to: {output_path}")

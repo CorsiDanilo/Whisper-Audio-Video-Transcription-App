@@ -63,6 +63,10 @@ english:
   media_file_path_label: File Paths
   media_file_path_placeholder: Use 'Browse...' to select files or paste paths here
     (one per line)
+  dialog_select_output_folder_title: Select output folder
+  output_dir_label: 'Output folder (default: same as input)'
+  output_dir_placeholder: Leave empty to use the input file's directory
+  choose_output_dir_btn: 📁 Choose output folder
   transcription_title: '## 📝 Transcription'
   transcription_accordion: 📝 Transcribed Text
   copy_transcription: 📋 Copy Transcription
@@ -184,6 +188,10 @@ italian:
   media_file_path_label: Percorsi file
   media_file_path_placeholder: Usa 'Sfoglia...' per selezionare i file oppure incolla
     i percorsi (uno per riga)
+  dialog_select_output_folder_title: Seleziona cartella di destinazione
+  output_dir_label: 'Cartella di destinazione (default: stessa cartella dei file)'
+  output_dir_placeholder: Lascia vuoto per salvare nella cartella dei file selezionati
+  choose_output_dir_btn: 📁 Scegli cartella di destinazione
   transcription_title: '## 📝 Trascrizione'
   transcription_accordion: 📝 Testo Trascritto
   copy_transcription: 📋 Copia Trascrizione

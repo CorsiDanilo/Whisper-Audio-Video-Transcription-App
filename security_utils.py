@@ -199,6 +199,18 @@ def build_local_output_path(input_path, suffix):
     return source.with_name(f"{safe_stem}{suffix}")
 
 
+def build_output_path_in_dir(source_path: Path, output_dir: Path, common_root: Path, suffix: str) -> Path:
+    """Build the output path preserving the folder hierarchy relative to common_root."""
+    safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", source_path.stem).strip("._") or "upload"
+    try:
+        rel = source_path.relative_to(common_root)
+    except ValueError:
+        rel = Path(source_path.name)
+    out = output_dir / rel.parent / f"{safe_stem}{suffix}"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    return out
+
+
 def remove_controlled_tree(path):
     resolved = _coerce_path(path)
     ensure_within(

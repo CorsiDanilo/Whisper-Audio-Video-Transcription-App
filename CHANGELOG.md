@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.1] - 2026-07-24
+
+### Added
+- **Custom Output Folder & Hierarchical Saving**: Added output folder selection (`output_dir_display` & `📁 Choose output folder` button). Processed audio/video files are saved in a timestamped folder (`YYYY-MM-DD_HH-MM-SS_transcription`), preserving the original folder hierarchy of input files.
+- **Unified File Naming & Combined Session File**: All transcriptions are saved with the suffix `_transcription.<ext>`. A combined transcript file (`YYYY-MM-DD_HH-MM-SS_transcription.<ext>`) containing all session transcriptions is also automatically saved.
+
 ## [1.3.0] - 2026-07-10
 
 ### Added
