@@ -4,3 +4,6 @@ build
 *.log
 secrets
 .docgen-agent
+
+# graphify-axet
+.graphify/

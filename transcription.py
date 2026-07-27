@@ -111,13 +111,13 @@ def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whis
                 file_ext = source_path.suffix.lower()
                 if file_ext != ".mp3":
                     if is_video_file(current_file_path):
-                        extract_audio_from_video(current_file_path, str(audio_file))
+                        extract_audio_from_video(current_file_path, str(audio_file), device=device)
                         current_file_path = str(audio_file)
                     elif is_whatsapp_audio_file(current_file_path):
-                        convert_whatsapp_audio_to_mp3(current_file_path, str(audio_file))
+                        convert_whatsapp_audio_to_mp3(current_file_path, str(audio_file), device=device)
                         current_file_path = str(audio_file)
                     elif is_audio_file(current_file_path):
-                        convert_audio_to_mp3(current_file_path, str(audio_file))
+                        convert_audio_to_mp3(current_file_path, str(audio_file), device=device)
                         current_file_path = str(audio_file)
                     else:
                         error_msg = "Invalid file type"

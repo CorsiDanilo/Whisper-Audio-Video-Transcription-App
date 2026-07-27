@@ -335,10 +335,15 @@ custom_css = """
 .scrollable-markdown {
     max-height: 400px !important;
     overflow-y: auto !important;
+    position: relative !important;
 }
 .scrollable-markdown * {
     overflow: visible !important;
     max-height: none !important;
+}
+.scrollable-markdown .progress-level,
+.scrollable-markdown .meta-text {
+    display: none !important;
 }
 * {
     user-select: text !important;
@@ -716,7 +721,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button, output_format, status_badge]
     ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
-    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir_override="", progress=gr.Progress(track_tqdm=True)):
+    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir_override="", progress=gr.Progress(track_tqdm=False)):
         if not file_paths_text or not file_paths_text.strip():
             yield _("invalid_file").format("No file selected"), None, gr.update(visible=False), gr.update(visible=False), gr.update()
             return
@@ -774,8 +779,8 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
                 yield transcription, output_path, gr.update(visible=False), gr.update(visible=False), file_paths_text_new
 
         progress(1.0, desc=_("progress_transcription_completed"))
-        # Save combined transcription file at session end
-        if expanded_paths and last_output_path:
+        # Save combined transcription file at session end only when multiple files are processed
+        if len(expanded_paths) > 1 and last_output_path:
             try:
                 combined_file = output_dir / f"{timestamp_str}_transcription{output_format}"
                 with open(combined_file, "w", encoding="utf-8") as f:

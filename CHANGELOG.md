@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.3] - 2026-07-27
+
+### Optimized
+- **Fast FFmpeg Audio Extraction & Hardware Acceleration**: Added `-vn`, `-sn`, `-dn`, and `-threads 0` flags to FFmpeg audio extraction commands to skip video/subtitle/data stream decoding completely, speeding up audio extraction from video files (such as `.mkv` or `.mp4`) from minutes to seconds. Added optional GPU hardware acceleration (`-hwaccel auto`) when CUDA is enabled.
+
+### Fixed
+- **Gradio Progress Bar Text Overlay**: Set `track_tqdm=False` in `gr.Progress()` and updated CSS to prevent floating progress bar overlays from covering and blocking the transcribed text component during streaming.
+- **Duplicate Single-File Transcription Files**: Updated output logic to save the combined session transcript (`<timestamp>_transcription.<ext>`) only when transcribing multiple files in a batch, eliminating duplicate `.txt` files when transcribing a single file.
+
 ## [1.3.2] - 2026-07-24
 
 ### Added
