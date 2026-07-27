@@ -83,7 +83,7 @@ pip install -r requirements_gpu.txt
 ### Step 4: Install FFmpeg (if not already installed):
 - 🐧 Linux: Install via your package manager (e.g., `sudo apt install ffmpeg`)
 - 🍎 macOS: Install via Homebrew (`brew install ffmpeg`)
-- 🖥️ Windows: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to your system's PATH.
+- 🖥️ Windows: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to your system's PATH (or use `winget install Gyan.FFmpeg`)
     - Follow [this guide](https://phoenixnap.com/kb/ffmpeg-windows) to ensure it's in your system's PATH.
 
 ### (OPTIONAL) Step 5: Install CUDA for NVIDIA GPU
