@@ -8,42 +8,54 @@ on:
   workflow_dispatch:   # allows manual trigger from GitHub UI
 
 jobs:
-  build-installers:
+  build-and-release:
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            artifact_name: WhisperUtilitySetup_Windows.exe
+            installer_name: WhisperUtilitySetup_Windows.exe
             pyinstaller_name: WhisperUtilitySetup_Windows
+            app_artifact: whisper_app_win.zip
+            requirements: requirements_cpu.txt
           - os: macos-latest
-            artifact_name: WhisperUtilitySetup_macOS
+            installer_name: WhisperUtilitySetup_macOS
             pyinstaller_name: WhisperUtilitySetup_macOS
+            app_artifact: whisper_app_mac.zip
+            requirements: requirements_macos.txt
           - os: ubuntu-latest
-            artifact_name: WhisperUtilitySetup_Linux
+            installer_name: WhisperUtilitySetup_Linux
             pyinstaller_name: WhisperUtilitySetup_Linux
+            app_artifact: whisper_app_linux.zip
+            requirements: requirements_linux.txt
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      # ── Checkout ──────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── Python ────────────────────────────────────────────────────────────
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # ── Dependencies ──────────────────────────────────────────────────────
-      - name: Install build dependencies
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0 libwebkit2gtk-4.1-dev
+
+      - name: Install Python dependencies for app core
         run: |
           python -m pip install --upgrade pip
+          pip install -r ${{ matrix.requirements }}
           pip install pyinstaller
 
-      # ── Build ─────────────────────────────────────────────────────────────
-      - name: Build installer binary
+      - name: Build Core Application
+        run: python tools/build_release.py
+
+      - name: Build Installer Binary
         run: |
           pyinstaller \
             --onefile \
@@ -54,27 +66,25 @@ jobs:
             installer/installer_main.py
         shell: bash
 
-      # macOS: rename so the artifact includes no extension
       - name: Prepare artifact (macOS)
-        if: runner.os == 'macOS' && matrix.pyinstaller_name != matrix.artifact_name
-        run: mv dist/${{ matrix.pyinstaller_name }} dist/${{ matrix.artifact_name }}
+        if: runner.os == 'macOS' && matrix.pyinstaller_name != matrix.installer_name
+        run: mv dist/${{ matrix.pyinstaller_name }} dist/${{ matrix.installer_name }}
 
-      # Linux: rename
       - name: Prepare artifact (Linux)
-        if: runner.os == 'Linux' && matrix.pyinstaller_name != matrix.artifact_name
-        run: mv dist/${{ matrix.pyinstaller_name }} dist/${{ matrix.artifact_name }}
+        if: runner.os == 'Linux' && matrix.pyinstaller_name != matrix.installer_name
+        run: mv dist/${{ matrix.pyinstaller_name }} dist/${{ matrix.installer_name }}
 
-      # ── Upload ────────────────────────────────────────────────────────────
-      - name: Upload installer as release asset
+      - name: Upload installer and app core as release assets
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/${{ matrix.artifact_name }}
+          files: |
+            dist/${{ matrix.installer_name }}
+            dist/${{ matrix.app_artifact }}
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Also upload manifest.json on tag push ─────────────────────────────
       - name: Upload manifest.json (once, from ubuntu runner)
         if: runner.os == 'Linux' && startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2

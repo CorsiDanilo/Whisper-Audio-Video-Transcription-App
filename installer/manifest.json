@@ -3,9 +3,9 @@
   "components": {
     "app_core": {
       "windows":    "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_win.zip",
-      "macos_arm64": "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_mac_arm64.tar.gz",
-      "macos_x64":  "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_mac_x64.tar.gz",
-      "linux":      "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_linux.tar.gz"
+      "macos_arm64": "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_mac.zip",
+      "macos_x64":  "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_mac.zip",
+      "linux":      "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_linux.zip"
     },
     "ffmpeg": {
       "windows_x64": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
