@@ -56,12 +56,12 @@ jobs:
 
       # macOS: rename so the artifact includes no extension
       - name: Prepare artifact (macOS)
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && matrix.pyinstaller_name != matrix.artifact_name
         run: mv dist/${{ matrix.pyinstaller_name }} dist/${{ matrix.artifact_name }}
 
       # Linux: rename
       - name: Prepare artifact (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.pyinstaller_name != matrix.artifact_name
         run: mv dist/${{ matrix.pyinstaller_name }} dist/${{ matrix.artifact_name }}
 
       # ── Upload ────────────────────────────────────────────────────────────
