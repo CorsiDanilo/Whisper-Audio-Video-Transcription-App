@@ -1,0 +1,84 @@
+name: Build Smart Installers
+
+# Triggers on every version tag push (e.g. v1.2.0)
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:   # allows manual trigger from GitHub UI
+
+jobs:
+  build-installers:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: WhisperUtilitySetup_Windows.exe
+            pyinstaller_name: WhisperUtilitySetup_Windows
+          - os: macos-latest
+            artifact_name: WhisperUtilitySetup_macOS
+            pyinstaller_name: WhisperUtilitySetup_macOS
+          - os: ubuntu-latest
+            artifact_name: WhisperUtilitySetup_Linux
+            pyinstaller_name: WhisperUtilitySetup_Linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Python ────────────────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # ── Dependencies ──────────────────────────────────────────────────────
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+
+      # ── Build ─────────────────────────────────────────────────────────────
+      - name: Build installer binary
+        run: |
+          pyinstaller \
+            --onefile \
+            --noconfirm \
+            --name "${{ matrix.pyinstaller_name }}" \
+            --add-data "installer/manifest.json:." \
+            --add-data "logo.ico:." \
+            installer/installer_main.py
+        shell: bash
+
+      # macOS: rename so the artifact includes no extension
+      - name: Prepare artifact (macOS)
+        if: runner.os == 'macOS'
+        run: mv dist/${{ matrix.pyinstaller_name }} dist/${{ matrix.artifact_name }}
+
+      # Linux: rename
+      - name: Prepare artifact (Linux)
+        if: runner.os == 'Linux'
+        run: mv dist/${{ matrix.pyinstaller_name }} dist/${{ matrix.artifact_name }}
+
+      # ── Upload ────────────────────────────────────────────────────────────
+      - name: Upload installer as release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ matrix.artifact_name }}
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Also upload manifest.json on tag push ─────────────────────────────
+      - name: Upload manifest.json (once, from ubuntu runner)
+        if: runner.os == 'Linux'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/manifest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

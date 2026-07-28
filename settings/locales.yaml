@@ -12,6 +12,19 @@ english:
   tray_show_hide: 👁️ Show / Hide App
   tray_exit: ❌ Exit
   configurations_title: '## ⚙️ Configurations'
+  config_menu_accordion: ⚙️ Config Files Editor
+  config_modal_title: "ℹ️ Configuration Files Guide"
+  config_modal_btn: "ℹ️ File Explanation"
+  config_modal_close_btn: "✕ Close"
+  config_modal_default_yaml_title: "📄 `settings/default.yaml` (System & Model Configurations)"
+  config_modal_default_yaml_desc: "- **device**: Processing backend (`cpu` or `cuda` for NVIDIA GPU).\n- **whisper_model**: Model checkpoint alias (e.g., `turbo`, `small`, `distil-large-v3`).\n- **cpu_threads / num_workers**: Parallelism control for CPU operations.\n- **compute_type**: Calculation precision (`float16`, `int8`, `float32`).\n- **temperature / beam_size / batch_size**: Decoding options for precision vs speed.\n- **word_timestamps**: Enable precise word-level timing in output transcripts."
+  config_modal_gemini_yaml_title: "🔑 `secrets/gemini.yaml` (Gemini API Credentials)"
+  config_modal_gemini_yaml_desc: "- **api_key**: Your personal Google Gemini API key.\n- **model**: Gemini model alias (e.g. `gemini-1.5-flash`, `gemini-1.5-pro`).\n- **temperature**: Controls creativity in post-processing summaries/fixes.\n- **system_prompt**: Default instructions passed to the AI assistant."
+  select_config_file_label: Select Configuration File
+  config_content_label: File Content (YAML)
+  save_config_file_btn: 💾 Save File
+  open_in_notepad_btn: 📝 Open in Text Editor
+  file_saved_toast: File saved successfully!
   explanation_accordion: ℹ️ Explanation
   explanation_text: '- **Device**: Determines the device to use for processing (CPU
     or GPU).
@@ -48,6 +61,10 @@ english:
     (higher values may improve processing speed but require more memory).'
   config_file_path_label: Configuration file path
   config_file_path_placeholder: C:\path\to\config.yaml
+  open_config_file_btn: 📝 Open Configuration File (settings/default.yaml)
+  open_config_file_toast: Opened configuration file settings/default.yaml in system editor.
+  configure_gemini_key_btn: 🔑 Configure Gemini API Key (secrets/gemini.yaml)
+  gemini_config_opened_toast: Opened secrets/gemini.yaml in system editor.
   device_label: Device
   cpu_threads_label: CPU Threads
   num_workers_label: Number of Workers
@@ -148,6 +165,19 @@ italian:
   tray_show_hide: 👁️ Mostra / Nascondi App
   tray_exit: ❌ Esci
   configurations_title: '## ⚙️ Configurazioni'
+  config_menu_accordion: ⚙️ Configura File (YAML)
+  config_modal_title: "ℹ️ Guida ai File di Configurazione"
+  config_modal_btn: "ℹ️ Spiegazione File"
+  config_modal_close_btn: "✕ Chiudi"
+  config_modal_default_yaml_title: "📄 `settings/default.yaml` (Impostazioni di Sistema e Modello)"
+  config_modal_default_yaml_desc: "- **device**: Dispositivo di elaborazione (`cpu` o `cuda` per GPU NVIDIA).\n- **whisper_model**: Alias del modello Whisper (es. `turbo`, `small`, `distil-large-v3`).\n- **cpu_threads / num_workers**: Controllo del parallelismo per elaborazione CPU.\n- **compute_type**: Precisione dei calcoli (`float16`, `int8`, `float32`).\n- **temperature / beam_size / batch_size**: Parametri di trascrizione per bilanciare accuratezza e velocità.\n- **word_timestamps**: Abilita il tracciamento dei timestamp parola per parola."
+  config_modal_gemini_yaml_title: "🔑 `secrets/gemini.yaml` (Credenziali API Gemini)"
+  config_modal_gemini_yaml_desc: "- **api_key**: La tua chiave API personale per Google Gemini.\n- **model**: Modello Gemini selezionato (es. `gemini-1.5-flash`, `gemini-1.5-pro`).\n- **temperature**: Controlla la creatività nelle risposte dell'assistente AI.\n- **system_prompt**: Istruzioni di base inviate al modello AI per le trascrizioni."
+  select_config_file_label: Seleziona File di Configurazione
+  config_content_label: Contenuto File (YAML)
+  save_config_file_btn: 💾 Salva File
+  open_in_notepad_btn: 📝 Apri in Editor di Testo
+  file_saved_toast: File salvato con successo!
   explanation_accordion: ℹ️ Spiegazione
   explanation_text: '- **Dispositivo**: Determina il dispositivo da utilizzare per
     l''elaborazione (CPU o GPU).
@@ -183,6 +213,10 @@ italian:
     (valori più alti migliorano la velocità ma richiedono più memoria).'
   config_file_path_label: Percorso file di configurazione
   config_file_path_placeholder: C:\percorso\al\config.yaml
+  open_config_file_btn: 📝 Apri File di Configurazione (settings/default.yaml)
+  open_config_file_toast: Aperto il file di configurazione settings/default.yaml nell'editor di sistema.
+  configure_gemini_key_btn: 🔑 Configura API Key Gemini (secrets/gemini.yaml)
+  gemini_config_opened_toast: Aperto il file secrets/gemini.yaml nell'editor di sistema.
   device_label: Dispositivo
   cpu_threads_label: Thread CPU
   num_workers_label: Numero di Worker

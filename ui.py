@@ -224,28 +224,55 @@ def browse_local_folders(existing_paths=""):
         return gr.update()
 
 
-def browse_local_config_file():
-    try:
-        import tkinter as tk
-        from tkinter import filedialog
+GEMINI_TEMPLATE = (
+    "# Configuration file for Google Gemini API Key\n"
+    "# Replace YOUR_GEMINI_API_KEY_HERE with your Google Gemini API key\n"
+    'gemini_api_key: "YOUR_GEMINI_API_KEY_HERE"\n'
+)
 
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes("-topmost", True)
-        selected_path = filedialog.askopenfilename(
-            title=_("select_config_title"),
-            filetypes=[
-                (_("yaml_files_filter"), "*.yaml *.yml"),
-                (_("all_files_filter"), "*.*"),
-            ],
-            parent=root,
-        )
-        root.destroy()
-        return selected_path or gr.update()
+
+def read_config_file_text(file_path: str) -> str:
+    """Read config file text, creating it with default template if missing."""
+    abs_path = os.path.abspath(file_path)
+    if not os.path.exists(abs_path):
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        template = GEMINI_TEMPLATE if "gemini" in file_path else ""
+        with open(abs_path, "w", encoding="utf-8") as f:
+            f.write(template)
+        return template
+    try:
+        with open(abs_path, "r", encoding="utf-8") as f:
+            return f.read()
     except Exception as e:
-        logging.error(f"Error selecting configuration file: {e}")
-        gr.Error(_("error_selecting_config").format(str(e)))
-        return gr.update()
+        logging.error(f"Error reading config file {abs_path}: {e}")
+        return f"# Error reading file: {e}"
+
+
+def write_config_file_text(file_path: str, content: str) -> None:
+    """Save content to configuration file."""
+    abs_path = os.path.abspath(file_path)
+    os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+    with open(abs_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    gr.Info(_("file_saved_toast"))
+
+
+def open_file_in_notepad(file_path: str) -> None:
+    """Open config file directly in Notepad on Windows or system text editor."""
+    import subprocess
+    abs_path = os.path.abspath(file_path)
+    if not os.path.exists(abs_path):
+        read_config_file_text(file_path)
+    try:
+        if sys.platform == "win32":
+            subprocess.Popen(["notepad.exe", abs_path])
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-e", abs_path])
+        else:
+            subprocess.Popen(["xdg-open", abs_path])
+    except Exception as e:
+        logging.error(f"Error opening editor for {abs_path}: {e}")
+        gr.Error(f"Error launching editor: {e}")
 
 
 def browse_output_folder(file_paths_text="", current_override=""):
@@ -332,6 +359,19 @@ def quit_app():
 
 
 custom_css = """
+#config-screen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 99999 !important;
+    background-color: var(--background-fill-primary) !important;
+    padding: 40px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
 .scrollable-markdown {
     max-height: 400px !important;
     overflow-y: auto !important;
@@ -386,8 +426,36 @@ def set_status_completed():
 
 with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     setup_logging()
-    gr.Markdown(_("title"))
-    status_badge = gr.Markdown(_("status_waiting"), elem_id="status_badge")
+    with gr.Row():
+        with gr.Column(scale=3):
+            gr.Markdown(_("title"))
+            status_badge = gr.Markdown(_("status_waiting"), elem_id="status_badge")
+        with gr.Column(scale=2):
+            show_config_info_btn = gr.Button(_("config_menu_accordion"), size="sm")
+
+    with gr.Column(visible=False, variant="panel", elem_id="config-screen") as config_modal:
+        gr.Markdown(f"### {_('config_modal_title')}")
+        gr.Markdown(f"### {_('config_modal_default_yaml_title')}\n{_('config_modal_default_yaml_desc')}")
+        gr.Markdown("---")
+        gr.Markdown(f"### {_('config_modal_gemini_yaml_title')}\n{_('config_modal_gemini_yaml_desc')}")
+        
+        with gr.Row():
+            config_file_selector = gr.Dropdown(
+                choices=["settings/default.yaml", "secrets/gemini.yaml"],
+                value="settings/default.yaml",
+                label=_("select_config_file_label"),
+                scale=3,
+            )
+        config_editor = gr.Code(
+            value=read_config_file_text("settings/default.yaml"),
+            language="yaml",
+            label=_("config_content_label"),
+            lines=15,
+        )
+        with gr.Row():
+            save_config_file_btn = gr.Button(_("save_config_file_btn"), variant="primary", size="sm")
+            open_in_notepad_btn = gr.Button(_("open_in_notepad_btn"), variant="secondary", size="sm")
+            close_config_modal_btn = gr.Button(_("config_modal_close_btn"), variant="secondary", size="sm")
 
     with gr.Row():
         file_path_input = gr.Textbox(
@@ -415,13 +483,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         with gr.Accordion(label=_("explanation_accordion"), open=False):
             gr.Markdown(_("explanation_text"))
 
-    with gr.Row():
-        config_path_input = gr.Textbox(
-            label=_("config_file_path_label"),
-            placeholder=_("config_file_path_placeholder"),
-            lines=1,
-        )
-    browse_config_button = gr.Button(_("browse"), variant="secondary")
+    config_path_input = gr.State("settings/default.yaml")
     with gr.Row():
         device = gr.Dropdown(choices=default_values['configurations']['devices'], value=default_config_values["device"], label=_("device_label"))
         cpu_threads = gr.Slider(minimum=default_values['configurations']['cpu_threads']['min'], value=default_config_values["cpu_threads"], step=1, label=_("cpu_threads_label"))
@@ -587,10 +649,34 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         outputs=[output_dir_display],
     )
 
-    browse_config_button.click(
-        fn=browse_local_config_file,
+    config_file_selector.change(
+        fn=read_config_file_text,
+        inputs=[config_file_selector],
+        outputs=[config_editor],
+    )
+
+    save_config_file_btn.click(
+        fn=write_config_file_text,
+        inputs=[config_file_selector, config_editor],
+        outputs=[],
+    )
+
+    open_in_notepad_btn.click(
+        fn=open_file_in_notepad,
+        inputs=[config_file_selector],
+        outputs=[],
+    )
+
+    show_config_info_btn.click(
+        fn=lambda: gr.update(visible=True),
         inputs=[],
-        outputs=[config_path_input],
+        outputs=[config_modal],
+    )
+
+    close_config_modal_btn.click(
+        fn=lambda: gr.update(visible=False),
+        inputs=[],
+        outputs=[config_modal],
     )
 
     def _provider_change(p):

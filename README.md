@@ -56,11 +56,16 @@ This app can analyze the transcript using either **Ollama (local)** or **Google 
 > **Tip**: Custom timeouts for local AI servers can be set in `settings/default.yaml` (`lmstudio_timeout`, `ollama_timeout`) or via environment variables (`LMSTUDIO_TIMEOUT`, `OLLAMA_TIMEOUT`). Default is 300s.
 
 ## 📦 Installation
-### Step 1: Clone the repository
 
-```
+### 🪟 Windows (Recommended)
+Simply download and run the latest **Whisper Utility Installer** from the [Releases](https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases) page.
+The setup wizard will automatically detect your hardware, download the required FFmpeg binaries, and fetch CUDA dependencies if an NVIDIA GPU is detected. You don't need to install Python, FFmpeg, or CUDA manually!
+
+### 💻 macOS / Linux / Developers (From Source)
+
+#### Step 1: Clone the repository
+```bash
 git clone https://github.com/CorsiDanilo/whisper-utility.git
-
 ```
 
 ### Step 2: Set up a virtual environment (optional but recommended):
@@ -86,7 +91,7 @@ pip install -r requirements_gpu.txt
 - 🖥️ Windows: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to your system's PATH (or use `winget install Gyan.FFmpeg`)
     - Follow [this guide](https://phoenixnap.com/kb/ffmpeg-windows) to ensure it's in your system's PATH.
 
-### (OPTIONAL) Step 5: Install CUDA for NVIDIA GPU
+### (OPTIONAL) Step 5: Install CUDA for NVIDIA GPU (Only if running from source)
 - Download and install [CUDA Toolkit 12.9](https://developer.nvidia.com/cuda-12-9-1-download-archive).
 - Download and install [cuDNN 9.19.0](https://developer.nvidia.com/cudnn-downloads?target_os=Windows&target_arch=x86_64&target_version=11&target_type=exe_local).
 

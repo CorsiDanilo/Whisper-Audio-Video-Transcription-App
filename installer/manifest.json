@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "components": {
+    "app_core": {
+      "windows":    "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_win.zip",
+      "macos_arm64": "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_mac_arm64.tar.gz",
+      "macos_x64":  "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_mac_x64.tar.gz",
+      "linux":      "https://github.com/CorsiDanilo/whisper-utility/releases/download/v2.0.0/whisper_app_linux.tar.gz"
+    },
+    "ffmpeg": {
+      "windows_x64": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
+      "macos_arm64": "https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip",
+      "macos_x64":   "https://evermeet.cx/ffmpeg/ffmpeg-7.1.zip",
+      "linux_x64":   "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+    },
+    "cuda_libs": {
+      "windows_nvidia": "https://github.com/CorsiDanilo/whisper-utility/releases/download/v1.0.0/cuda_12_dlls_win.zip"
+    }
+  },
+  "sha256": {}
+}
