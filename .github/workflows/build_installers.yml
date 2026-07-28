@@ -66,6 +66,7 @@ jobs:
 
       # ── Upload ────────────────────────────────────────────────────────────
       - name: Upload installer as release asset
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: dist/${{ matrix.artifact_name }}
@@ -75,7 +76,7 @@ jobs:
 
       # ── Also upload manifest.json on tag push ─────────────────────────────
       - name: Upload manifest.json (once, from ubuntu runner)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: installer/manifest.json
