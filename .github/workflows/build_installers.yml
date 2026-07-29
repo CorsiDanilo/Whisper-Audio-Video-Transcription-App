@@ -38,10 +38,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up uv & Python 3.11
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
+          enable-cache: true
 
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
@@ -51,9 +52,8 @@ jobs:
 
       - name: Install Python dependencies for app core
         run: |
-          python -m pip install --upgrade pip
-          pip install -r ${{ matrix.requirements }}
-          pip install pyinstaller
+          uv pip install --system -r ${{ matrix.requirements }}
+          uv pip install --system pyinstaller
 
       - name: Build Core Application
         run: python tools/build_release.py
