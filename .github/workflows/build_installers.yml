@@ -52,15 +52,15 @@ jobs:
 
       - name: Install Python dependencies for app core
         run: |
-          uv pip install --system -r ${{ matrix.requirements }}
-          uv pip install --system pyinstaller
+          uv pip install -r ${{ matrix.requirements }}
+          uv pip install pyinstaller
 
       - name: Build Core Application
-        run: python tools/build_release.py
+        run: uv run python tools/build_release.py
 
       - name: Build Installer Binary
         run: |
-          pyinstaller \
+          uv run pyinstaller \
             --onefile \
             --noconfirm \
             --name "${{ matrix.pyinstaller_name }}" \
