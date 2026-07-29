@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.1] - 2026-07-29
+
+### Fixed
+- **Rancher Desktop BuildKit Compatibility**: Set `DOCKER_BUILDKIT=0` and `COMPOSE_DOCKER_CLI_BUILD=0` in `run.bat` and `run.sh` to bypass containerized BuildKit cgroup v2 permission errors (`OCI permission denied`) on Rancher Desktop.
+
+### Added
+- **`uv` Package Manager Integration**: Integrated `uv` in `Dockerfile.cpu` and `Dockerfile.gpu` (`COPY --from=ghcr.io/astral-sh/uv:latest`) for lightning-fast container builds and added `astral-sh/setup-uv@v5` to GitHub Actions workflow.
+- **Python Version Management Documentation**: Added `uv venv --python 3.11` guide in `README.md` for automatic Python version management and ultra-fast local setups.
+
 ## [2.1.0] - 2026-07-29
 
 ### Added
