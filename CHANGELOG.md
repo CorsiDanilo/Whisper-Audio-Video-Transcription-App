@@ -5,10 +5,10 @@
 ### Added
 - **Docker Support & Cross-Platform Launchers**: Added `Dockerfile.cpu`, `Dockerfile.gpu`, `docker-compose.yml`, `run.bat` (Windows), and `run.sh` (Linux/macOS) for containerized deployment.
 - **Automated GPU Runtime Detection**: Added hardware (`nvidia-smi`) and Docker GPU runtime (`--gpus all`) verification in `run.bat` and `run.sh`. Automatically runs GPU container (`--profile gpu`) if supported, or gracefully falls back to CPU (`--profile cpu`) with tips for Docker Desktop and Rancher Desktop users.
-- **Container Requirements**: Created `requirements_docker_cpu.txt` and `requirements_docker_gpu.txt` optimized for docker build layers.
+- **Container Requirements & `uv` Integration**: Created `requirements_docker_cpu.txt` and `requirements_docker_gpu.txt` optimized for docker build layers, and integrated `uv` into Dockerfiles for ultra-fast package resolution and installation.
 
 ### Changed
-- **Documentation**: Updated `README.md` with complete Docker deployment instructions and Rancher Desktop / Docker Desktop GPU compatibility notes.
+- **Documentation**: Updated `README.md` with complete Docker deployment instructions, Rancher Desktop / Docker Desktop GPU compatibility notes, and `uv` setup guide specifying Python version management (`uv venv --python 3.11`).
 - **Installer Manifest**: Updated `installer/manifest.json` component release targets to `v2.1.0`.
 
 ## [2.0.0] - 2026-07-28

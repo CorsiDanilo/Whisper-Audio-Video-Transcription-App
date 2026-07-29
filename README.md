@@ -107,14 +107,24 @@ source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
 ```
 
 ### Step 3: Install the required dependencies
-```
+```bash
 pip install -r requirements_cpu.txt
 ```
 
 If you have an NVIDIA GPU and want CUDA acceleration, use:
-```
+```bash
 pip install -r requirements_gpu.txt
 ```
+
+> ⚡ **Tip (Ultra-Fast Installation & Python Version Control with `uv`):**
+> If you have [`uv`](https://github.com/astral-sh/uv) installed, you can automatically download Python 3.11 and install dependencies up to 10-100x faster without pre-installing Python 3.11 manually on your OS:
+> ```bash
+> # Create virtual environment specifying Python 3.11 (uv will fetch it if missing)
+> uv venv --python 3.11
+> 
+> # Install dependencies in seconds
+> uv pip install -r requirements_cpu.txt   # or requirements_gpu.txt
+> ```
 
 ### Step 4: Install FFmpeg (if not already installed):
 - 🐧 Linux: Install via your package manager (e.g., `sudo apt install ffmpeg`)

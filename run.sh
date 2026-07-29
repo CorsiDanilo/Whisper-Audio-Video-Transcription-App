@@ -8,6 +8,8 @@ echo "========================================================"
 echo ""
 
 # Check if Docker is running
+export DOCKER_BUILDKIT=0
+export COMPOSE_DOCKER_CLI_BUILD=0
 if ! docker info >/dev/null 2>&1; then
     echo "[ERROR] Docker daemon is not running!"
     echo ""

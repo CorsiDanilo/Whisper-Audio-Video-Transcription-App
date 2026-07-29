@@ -8,6 +8,8 @@ echo ========================================================
 echo.
 
 :: Check if Docker is running
+set DOCKER_BUILDKIT=0
+set COMPOSE_DOCKER_CLI_BUILD=0
 docker info >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERROR] Docker daemon is not running!
