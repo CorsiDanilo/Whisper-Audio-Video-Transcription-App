@@ -62,8 +62,10 @@ jobs:
         run: |
           uv run pyinstaller \
             --onefile \
+            --noupx \
             --noconfirm \
             --name "${{ matrix.pyinstaller_name }}" \
+            --icon "logo.ico" \
             --add-data "installer/manifest.json:." \
             --add-data "logo.ico:." \
             installer/installer_main.py

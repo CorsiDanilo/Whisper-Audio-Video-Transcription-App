@@ -5,7 +5,7 @@ Run directly:
     python installer/installer_main.py
 
 Compile to standalone binary:
-    pyinstaller --onefile --noconfirm --name WhisperUtilitySetup installer/installer_main.py
+    pyinstaller --onefile --noupx --icon logo.ico --noconfirm --name WhisperUtilitySetup installer/installer_main.py
 """
 
 import os
