@@ -1,0 +1,17 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.ruff_cache
+.docgen-agent
+.graphify
+docs/
+outputs/
+whisper.log
+installer/
+notebooks/
+secrets/

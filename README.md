@@ -61,6 +61,37 @@ This app can analyze the transcript using either **Ollama (local)** or **Google 
 Simply download and run the latest **Whisper Utility Installer** from the [Releases](https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases) page.
 The setup wizard will automatically detect your hardware, download the required FFmpeg binaries, and fetch CUDA dependencies if an NVIDIA GPU is detected. You don't need to install Python, FFmpeg, or CUDA manually!
 
+### 🐳 Docker (Cross-Platform — No Manual Setup Required)
+
+Run the app in a fully isolated container — no Python, FFmpeg, or CUDA to install manually. The launcher automatically detects whether you have an NVIDIA GPU and starts the right container.
+
+**Prerequisites:** Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [Rancher Desktop](https://rancherdesktop.io/) (and optionally [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for GPU support).
+
+> **Note on GPU Acceleration:** Docker Desktop on Windows supports NVIDIA GPU passthrough natively via WSL2. If using Rancher Desktop or standard Docker without GPU runtime configured, the launcher will display a warning and safely fall back to the CPU container.
+
+#### 🪟 Windows — Double-click `run.bat`
+
+#### 🐧 Linux / 🍎 macOS
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+#### Manual Docker Compose
+```bash
+# GPU (requires NVIDIA Container Toolkit / Docker Desktop WSL2 GPU support):
+docker compose --profile gpu up --build
+
+# CPU only:
+docker compose --profile cpu up --build
+```
+Open your browser at **http://localhost:7860**.
+
+> **Notes:**
+> - Transcription outputs are saved to the `./outputs/` folder on your PC.
+> - Downloaded Whisper models are cached in a Docker volume (`whisper_models_cache`) — they won't be re-downloaded on restart.
+> - If you use **Ollama** or **LM Studio** on the same PC, the container can reach them at `http://host.docker.internal:11434` (Ollama) and `http://host.docker.internal:1234` (LM Studio).
+
 ### 💻 macOS / Linux / Developers (From Source)
 
 #### Step 1: Clone the repository

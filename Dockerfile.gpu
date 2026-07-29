@@ -1,0 +1,40 @@
+FROM python:3.11-slim
+
+# Prevent interactive prompts during apt install
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Gradio server binding — 0.0.0.0 makes it reachable outside the container
+ENV WHISPER_GRADIO_SERVER_NAME=0.0.0.0
+
+# Install system dependencies & ffmpeg
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install PyTorch with CUDA 12.1 support (separate layer for better caching)
+RUN pip install --no-cache-dir \
+    torch==2.5.1 \
+    torchvision==0.20.1 \
+    torchaudio==2.5.1 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# Copy and install the rest of the dependencies
+COPY requirements_docker_gpu.txt .
+RUN pip install --no-cache-dir -r requirements_docker_gpu.txt
+
+# Copy application source code
+COPY . .
+
+# Create outputs directory
+RUN mkdir -p /app/outputs
+
+# Expose Gradio port
+EXPOSE 7860
+
+# Launch Gradio in headless server mode (no webview, no tray icon)
+CMD ["python", "main.py"]

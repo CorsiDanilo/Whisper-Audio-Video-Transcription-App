@@ -1,0 +1,45 @@
+services:
+  whisper-gpu:
+    profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    container_name: whisper-utility-gpu
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./outputs:/app/outputs
+      - ./config:/app/config
+      - ./settings:/app/settings
+      - whisper_cache:/root/.cache/huggingface
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  whisper-cpu:
+    profiles: ["cpu"]
+    build:
+      context: .
+      dockerfile: Dockerfile.cpu
+    container_name: whisper-utility-cpu
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./outputs:/app/outputs
+      - ./config:/app/config
+      - ./settings:/app/settings
+      - whisper_cache:/root/.cache/huggingface
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  whisper_cache:
+    name: whisper_models_cache

@@ -230,7 +230,7 @@ def cleanup_temp_storage():
 
 def _is_loopback_host(server_name):
     normalized = (server_name or "").strip().lower()
-    return normalized in {"127.0.0.1", "localhost", "::1"}
+    return normalized in {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
 
 
 def get_gradio_launch_kwargs(**overrides):
@@ -242,16 +242,17 @@ def get_gradio_launch_kwargs(**overrides):
     }
     kwargs.update(overrides)
 
-    requires_auth = bool(kwargs.get("share")) or not _is_loopback_host(
-        kwargs.get("server_name")
-    )
-    if requires_auth:
-        username = os.getenv("WHISPER_GRADIO_AUTH_USER")
-        password = os.getenv("WHISPER_GRADIO_AUTH_PASSWORD")
-        if not username or not password:
+    username = os.getenv("WHISPER_GRADIO_AUTH_USER")
+    password = os.getenv("WHISPER_GRADIO_AUTH_PASSWORD")
+    if username and password:
+        kwargs["auth"] = (username, password)
+    else:
+        requires_auth = bool(kwargs.get("share")) or not _is_loopback_host(
+            kwargs.get("server_name")
+        )
+        if requires_auth:
             raise RuntimeError(
                 "Remote/shared Gradio launch requires "
                 "WHISPER_GRADIO_AUTH_USER and WHISPER_GRADIO_AUTH_PASSWORD."
             )
-        kwargs["auth"] = (username, password)
     return kwargs
