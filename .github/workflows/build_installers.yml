@@ -62,6 +62,7 @@ jobs:
         run: |
           uv run pyinstaller \
             --onefile \
+            --noconsole \
             --noupx \
             --noconfirm \
             --name "${{ matrix.pyinstaller_name }}" \
