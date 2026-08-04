@@ -3,6 +3,7 @@
 ## [2.1.1] - 2026-07-29
 
 ### Fixed
+- **AI Models Reset & Fallback Fix**: Fixed `reset_fields()` in `ui.py` to reset AI Provider (`provider`), Brand Radio (`google_brand_radio`), and Gemini Model (`gemini_model`) to their default values (`gemini-flash-latest`). Added guaranteed inclusion of `gemini-flash-latest` and `gemini-flash-lite-latest` in `get_sorted_gemini_models()` in `llms.py` so default options are always present in UI dropdown choices.
 - **Rancher Desktop BuildKit Compatibility**: Set `DOCKER_BUILDKIT=0` and `COMPOSE_DOCKER_CLI_BUILD=0` in `run.bat` and `run.sh` to bypass containerized BuildKit cgroup v2 permission errors (`OCI permission denied`) on Rancher Desktop.
 
 ### Added

@@ -111,6 +111,13 @@ def save_config(
 
 def reset_fields():
     """Reset fields to default values."""
+    gemini_api_key = get_gemini_api_key()
+    gemini_models = get_sorted_gemini_models(gemini_api_key)
+    has_gemini = len(gemini_models) > 0
+    default_provider = "Google" if has_gemini else "Ollama"
+    default_brand = "Gemini"
+    default_gemini = default_config_values.get("gemini_model", "gemini-flash-latest")
+
     return (
         None,
         None,
@@ -127,14 +134,17 @@ def reset_fields():
         _("transcription_placeholder"),
         default_values['default_values']["download_output"],
         default_config_values["word_timestamps"],
-        default_config_values["gemini_model"],
+        default_gemini,
         "",
         _("response_placeholder"),
         gr.update(visible=False), # save_transcript_button
         gr.update(visible=False), # submit_query_button
         ".txt",                   # output_format
         _("status_waiting"),      # status_badge
+        default_provider,         # provider
+        gr.update(value=default_brand, visible=has_gemini), # google_brand_radio
     )
+
 
 
 def preset_query_summary():
@@ -804,7 +814,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     reset_button.click(
         fn=reset_fields,
         inputs=[],
-        outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button, output_format, status_badge]
+        outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button, output_format, status_badge, provider, google_brand_radio]
     ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
     def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir_override="", progress=gr.Progress(track_tqdm=False)):

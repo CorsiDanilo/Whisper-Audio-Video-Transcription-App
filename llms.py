@@ -498,9 +498,15 @@ def get_sorted_gemini_models(api_key: str) -> list[str]:
                         continue
                     clean_name = model.name.replace("models/", "")
                     retrieved_models.append(clean_name)
-                    
+
+        always_present = ["gemini-flash-latest", "gemini-flash-lite-latest"]
+        for dm in always_present:
+            if dm not in retrieved_models:
+                retrieved_models.append(dm)
+
         if not retrieved_models:
-            return []
+            retrieved_models = always_present.copy()
+
 
         # 2. Algoritmo di ordinamento semantico (Latest-First)
         def get_sort_key(name):
@@ -543,4 +549,4 @@ def get_sorted_gemini_models(api_key: str) -> list[str]:
         
     except Exception as e:
         logging.error(f"Impossibile connettersi a Gemini API o recuperare i modelli: {e}")
-        return []
+        return ["gemini-flash-latest", "gemini-flash-lite-latest"]
