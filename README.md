@@ -13,6 +13,9 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🖥️ Simple UI built with Gradio for easy access and use
 - 📊 **Dedicated Status Badge & Progress Tracking**: Real-time color-coded status badge (`⚪ Waiting`, `🟡 Transcribing...`, `🟢 Completed`, `🔴 Interrupted`) with phase progress bars and Web Audio sound notifications upon completion.
 - 🌐 **Fully Localized UI**: Complete bilingual support (English and Italian) backed by `settings/locales.yaml` for all controls, labels, progress indicators, and status messages.
+- ⚙️ **Smart Setup Customization & Non-Destructive Preservations**: Interactive wizard options for Gemini API key, UI language, default Whisper model, computation device (CUDA/CPU), and CPU threads. Pre-fills and preserves pre-existing user settings on upgrades.
+- 📂 **OS-Native System AppData Storage**: User preferences and API keys are stored safely in system configuration locations (`%APPDATA%\WhisperUtility` on Windows, `~/Library/Application Support/WhisperUtility` on macOS, `~/.config/whisper-utility` on Linux), isolating user data from application binaries.
+- 🔄 **In-App Auto-Updater**: One-click update check against remote GitHub releases and direct installer launcher right from the Gradio Settings tab.
 - ⬇️ Save transcripts and converted/extracted `.mp3` audio files in custom timestamped output folders (`YYYY-MM-DD_HH-MM-SS_transcription`), preserving folder structure and producing combined session files.
 
 ## Demo

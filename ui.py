@@ -18,6 +18,7 @@ from transcription import transcribe_file  # noqa: E402
 from config import load_default_values, load_default_config, get_gemini_api_key, get_translation as _  # noqa: E402
 from llms import query_gemini, list_ollama_models, list_lmstudio_models, get_sorted_gemini_models  # noqa: E402
 from config import setup_logging  # noqa: E402
+from updater import check_for_updates, launch_installer_update, CURRENT_VERSION  # noqa: E402
 
 default_values = load_default_values()
 NO_MODELS_FOUND = "No models found"
@@ -466,6 +467,13 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
             save_config_file_btn = gr.Button(_("save_config_file_btn"), variant="primary", size="sm")
             open_in_notepad_btn = gr.Button(_("open_in_notepad_btn"), variant="secondary", size="sm")
             close_config_modal_btn = gr.Button(_("config_modal_close_btn"), variant="secondary", size="sm")
+
+        gr.Markdown("---")
+        gr.Markdown("### 🔄 Controllo Aggiornamenti Applicazione")
+        with gr.Row():
+            update_status_md = gr.Markdown(f"**Versione installata:** `v{CURRENT_VERSION}`")
+            check_updates_btn = gr.Button("🔍 Verifica Aggiornamenti", variant="secondary", size="sm")
+            launch_updater_btn = gr.Button("🚀 Avvia Aggiornamento", variant="primary", size="sm", visible=False)
 
     with gr.Row():
         file_path_input = gr.Textbox(
@@ -996,4 +1004,35 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         fn=None,
         inputs=[gemini_response],
         js=js_copy_text
+    )
+
+    def on_check_updates():
+        res = check_for_updates()
+        if res.get("has_update"):
+            msg = f"🚀 **Nuova versione v{res['latest_version']} disponibile!** (Attuale: `v{CURRENT_VERSION}`)"
+            return msg, gr.update(visible=True)
+        elif "check_failed" in str(res.get("status")):
+            msg = f"⚠ **Impossibile verificare aggiornamenti** (Attuale: `v{CURRENT_VERSION}`)"
+            return msg, gr.update(visible=False)
+        else:
+            msg = f"✅ **Whisper Utility è aggiornato all'ultima versione (`v{CURRENT_VERSION}`)**"
+            return msg, gr.update(visible=False)
+
+    check_updates_btn.click(
+        fn=on_check_updates,
+        inputs=[],
+        outputs=[update_status_md, launch_updater_btn]
+    )
+
+    def on_launch_updater():
+        success = launch_installer_update()
+        if success:
+            gr.Info("L'installer di aggiornamento è stato avviato.")
+        else:
+            gr.Error("Impossibile avviare l'installer.")
+
+    launch_updater_btn.click(
+        fn=on_launch_updater,
+        inputs=[],
+        outputs=[]
     )

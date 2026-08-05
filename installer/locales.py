@@ -42,6 +42,14 @@ STRINGS_EN: Dict[str, str] = {
     "msg_manifest_fallback": "Continuing with local manifest fallback…",
     "msg_creating_shortcuts": "Creating shortcuts and uninstaller…",
     "msg_complete": "Installation Complete!",
+    "config_title": "Configuration Settings",
+    "config_sub": "Customize your initial setup or keep existing settings.",
+    "config_existing_detected": "ℹ  Existing settings detected in destination folder. Pre-filled below.",
+    "lbl_gemini_key": "Gemini API Key (optional):",
+    "lbl_ui_language": "Interface Language:",
+    "lbl_whisper_model": "Default Whisper Model:",
+    "lbl_device": "Computation Device:",
+    "lbl_cpu_threads": "CPU Threads:",
 }
 
 STRINGS_IT: Dict[str, str] = {
@@ -78,6 +86,14 @@ STRINGS_IT: Dict[str, str] = {
     "msg_manifest_fallback": "Uso del manifest locale di riserva…",
     "msg_creating_shortcuts": "Creazione delle scorciatoie ed uninstaller…",
     "msg_complete": "Installazione Completata!",
+    "config_title": "Configurazione Impostazioni",
+    "config_sub": "Personalizza le opzioni o mantieni quelle correnti.",
+    "config_existing_detected": "ℹ  Impostazioni esistenti rilevate nella destinazione. Campi pre-compilati.",
+    "lbl_gemini_key": "Gemini API Key (opzionale):",
+    "lbl_ui_language": "Lingua Interfaccia:",
+    "lbl_whisper_model": "Modello Whisper Predefinito:",
+    "lbl_device": "Dispositivo di Calcolo:",
+    "lbl_cpu_threads": "Thread CPU:",
 }
 
 

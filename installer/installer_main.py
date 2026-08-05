@@ -4,8 +4,8 @@ installer_main.py - Entry point for the Whisper Utility Smart Installer.
 Run directly:
     python installer/installer_main.py
 
-Compile to standalone binary:
-    pyinstaller --onefile --noconsole --noupx --icon logo.ico --noconfirm --name WhisperUtilitySetup installer/installer_main.py
+Compile to standalone directory package (prevents false-positive AV blocks):
+    pyinstaller --onedir --noconsole --noupx --icon logo.ico --noconfirm --name WhisperUtilitySetup installer/installer_main.py
 """
 
 import os

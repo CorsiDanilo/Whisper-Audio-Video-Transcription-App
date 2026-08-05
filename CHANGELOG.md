@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.0.0] - 2026-08-05
+
+### Added
+- **Installer Configuration Customization Page**: Added a new wizard screen (`_show_config`) in `installer/gui.py` allowing users to configure Gemini API Key, UI Language, Whisper Model, Computation Device (CUDA/CPU), and CPU Threads during setup.
+- **Non-Destructive Configuration Preservation**: Implemented `installer/config_manager.py` to automatically detect existing `settings/default.yaml` and `secrets/gemini.yaml` files, pre-fill form fields, and merge new user choices while preserving all custom parameters.
+- **OS-Native System AppData Storage**: Added `get_app_config_dir()` in `config.py` to store configuration files in native system AppData locations (`%APPDATA%\WhisperUtility` on Windows, `~/Library/Application Support/WhisperUtility` on macOS, and `~/.config/whisper-utility` on Linux), separating user settings completely from application binaries for risk-free updates.
+- **In-App Auto-Updater & Version Checker**: Created `updater.py` module and integrated an interactive update control panel into the Gradio UI (`ui.py`). Users can check for new releases against remote GitHub manifests and launch the graphical installer directly from the app.
+- **Antivirus False-Positive Protection**: Updated PyInstaller packaging guidelines to `--onedir` directory mode, preventing antivirus engines (like Bitdefender and Windows Defender) from triggering false-positive heuristic blocks.
+- **Automated Test Suite**: Added complete test suite (`tests/test_system_config.py`, `tests/test_updater.py`, `tests/test_updater_ui.py`, `tests/test_installer_config_manager.py`, `tests/test_installer_gui.py`, `tests/test_installer_locales.py`).
+
 ## [2.1.1] - 2026-07-29
 
 ### Fixed

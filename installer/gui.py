@@ -25,6 +25,7 @@ from installer.hardware_detector import HardwareInfo, detect_hardware
 from installer.locales import get_locale_strings
 from installer.manifest import Manifest, ManifestError
 from installer.shortcut_manager import create_shortcuts, create_uninstaller
+from installer.config_manager import load_existing_configs, save_merged_configs
 
 if sys.platform == "win32":
     try:
@@ -66,6 +67,14 @@ class InstallerWizard(tk.Tk):
         self.manifest: Optional[Manifest] = None
         self._downloader = FileDownloader()
         self._cancel_flag = threading.Event()
+
+        # ── Configuration State ──────────────────────────────────────────────
+        self.gemini_key_var = tk.StringVar(value="")
+        self.ui_lang_var = tk.StringVar(value="italian")
+        self.whisper_model_var = tk.StringVar(value="large-v3")
+        self.device_var = tk.StringVar(value="cuda" if self.hardware.has_nvidia_gpu else "cpu")
+        self.cpu_threads_var = tk.IntVar(value=min(os.cpu_count() or 6, 16))
+        self.has_existing_configs = False
 
         # ── Window setup ──────────────────────────────────────────────────────
         self.title(self.strings["title"])
@@ -201,6 +210,84 @@ class InstallerWizard(tk.Tk):
         nav = ttk.Frame(f)
         nav.pack(fill="x", side="bottom")
         ttk.Button(nav, text=self.strings["btn_back"], style="Ghost.TButton", command=self._show_welcome).pack(side="left")
+        ttk.Button(nav, text=self.strings["btn_next"], style="Accent.TButton", command=self._show_config).pack(side="right")
+
+    def _show_config(self) -> None:
+        self._clear()
+        f = ttk.Frame(self._container, padding=(40, 20))
+        f.pack(fill="both", expand=True)
+
+        # Check existing config in install_dir
+        existing = load_existing_configs(self.install_dir.get())
+        if existing["has_existing"]:
+            self.has_existing_configs = True
+            if existing["gemini_api_key"]:
+                self.gemini_key_var.set(existing["gemini_api_key"])
+            st = existing["settings"]
+            if "ui_language" in st:
+                self.ui_lang_var.set(st["ui_language"])
+            if "whisper_model" in st:
+                self.whisper_model_var.set(st["whisper_model"])
+            if "device" in st:
+                self.device_var.set(st["device"])
+            if "cpu_threads" in st:
+                try:
+                    self.cpu_threads_var.set(int(st["cpu_threads"]))
+                except Exception:
+                    pass
+
+        ttk.Label(f, text=self.strings.get("config_title", "Configuration"), style="Title.TLabel").pack(anchor="w", pady=(0, 4))
+        ttk.Label(f, text=self.strings.get("config_sub", "Customize settings"), style="Muted.TLabel").pack(anchor="w", pady=(0, 10))
+
+        if existing["has_existing"]:
+            note_card = ttk.Frame(f, style="Surface.TFrame", padding=8)
+            note_card.pack(fill="x", pady=(0, 10))
+            ttk.Label(
+                note_card,
+                text=self.strings.get("config_existing_detected", "Existing settings detected"),
+                style="Surface.TLabel",
+                foreground=ACCENT,
+            ).pack(anchor="w")
+
+        form = ttk.Frame(f)
+        form.pack(fill="x", expand=True, pady=(0, 10))
+
+        # Gemini API Key
+        ttk.Label(form, text=self.strings.get("lbl_gemini_key", "Gemini API Key:")).grid(row=0, column=0, sticky="w", pady=4, padx=(0, 10))
+        key_entry = ttk.Entry(form, textvariable=self.gemini_key_var, width=42, show="•")
+        key_entry.grid(row=0, column=1, sticky="w", pady=4)
+
+        show_var = tk.BooleanVar(value=False)
+
+        def _toggle_key():
+            key_entry.configure(show="" if show_var.get() else "•")
+
+        ttk.Checkbutton(form, text="👁", variable=show_var, command=_toggle_key).grid(row=0, column=2, sticky="w", padx=4)
+
+        # UI Language
+        ttk.Label(form, text=self.strings.get("lbl_ui_language", "Interface Language:")).grid(row=1, column=0, sticky="w", pady=4, padx=(0, 10))
+        lang_cb = ttk.Combobox(form, textvariable=self.ui_lang_var, values=["italian", "english", "spanish", "french", "german"], state="readonly", width=39)
+        lang_cb.grid(row=1, column=1, sticky="w", pady=4)
+
+        # Whisper Model
+        ttk.Label(form, text=self.strings.get("lbl_whisper_model", "Whisper Model:")).grid(row=2, column=0, sticky="w", pady=4, padx=(0, 10))
+        model_cb = ttk.Combobox(form, textvariable=self.whisper_model_var, values=["large-v3", "medium", "base", "small", "tiny", "large-v3-turbo", "distil-large-v3"], state="readonly", width=39)
+        model_cb.grid(row=2, column=1, sticky="w", pady=4)
+
+        # Device
+        ttk.Label(form, text=self.strings.get("lbl_device", "Computation Device:")).grid(row=3, column=0, sticky="w", pady=4, padx=(0, 10))
+        dev_cb = ttk.Combobox(form, textvariable=self.device_var, values=["cuda", "cpu"], state="readonly", width=39)
+        dev_cb.grid(row=3, column=1, sticky="w", pady=4)
+
+        # CPU Threads
+        ttk.Label(form, text=self.strings.get("lbl_cpu_threads", "CPU Threads:")).grid(row=4, column=0, sticky="w", pady=4, padx=(0, 10))
+        cpu_sb = ttk.Spinbox(form, from_=1, to=16, textvariable=self.cpu_threads_var, width=10)
+        cpu_sb.grid(row=4, column=1, sticky="w", pady=4)
+
+        # Navigation
+        nav = ttk.Frame(f)
+        nav.pack(fill="x", side="bottom")
+        ttk.Button(nav, text=self.strings["btn_back"], style="Ghost.TButton", command=self._show_summary).pack(side="left")
         ttk.Button(nav, text=self.strings["btn_install"], style="Accent.TButton", command=self._start_install).pack(side="right")
 
     def _show_progress(self) -> None:
@@ -385,6 +472,20 @@ class InstallerWizard(tk.Tk):
                     self._log_write(f"  ✓ extracted\n")
 
                 self.after(0, self._update_overall_bar, int(idx / total * 100))
+
+            self._log_write("  ⚙ Saving configuration settings…\n")
+            try:
+                save_merged_configs(
+                    install_dir,
+                    gemini_api_key=self.gemini_key_var.get(),
+                    ui_language=self.ui_lang_var.get(),
+                    whisper_model=self.whisper_model_var.get(),
+                    device=self.device_var.get(),
+                    cpu_threads=self.cpu_threads_var.get(),
+                )
+                self._log_write("  ✓ Configuration saved\n")
+            except Exception as exc:
+                self._log_write(f"  ⚠ Configuration saving error: {exc}\n")
 
             self._set_status(self.strings["msg_creating_shortcuts"])
             self._log_write(f"{self.strings['msg_creating_shortcuts']}\n")
