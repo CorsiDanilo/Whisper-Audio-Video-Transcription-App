@@ -80,17 +80,17 @@ class InstallerWizard(tk.Tk):
         )
         self._hw_ready = False
         self.default_dir = self._default_install_dir()
-        self.install_dir = tk.StringVar(value=self.default_dir)
+        self.install_dir = tk.StringVar(self, value=self.default_dir)
         self.manifest: Optional[Manifest] = None
         self._downloader = FileDownloader()
         self._cancel_flag = threading.Event()
 
         # ── Configuration State ──────────────────────────────────────────────
-        self.gemini_key_var = tk.StringVar(value="")
-        self.ui_lang_var = tk.StringVar(value="italian")
-        self.whisper_model_var = tk.StringVar(value="large-v3")
-        self.device_var = tk.StringVar(value="cpu")  # updated after hw detection
-        self.cpu_threads_var = tk.IntVar(value=min(os.cpu_count() or 6, 16))
+        self.gemini_key_var = tk.StringVar(self, value="")
+        self.ui_lang_var = tk.StringVar(self, value="italian")
+        self.whisper_model_var = tk.StringVar(self, value="large-v3")
+        self.device_var = tk.StringVar(self, value="cpu")  # updated after hw detection
+        self.cpu_threads_var = tk.IntVar(self, value=min(os.cpu_count() or 6, 16))
         self.has_existing_configs = False
 
         # ── Window setup ──────────────────────────────────────────────────────
@@ -246,7 +246,7 @@ class InstallerWizard(tk.Tk):
         lang_row = tk.Frame(f, bg=BG)
         lang_row.pack(anchor="ne", pady=(0, 8))
         tk.Label(lang_row, text="Language / Lingua:", bg=BG, fg=MUTED, font=FONT_BODY).pack(side="left", padx=(0, 6))
-        _lang_var = tk.StringVar(value=self._lang_code)
+        _lang_var = tk.StringVar(self, value=self._lang_code)
         _lang_om = self._create_option_menu(lang_row, _lang_var, ["it", "en"])
         _lang_om.pack(side="left")
 
@@ -262,8 +262,8 @@ class InstallerWizard(tk.Tk):
         card = tk.Frame(f, bg=SURFACE, padx=14, pady=14)
         card.pack(fill="x", pady=(0, 10))
 
-        self._hw_status_var = tk.StringVar()
-        self._hw_spinner_var = tk.StringVar()
+        self._hw_status_var = tk.StringVar(self)
+        self._hw_spinner_var = tk.StringVar(self)
         if self._hw_ready:
             # Hardware already detected (e.g., page refreshed via language switch)
             self._refresh_hw_label()
@@ -367,7 +367,7 @@ class InstallerWizard(tk.Tk):
         key_entry = self._create_entry(form, self.gemini_key_var, width=42, show="•")
         key_entry.grid(row=0, column=1, sticky="w", pady=4)
 
-        show_var = tk.BooleanVar(value=False)
+        show_var = tk.BooleanVar(self, value=False)
 
         def _toggle_key():
             key_entry.configure(show="" if show_var.get() else "•")
@@ -408,21 +408,21 @@ class InstallerWizard(tk.Tk):
         ttk.Label(f, text=self.strings["installing_title"], style="Title.TLabel").pack(anchor="w", pady=(0, 20))
 
         # Current component
-        self._status_var = tk.StringVar(value=self.strings["msg_preparing"])
+        self._status_var = tk.StringVar(self, value=self.strings["msg_preparing"])
         ttk.Label(f, textvariable=self._status_var, style="Heading.TLabel").pack(anchor="w")
 
         # Per-file progress
         ttk.Label(f, text=self.strings["lbl_file_progress"]).pack(anchor="w", pady=(10, 2))
         self._file_bar = ttk.Progressbar(f, style="Horizontal.TProgressbar", length=580, mode="determinate")
         self._file_bar.pack(fill="x")
-        self._file_pct = tk.StringVar(value="0 %")
+        self._file_pct = tk.StringVar(self, value="0 %")
         ttk.Label(f, textvariable=self._file_pct, style="Muted.TLabel").pack(anchor="e")
 
         # Overall progress
         ttk.Label(f, text=self.strings["lbl_overall_progress"]).pack(anchor="w", pady=(10, 2))
         self._overall_bar = ttk.Progressbar(f, style="Horizontal.TProgressbar", length=580, mode="determinate")
         self._overall_bar.pack(fill="x")
-        self._overall_pct = tk.StringVar(value="0 %")
+        self._overall_pct = tk.StringVar(self, value="0 %")
         ttk.Label(f, textvariable=self._overall_pct, style="Muted.TLabel").pack(anchor="e")
 
         # Log box
@@ -461,12 +461,12 @@ class InstallerWizard(tk.Tk):
                 text=f"{self.strings['complete_sub']}\n{self.install_dir.get()}",
                 style="Muted.TLabel",
             ).pack(anchor="w", pady=(0, 20))
-            self._launch_var = tk.BooleanVar(value=True)
+            self._launch_var = tk.BooleanVar(self, value=True)
             ttk.Checkbutton(f, text=self.strings["chk_launch"], variable=self._launch_var).pack(anchor="w")
         else:
             ttk.Label(f, text=self.strings["failed_title"], style="Title.TLabel").pack(anchor="w", pady=(0, 10))
             ttk.Label(f, text=self.strings["failed_sub"], style="Muted.TLabel").pack(anchor="w")
-            self._launch_var = tk.BooleanVar(value=False)
+            self._launch_var = tk.BooleanVar(self, value=False)
             
             if log_text:
                 log_box = tk.Text(
