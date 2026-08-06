@@ -146,6 +146,9 @@ class InstallerWizard(tk.Tk):
             background=SUCCESS,
         )
         style.configure("TEntry", fieldbackground=SURFACE, foreground=TEXT, insertcolor=TEXT)
+        style.map("TEntry", fieldbackground=[("readonly", SURFACE), ("active", SURFACE)], foreground=[("readonly", TEXT), ("active", TEXT)])
+        style.configure("TCombobox", fieldbackground=SURFACE, background=SURFACE, foreground=TEXT, selectbackground=SURFACE, selectforeground=TEXT)
+        style.map("TCombobox", fieldbackground=[("readonly", SURFACE)], foreground=[("readonly", TEXT)])
 
         # ── Page container ────────────────────────────────────────────────────
         self._container = ttk.Frame(self)
@@ -205,7 +208,7 @@ class InstallerWizard(tk.Tk):
         # ── Language selector row (top-right) ─────────────────────────────────
         lang_row = ttk.Frame(f)
         lang_row.pack(anchor="ne", pady=(0, 8))
-        _lang_label_it = "🌐 Lingua / Language:"
+        _lang_label_it = "Language / Lingua:"
         ttk.Label(lang_row, text=_lang_label_it, style="Muted.TLabel").pack(side="left", padx=(0, 6))
         _lang_var = tk.StringVar(value=self._lang_code)
         _lang_cb = ttk.Combobox(
@@ -235,7 +238,7 @@ class InstallerWizard(tk.Tk):
             # Hardware already detected (e.g., page refreshed via language switch)
             self._refresh_hw_label()
         else:
-            _detecting_it = "⏳ Rilevamento hardware in corso..." if self._lang_code == "it" else "⏳ Detecting hardware..."
+            _detecting_it = "Rilevamento hardware in corso..." if self._lang_code == "it" else "Detecting hardware..."
             self._hw_status_var.set(_detecting_it)
             self._hw_spinner_var.set("")
 
