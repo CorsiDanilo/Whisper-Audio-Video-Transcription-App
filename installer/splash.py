@@ -12,17 +12,17 @@ from tkinter import ttk
 _STRINGS = {
     "it": {
         "title": "Whisper Utility Setup – Avvio in corso...",
-        "init": "⚙️  Inizializzazione programma di installazione...",
-        "hw": "🔍  Rilevamento componenti di sistema...",
-        "gui": "🚀  Caricamento interfaccia guidata...",
-        "ready": "✅  Pronto!",
+        "init": "[Setup] Inizializzazione programma di installazione...",
+        "hw": "[System] Rilevamento componenti di sistema...",
+        "gui": "[UI] Caricamento interfaccia guidata...",
+        "ready": "[Ready] Pronto!",
     },
     "en": {
         "title": "Whisper Utility Setup – Launching...",
-        "init": "⚙️  Initializing setup installer...",
-        "hw": "🔍  Detecting system hardware...",
-        "gui": "🚀  Loading setup wizard...",
-        "ready": "✅  Ready!",
+        "init": "[Setup] Initializing setup installer...",
+        "hw": "[System] Detecting system hardware...",
+        "gui": "[UI] Loading setup wizard...",
+        "ready": "[Ready] Ready!",
     },
 }
 
@@ -97,7 +97,7 @@ class InstallerSplashScreen:
         # App title
         tk.Label(
             inner,
-            text="🎙️ Whisper Utility Setup",
+            text="Whisper Utility Setup",
             bg=_BG,
             fg=_TEXT,
             font=("Segoe UI", 16, "bold"),

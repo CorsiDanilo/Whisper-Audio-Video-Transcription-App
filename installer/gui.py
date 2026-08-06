@@ -562,7 +562,7 @@ class InstallerWizard(tk.Tk):
                 except DownloadError as exc:
                     if "app_core" in fname:
                         self._log_write("  ⚠ Remote release asset not published yet.\n")
-                        self._log_write("  📦 Packaging local codebase for dev testing…\n")
+                        self._log_write("  [App] Packaging local codebase for dev testing…\n")
                         self._create_local_app_bundle(dest)
                         self._log_write("  ✓ Local app bundle created successfully\n")
                     elif "cuda" in fname:
