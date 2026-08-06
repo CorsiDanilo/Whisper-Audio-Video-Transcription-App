@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.1.0] - 2026-08-06
+
+### Changed
+- **Tabbed Interface Layout**: Redesigned the main interface into clean "🎙️ Transcription" and "⚙️ Settings" tabs to eliminate layout clutter and prevent double scrollbars.
+- **UI Reset & Field Controls**: Moved the "Reset fields" button exclusively inside the Transcription tab for intuitive workflow, and restricted interface language choices strictly to supported locales (`english` and `italian`).
+
+### Fixed
+- **Complete UI Localization (i18n)**: Resolved missing and hardcoded translation strings across the application, including update status badges and modal labels.
+- **Gemini API & Config Resolution**: Fixed unnecessary remote API calls during field resets and resolved configuration path precedence between local files and system AppData.
+- **Process & Log Lock Management**: Prevented `PermissionError` file lock issues on `whisper.log` by ensuring proper background process cleanup on restart.
+
 ## [3.0.0] - 2026-08-05
 
 ### Added
@@ -123,3 +134,4 @@
 - System tray icon for background operation.
 - Configurable settings via YAML files (`settings/cpu.yaml`, `settings/gpu.yaml`).
 - CPU and GPU build variants for Windows.
+- Ristrutturato il layout in due tab principali: **🎙️ Trascrizione** e **⚙️ Impostazioni**, rimuovendo il pannello laterale a comparsa.

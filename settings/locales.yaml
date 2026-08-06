@@ -13,13 +13,31 @@ english:
   tray_exit: ❌ Exit
   configurations_title: '## ⚙️ Configurations'
   config_menu_accordion: ⚙️ Config Files Editor
-  config_modal_title: "ℹ️ Configuration Files Guide"
-  config_modal_btn: "ℹ️ File Explanation"
-  config_modal_close_btn: "✕ Close"
-  config_modal_default_yaml_title: "📄 `settings/default.yaml` (System & Model Configurations)"
-  config_modal_default_yaml_desc: "- **device**: Processing backend (`cpu` or `cuda` for NVIDIA GPU).\n- **whisper_model**: Model checkpoint alias (e.g., `turbo`, `small`, `distil-large-v3`).\n- **cpu_threads / num_workers**: Parallelism control for CPU operations.\n- **compute_type**: Calculation precision (`float16`, `int8`, `float32`).\n- **temperature / beam_size / batch_size**: Decoding options for precision vs speed.\n- **word_timestamps**: Enable precise word-level timing in output transcripts."
-  config_modal_gemini_yaml_title: "🔑 `secrets/gemini.yaml` (Gemini API Credentials)"
-  config_modal_gemini_yaml_desc: "- **api_key**: Your personal Google Gemini API key.\n- **model**: Gemini model alias (e.g. `gemini-1.5-flash`, `gemini-1.5-pro`).\n- **temperature**: Controls creativity in post-processing summaries/fixes.\n- **system_prompt**: Default instructions passed to the AI assistant."
+  config_modal_title: ℹ️ Configuration Files Guide
+  config_modal_btn: ℹ️ File Explanation
+  config_modal_close_btn: ✕ Close
+  config_modal_default_yaml_title: 📄 `settings/default.yaml` (System & Model Configurations)
+  config_modal_default_yaml_desc: '- **device**: Processing backend (`cpu` or `cuda`
+    for NVIDIA GPU).
+
+    - **whisper_model**: Model checkpoint alias (e.g., `turbo`, `small`, `distil-large-v3`).
+
+    - **cpu_threads / num_workers**: Parallelism control for CPU operations.
+
+    - **compute_type**: Calculation precision (`float16`, `int8`, `float32`).
+
+    - **temperature / beam_size / batch_size**: Decoding options for precision vs
+    speed.
+
+    - **word_timestamps**: Enable precise word-level timing in output transcripts.'
+  config_modal_gemini_yaml_title: 🔑 `secrets/gemini.yaml` (Gemini API Credentials)
+  config_modal_gemini_yaml_desc: '- **api_key**: Your personal Google Gemini API key.
+
+    - **model**: Gemini model alias (e.g. `gemini-1.5-flash`, `gemini-1.5-pro`).
+
+    - **temperature**: Controls creativity in post-processing summaries/fixes.
+
+    - **system_prompt**: Default instructions passed to the AI assistant.'
   select_config_file_label: Select Configuration File
   config_content_label: File Content (YAML)
   save_config_file_btn: 💾 Save File
@@ -62,7 +80,8 @@ english:
   config_file_path_label: Configuration file path
   config_file_path_placeholder: C:\path\to\config.yaml
   open_config_file_btn: 📝 Open Configuration File (settings/default.yaml)
-  open_config_file_toast: Opened configuration file settings/default.yaml in system editor.
+  open_config_file_toast: Opened configuration file settings/default.yaml in system
+    editor.
   configure_gemini_key_btn: 🔑 Configure Gemini API Key (secrets/gemini.yaml)
   gemini_config_opened_toast: Opened secrets/gemini.yaml in system editor.
   device_label: Device
@@ -147,10 +166,28 @@ english:
   status_completed: '### 🟢 **Status:** *Completed successfully*'
   status_interrupted: '### 🔴 **Status:** *Transcription interrupted*'
   status_ai_interrupted: '### 🔴 **Status:** *AI request interrupted*'
-  toast_completed_whisper: 'Audio/video transcription completed successfully!'
-  progress_prep_transcription: 'Preparing transcription...'
-  progress_loading_whisper: 'Loading Whisper model and processing...'
-  progress_transcription_completed: 'Transcription completed!'
+  toast_completed_whisper: Audio/video transcription completed successfully!
+  progress_prep_transcription: Preparing transcription...
+  progress_loading_whisper: Loading Whisper model and processing...
+  progress_transcription_completed: Transcription completed!
+  tab_transcription: 🎙️ Transcription
+  tab_settings: ⚙️ Settings
+  model_manager_accordion: 🗂️ Whisper Model Manager
+  model_manager_status_initial: '*Click ''Refresh'' to scan the model cache.*'
+  model_manager_refresh_btn: 🔄 Refresh
+  model_manager_download_btn: 📥 Download selected model
+  model_manager_delete_btn: 🗑️ Delete selected model
+  model_manager_delete_confirm: Are you sure you want to delete the '${model}' model
+    from disk? This cannot be undone.
+  installed_version: "**Installed version:** `v{version}`"
+  updater_title: '### 🔄 Application Update Check'
+  updater_check_btn: 🔍 Check for Updates
+  updater_launch_btn: 🚀 Launch Update
+  update_available: "🚀 **New version v{latest} available!** (Current: `v{current}`)"
+  update_check_failed: "⚠ **Failed to check for updates** (Current: `v{current}`)"
+  update_up_to_date: "✅ **Whisper Utility is up to date (`v{current}`)**"
+  update_installer_launched: Update installer launched successfully.
+  update_installer_failed: Failed to launch the installer.
 italian:
   title: '# 🎤 Trascrizione Audio/Video con Modello Whisper'
   browse: 📁 Sfoglia...
@@ -166,13 +203,33 @@ italian:
   tray_exit: ❌ Esci
   configurations_title: '## ⚙️ Configurazioni'
   config_menu_accordion: ⚙️ Configura File (YAML)
-  config_modal_title: "ℹ️ Guida ai File di Configurazione"
-  config_modal_btn: "ℹ️ Spiegazione File"
-  config_modal_close_btn: "✕ Chiudi"
-  config_modal_default_yaml_title: "📄 `settings/default.yaml` (Impostazioni di Sistema e Modello)"
-  config_modal_default_yaml_desc: "- **device**: Dispositivo di elaborazione (`cpu` o `cuda` per GPU NVIDIA).\n- **whisper_model**: Alias del modello Whisper (es. `turbo`, `small`, `distil-large-v3`).\n- **cpu_threads / num_workers**: Controllo del parallelismo per elaborazione CPU.\n- **compute_type**: Precisione dei calcoli (`float16`, `int8`, `float32`).\n- **temperature / beam_size / batch_size**: Parametri di trascrizione per bilanciare accuratezza e velocità.\n- **word_timestamps**: Abilita il tracciamento dei timestamp parola per parola."
-  config_modal_gemini_yaml_title: "🔑 `secrets/gemini.yaml` (Credenziali API Gemini)"
-  config_modal_gemini_yaml_desc: "- **api_key**: La tua chiave API personale per Google Gemini.\n- **model**: Modello Gemini selezionato (es. `gemini-1.5-flash`, `gemini-1.5-pro`).\n- **temperature**: Controlla la creatività nelle risposte dell'assistente AI.\n- **system_prompt**: Istruzioni di base inviate al modello AI per le trascrizioni."
+  config_modal_title: ℹ️ Guida ai File di Configurazione
+  config_modal_btn: ℹ️ Spiegazione File
+  config_modal_close_btn: ✕ Chiudi
+  config_modal_default_yaml_title: 📄 `settings/default.yaml` (Impostazioni di Sistema
+    e Modello)
+  config_modal_default_yaml_desc: '- **device**: Dispositivo di elaborazione (`cpu`
+    o `cuda` per GPU NVIDIA).
+
+    - **whisper_model**: Alias del modello Whisper (es. `turbo`, `small`, `distil-large-v3`).
+
+    - **cpu_threads / num_workers**: Controllo del parallelismo per elaborazione CPU.
+
+    - **compute_type**: Precisione dei calcoli (`float16`, `int8`, `float32`).
+
+    - **temperature / beam_size / batch_size**: Parametri di trascrizione per bilanciare
+    accuratezza e velocità.
+
+    - **word_timestamps**: Abilita il tracciamento dei timestamp parola per parola.'
+  config_modal_gemini_yaml_title: 🔑 `secrets/gemini.yaml` (Credenziali API Gemini)
+  config_modal_gemini_yaml_desc: '- **api_key**: La tua chiave API personale per Google
+    Gemini.
+
+    - **model**: Modello Gemini selezionato (es. `gemini-1.5-flash`, `gemini-1.5-pro`).
+
+    - **temperature**: Controlla la creatività nelle risposte dell''assistente AI.
+
+    - **system_prompt**: Istruzioni di base inviate al modello AI per le trascrizioni.'
   select_config_file_label: Seleziona File di Configurazione
   config_content_label: Contenuto File (YAML)
   save_config_file_btn: 💾 Salva File
@@ -214,7 +271,8 @@ italian:
   config_file_path_label: Percorso file di configurazione
   config_file_path_placeholder: C:\percorso\al\config.yaml
   open_config_file_btn: 📝 Apri File di Configurazione (settings/default.yaml)
-  open_config_file_toast: Aperto il file di configurazione settings/default.yaml nell'editor di sistema.
+  open_config_file_toast: Aperto il file di configurazione settings/default.yaml nell'editor
+    di sistema.
   configure_gemini_key_btn: 🔑 Configura API Key Gemini (secrets/gemini.yaml)
   gemini_config_opened_toast: Aperto il file secrets/gemini.yaml nell'editor di sistema.
   device_label: Dispositivo
@@ -303,7 +361,26 @@ italian:
   status_completed: '### 🟢 **Stato:** *Completato con successo*'
   status_interrupted: '### 🔴 **Stato:** *Trascrizione interrotta*'
   status_ai_interrupted: '### 🔴 **Stato:** *Richiesta AI interrotta*'
-  toast_completed_whisper: 'Trascrizione audio/video completata con successo!'
-  progress_prep_transcription: 'Preparazione trascrizione...'
-  progress_loading_whisper: 'Caricamento modello Whisper ed elaborazione...'
-  progress_transcription_completed: 'Trascrizione completata!'
+  toast_completed_whisper: Trascrizione audio/video completata con successo!
+  progress_prep_transcription: Preparazione trascrizione...
+  progress_loading_whisper: Caricamento modello Whisper ed elaborazione...
+  progress_transcription_completed: Trascrizione completata!
+  tab_transcription: 🎙️ Trascrizione
+  tab_settings: ⚙️ Impostazioni
+  model_manager_accordion: 🗂️ Gestione Modelli Whisper
+  model_manager_status_initial: '*Clicca ''Aggiorna'' per scansionare la cache dei
+    modelli.*'
+  model_manager_refresh_btn: 🔄 Aggiorna
+  model_manager_download_btn: 📥 Scarica modello selezionato
+  model_manager_delete_btn: 🗑️ Elimina modello selezionato
+  model_manager_delete_confirm: Sei sicuro di voler eliminare il modello '${model}'
+    dal disco? Questa operazione non può essere annullata.
+  installed_version: "**Versione installata:** `v{version}`"
+  updater_title: '### 🔄 Controllo Aggiornamenti Applicazione'
+  updater_check_btn: 🔍 Verifica Aggiornamenti
+  updater_launch_btn: 🚀 Avvia Aggiornamento
+  update_available: "🚀 **Nuova versione v{latest} disponibile!** (Attuale: `v{current}`)"
+  update_check_failed: "⚠ **Impossibile verificare aggiornamenti** (Attuale: `v{current}`)"
+  update_up_to_date: "✅ **Whisper Utility è aggiornato all'ultima versione (`v{current}`)**"
+  update_installer_launched: L'installer di aggiornamento è stato avviato.
+  update_installer_failed: Impossibile avviare l'installer.

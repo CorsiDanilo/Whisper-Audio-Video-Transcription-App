@@ -98,7 +98,10 @@ STRINGS_IT: Dict[str, str] = {
 
 
 def get_locale_strings(override_lang: Optional[str] = None) -> Dict[str, str]:
-    """Return dictionary of UI strings for the current system locale or override_lang."""
+    """Return dictionary of UI strings for the current system locale or override_lang.
+
+    Accepts both ISO 639-1 codes ('it', 'en') and long names ('italian', 'english').
+    """
     if override_lang:
         lang = override_lang.lower()
     else:
@@ -108,4 +111,6 @@ def get_locale_strings(override_lang: Optional[str] = None) -> Dict[str, str]:
         except Exception:
             lang = "en"
 
-    return STRINGS_IT if lang == "it" else STRINGS_EN
+    # Normalise: accept both 'it' / 'italian' and 'en' / 'english'
+    is_italian = lang in ("it", "italian")
+    return STRINGS_IT if is_italian else STRINGS_EN

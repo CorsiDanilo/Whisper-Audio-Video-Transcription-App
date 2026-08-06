@@ -10,7 +10,7 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🚀 GPU support for faster transcription using CUDA
 - 🎥 Extracts audio from video files automatically
 - 🔍 High-precision transcription with options for beam search and other configurations
-- 🖥️ Simple UI built with Gradio for easy access and use
+- 🗂️ **Clean Tabbed Layout**: Intuitive navigation with dedicated `🎙️ Transcription` and `⚙️ Settings` tabs to prevent scrollbar clutter and provide an ultra-clean workspace.
 - 📊 **Dedicated Status Badge & Progress Tracking**: Real-time color-coded status badge (`⚪ Waiting`, `🟡 Transcribing...`, `🟢 Completed`, `🔴 Interrupted`) with phase progress bars and Web Audio sound notifications upon completion.
 - 🌐 **Fully Localized UI**: Complete bilingual support (English and Italian) backed by `settings/locales.yaml` for all controls, labels, progress indicators, and status messages.
 - ⚙️ **Smart Setup Customization & Non-Destructive Preservations**: Interactive wizard options for Gemini API key, UI language, default Whisper model, computation device (CUDA/CPU), and CPU threads. Pre-fills and preserves pre-existing user settings on upgrades.

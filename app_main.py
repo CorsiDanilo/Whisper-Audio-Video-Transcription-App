@@ -1,3 +1,8 @@
+from splash import AppSplashScreen as _SplashScreen
+
+_splash = _SplashScreen()
+_splash.update_status("init", 5)
+
 import webview
 import threading
 import time
@@ -8,6 +13,8 @@ from ctypes import wintypes
 import pystray
 from PIL import Image
 
+_splash.update_status("init", 20)
+
 # Set Windows AppUserModelID so Taskbar displays custom icon instead of Python logo
 if sys.platform == 'win32':
     try:
@@ -17,7 +24,11 @@ if sys.platform == 'win32':
         pass
 
 from config import get_translation as _
-from main import demo as main 
+_splash.update_status("init", 35)
+
+from main import demo as main
+_splash.update_status("server", 60)
+
 from security_utils import get_gradio_launch_kwargs
 
 def get_icon_path():
@@ -113,6 +124,7 @@ def setup_tray():
 
 from ui import custom_css
 
+_splash.update_status("server", 75)
 main.launch(css=custom_css, **get_gradio_launch_kwargs(prevent_thread_lock=True))
 
 tray_thread = threading.Thread(target=setup_tray, daemon=True)
@@ -120,6 +132,9 @@ tray_thread.start()
 
 icon_thread = threading.Thread(target=delayed_icon_setter, daemon=True)
 icon_thread.start()
+
+_splash.update_status("ui", 92)
+_splash.close()
 
 window = webview.create_window("🎙️ Whisper Audio/Video Transcription App", main.local_url, width=1280, height=1280)
 webview.start()

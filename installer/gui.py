@@ -52,6 +52,9 @@ MANIFEST_URL = (
     "https://raw.githubusercontent.com/CorsiDanilo/whisper-utility/main/installer/manifest.json"
 )
 
+# Placeholder used while hardware detection runs in background
+_HARDWARE_LOADING = "detecting..."
+
 
 class InstallerWizard(tk.Tk):
     """Root window that hosts a stack of wizard page frames."""
@@ -59,9 +62,23 @@ class InstallerWizard(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
 
-        # ── State & Locales ───────────────────────────────────────────────────
-        self.strings = get_locale_strings()
-        self.hardware: HardwareInfo = detect_hardware()
+        # ── Locale (detect system language immediately, before any widget creation) ──
+        self._lang_code = "it"  # default; updated in _reload_locale
+        try:
+            import locale
+            loc = locale.getdefaultlocale()[0]
+            self._lang_code = loc.split("_")[0].lower() if loc else "en"
+        except Exception:
+            self._lang_code = "en"
+        self.strings = get_locale_strings(self._lang_code)
+
+        # ── Placeholder hardware (window opens instantly) ──────────────────────
+        self.hardware: HardwareInfo = HardwareInfo(
+            os_name="windows", arch="x64",
+            has_nvidia_gpu=False, is_apple_silicon=False,
+            gpu_name=None,
+        )
+        self._hw_ready = False
         self.default_dir = self._default_install_dir()
         self.install_dir = tk.StringVar(value=self.default_dir)
         self.manifest: Optional[Manifest] = None
@@ -72,7 +89,7 @@ class InstallerWizard(tk.Tk):
         self.gemini_key_var = tk.StringVar(value="")
         self.ui_lang_var = tk.StringVar(value="italian")
         self.whisper_model_var = tk.StringVar(value="large-v3")
-        self.device_var = tk.StringVar(value="cuda" if self.hardware.has_nvidia_gpu else "cpu")
+        self.device_var = tk.StringVar(value="cpu")  # updated after hw detection
         self.cpu_threads_var = tk.IntVar(value=min(os.cpu_count() or 6, 16))
         self.has_existing_configs = False
 
@@ -136,7 +153,41 @@ class InstallerWizard(tk.Tk):
 
         self._show_welcome()
 
+        # ── Kick off hardware detection in background ─────────────────────────
+        threading.Thread(target=self._detect_hw_async, daemon=True).start()
+
     # ── Page navigation ───────────────────────────────────────────────────────
+
+    def _detect_hw_async(self) -> None:
+        """Run hardware detection in background and update UI when done."""
+        result = detect_hardware()
+        self._hw_ready = True
+        self.hardware = result
+        # Update device_var based on actual hardware
+        self.device_var.set("cuda" if result.has_nvidia_gpu else "cpu")
+        # Update the welcome page hardware info label if still visible
+        self.after(0, self._refresh_hw_label)
+
+    def _refresh_hw_label(self) -> None:
+        """Refresh hardware status label on the welcome page (if it exists)."""
+        if hasattr(self, "_hw_status_var"):
+            if self.hardware.has_nvidia_gpu:
+                gpu_text = self.strings["gpu_label_cuda"].format(gpu=self.hardware.gpu_name)
+            elif self.hardware.is_apple_silicon:
+                gpu_text = self.strings["gpu_label_metal"]
+            else:
+                gpu_text = self.strings["gpu_label_cpu"]
+            os_text = f"{self.strings['os_label']}    {self.hardware.os_name.title()} ({self.hardware.arch})"
+            self._hw_status_var.set(f"{os_text}\n{gpu_text}")
+        if hasattr(self, "_hw_spinner_var"):
+            self._hw_spinner_var.set("")
+
+    def _reload_locale(self, lang_code: str) -> None:
+        """Switch installer UI language and re-render current page."""
+        self._lang_code = lang_code
+        self.strings = get_locale_strings(lang_code)
+        self.title(self.strings["title"])
+        self._show_welcome()
 
     def _clear(self) -> None:
         for child in self._container.winfo_children():
@@ -151,21 +202,45 @@ class InstallerWizard(tk.Tk):
         accent_bar = tk.Frame(f, bg=ACCENT, width=4)
         accent_bar.place(x=0, y=0, relheight=1)
 
+        # ── Language selector row (top-right) ─────────────────────────────────
+        lang_row = ttk.Frame(f)
+        lang_row.pack(anchor="ne", pady=(0, 8))
+        _lang_label_it = "🌐 Lingua / Language:"
+        ttk.Label(lang_row, text=_lang_label_it, style="Muted.TLabel").pack(side="left", padx=(0, 6))
+        _lang_var = tk.StringVar(value=self._lang_code)
+        _lang_cb = ttk.Combobox(
+            lang_row,
+            textvariable=_lang_var,
+            values=["it", "en"],
+            state="readonly",
+            width=5,
+        )
+        _lang_cb.pack(side="left")
+
+        def _on_lang_change(event=None):
+            self._reload_locale(_lang_var.get())
+
+        _lang_cb.bind("<<ComboboxSelected>>", _on_lang_change)
+
         ttk.Label(f, text=self.strings["welcome_heading"], style="Title.TLabel").pack(anchor="w", pady=(0, 4))
-        ttk.Label(f, text=self.strings["welcome_sub"], style="Heading.TLabel").pack(anchor="w", pady=(0, 20))
+        ttk.Label(f, text=self.strings["welcome_sub"], style="Heading.TLabel").pack(anchor="w", pady=(0, 12))
 
-        # System info card
+        # System info card (live-updating)
         card = ttk.Frame(f, style="Surface.TFrame", padding=12)
-        card.pack(fill="x", pady=(0, 14))
-        ttk.Label(card, text=f"{self.strings['os_label']}    {self.hardware.os_name.title()} ({self.hardware.arch})", style="Surface.TLabel").pack(anchor="w")
+        card.pack(fill="x", pady=(0, 10))
 
-        if self.hardware.has_nvidia_gpu:
-            gpu_text = self.strings["gpu_label_cuda"].format(gpu=self.hardware.gpu_name)
-        elif self.hardware.is_apple_silicon:
-            gpu_text = self.strings["gpu_label_metal"]
+        self._hw_status_var = tk.StringVar()
+        self._hw_spinner_var = tk.StringVar()
+        if self._hw_ready:
+            # Hardware already detected (e.g., page refreshed via language switch)
+            self._refresh_hw_label()
         else:
-            gpu_text = self.strings["gpu_label_cpu"]
-        ttk.Label(card, text=gpu_text, style="Surface.TLabel").pack(anchor="w")
+            _detecting_it = "⏳ Rilevamento hardware in corso..." if self._lang_code == "it" else "⏳ Detecting hardware..."
+            self._hw_status_var.set(_detecting_it)
+            self._hw_spinner_var.set("")
+
+        ttk.Label(card, textvariable=self._hw_status_var, style="Surface.TLabel", justify="left").pack(anchor="w")
+        ttk.Label(card, textvariable=self._hw_spinner_var, style="Surface.TLabel", foreground=MUTED).pack(anchor="w")
 
         # Install path
         ttk.Label(f, text=self.strings["path_label"]).pack(anchor="w", pady=(8, 2))

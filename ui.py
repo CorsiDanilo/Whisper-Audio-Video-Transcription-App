@@ -89,9 +89,13 @@ def save_config(
         condition_on_previous_text,
         word_timestamps,
         gemini_model,
+        ui_language="italian",
     ):
+    """Save configuration to both local settings/default.yaml and system AppData."""
+    from config import get_app_config_dir
     try:
         config = {
+            "ui_language": ui_language,
             "device": device,
             "cpu_threads": cpu_threads,
             "num_workers": num_workers,
@@ -105,16 +109,39 @@ def save_config(
             "word_timestamps": word_timestamps,
             "gemini_model": gemini_model,
         }
-        with open("settings/default.yaml", "w") as file:
-            yaml.dump(config, file)
+
+        # 1. Write local copy
+        os.makedirs("settings", exist_ok=True)
+        with open("settings/default.yaml", "w", encoding="utf-8") as file:
+            yaml.dump(config, file, sort_keys=False, allow_unicode=True)
+
+        # 2. Write system AppData copy (so the app always reads the right one)
+        sys_settings_dir = os.path.join(get_app_config_dir(), "settings")
+        os.makedirs(sys_settings_dir, exist_ok=True)
+        sys_path = os.path.join(sys_settings_dir, "default.yaml")
+        # Merge: preserve any keys not managed by this UI (e.g. future additions)
+        existing: dict = {}
+        if os.path.exists(sys_path):
+            try:
+                with open(sys_path, "r", encoding="utf-8") as f:
+                    loaded = yaml.safe_load(f)
+                    if isinstance(loaded, dict):
+                        existing = loaded
+            except Exception:
+                pass
+        existing.update(config)
+        with open(sys_path, "w", encoding="utf-8") as file:
+            yaml.dump(existing, file, sort_keys=False, allow_unicode=True)
+
+        gr.Info(_("settings_saved_toast") if _("settings_saved_toast") != "settings_saved_toast" else "✅ Settings saved successfully!")
     except Exception as e:
         logging.error(f"Error saving settings: {e}")
+        gr.Warning(f"Error saving settings: {e}")
 
 def reset_fields():
     """Reset fields to default values."""
     gemini_api_key = get_gemini_api_key()
-    gemini_models = get_sorted_gemini_models(gemini_api_key)
-    has_gemini = len(gemini_models) > 0
+    has_gemini = bool(gemini_api_key)
     default_provider = "Google" if has_gemini else "Ollama"
     default_brand = "Gemini"
     default_gemini = default_config_values.get("gemini_model", "gemini-flash-latest")
@@ -383,6 +410,9 @@ custom_css = """
     overflow-x: hidden !important;
     box-sizing: border-box !important;
 }
+#config-screen > * {
+    flex-shrink: 0 !important;
+}
 .scrollable-markdown {
     max-height: 400px !important;
     overflow-y: auto !important;
@@ -441,214 +471,315 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         with gr.Column(scale=3):
             gr.Markdown(_("title"))
             status_badge = gr.Markdown(_("status_waiting"), elem_id="status_badge")
-        with gr.Column(scale=2):
-            show_config_info_btn = gr.Button(_("config_menu_accordion"), size="sm")
+    with gr.Tabs():
+        with gr.Tab(_("tab_transcription")):
+            with gr.Row():
+                file_path_input = gr.Textbox(
+                    label=_("media_file_path_label"),
+                    placeholder=_("media_file_path_placeholder"),
+                    lines=3,
+                )
+            with gr.Row():
+                browse_files_btn = gr.Button(_("dialog_btn_files"), variant="secondary")
+                browse_folders_btn = gr.Button(_("dialog_btn_folder"), variant="secondary")
 
-    with gr.Column(visible=False, variant="panel", elem_id="config-screen") as config_modal:
-        gr.Markdown(f"### {_('config_modal_title')}")
-        gr.Markdown(f"### {_('config_modal_default_yaml_title')}\n{_('config_modal_default_yaml_desc')}")
-        gr.Markdown("---")
-        gr.Markdown(f"### {_('config_modal_gemini_yaml_title')}\n{_('config_modal_gemini_yaml_desc')}")
-        
-        with gr.Row():
-            config_file_selector = gr.Dropdown(
-                choices=["settings/default.yaml", "secrets/gemini.yaml"],
-                value="settings/default.yaml",
-                label=_("select_config_file_label"),
-                scale=3,
+            with gr.Row():
+                output_dir_display = gr.Textbox(
+                    label=_("output_dir_label"),
+                    placeholder=_("output_dir_placeholder"),
+                    lines=1,
+                    interactive=True,
+                )
+            with gr.Row():
+                choose_output_dir_btn = gr.Button(_("choose_output_dir_btn"), variant="secondary")
+
+            with gr.Row():
+                gr.Markdown(_("transcription_title"))
+            with gr.Accordion(_("transcription_accordion")):
+                copy_transcription_button = gr.Button(_("copy_transcription"), variant="secondary", size="sm")
+                output_text = gr.Markdown(_("transcription_placeholder"), container=True, line_breaks=True, elem_classes="scrollable-markdown")
+
+            transcript_file_path = gr.State()
+            save_transcript_button = gr.Button(_("save_transcript_as"), variant="primary", visible=False)
+            with gr.Row():
+                transcribe_button = gr.Button(_("transcribe_btn"), variant="secondary")
+                stop_transcribe_btn = gr.Button(_("stop_btn"), variant="stop", visible=False)
+
+            # Ensure UI elements exist for AI querying
+            gemini_model = None
+            user_query = None
+            gemini_response = None
+
+            gemini_api_key = get_gemini_api_key()
+            gemini_models = get_sorted_gemini_models(gemini_api_key)
+            has_gemini = len(gemini_models) > 0
+
+            with gr.Accordion(_("ai_provider_accordion"), open=True):
+                # Provider selection: if Gemini API key and models are present, allow all providers; otherwise only local providers
+                provider_choices = ["Google", "Ollama", "LM Studio"] if has_gemini else ["Ollama", "LM Studio"]
+                provider = gr.Radio(
+                    choices=provider_choices,
+                    value="Google" if has_gemini else "Ollama",
+                    label=_("provider_label")
+                )
+
+                google_brand_radio = gr.Radio(
+                    choices=["Gemini", "Gemma"],
+                    value="Gemini",
+                    label=_("model_family_label"),
+                    visible=has_gemini,
+                )
+
+
+                initial_filtered_models = [m for m in gemini_models if "gemini" in m.lower()]
+                if not initial_filtered_models and gemini_models:
+                    initial_filtered_models = [m for m in gemini_models if "gemma" in m.lower()]
+
+                default_val = None
+                for m in initial_filtered_models:
+                    if "gemini-flash-latest" in m.lower():
+                        default_val = m
+                        break
+                if not default_val and initial_filtered_models:
+                    default_val = initial_filtered_models[0]
+
+                # Gemini model selector (only meaningful when using Gemini/Google)
+                gemini_model = gr.Dropdown(
+                    choices=initial_filtered_models,
+                    value=default_val,
+                    allow_custom_value=True,
+                    label=_("choose_gemini_model"),
+                    visible=has_gemini,
+                )
+
+                # Ollama-specific model selector (populated from local Ollama)
+                # allow_custom_value=True prevents Gradio warning when choices are empty at init
+                try:
+                    _initial_ollama_models = list_ollama_models() if not has_gemini else []
+                except Exception:
+                    _initial_ollama_models = []
+                _initial_ollama_value = _initial_ollama_models[0] if _initial_ollama_models else ""
+
+                ollama_model = gr.Dropdown(
+                    choices=_initial_ollama_models,
+                    value=_initial_ollama_value,
+                    allow_custom_value=True,
+                    label=_("choose_ollama_model"),
+                    visible=not has_gemini,
+                )
+
+                try:
+                    _initial_lmstudio_models = []
+                except Exception:
+                    _initial_lmstudio_models = []
+                _initial_lmstudio_value = _initial_lmstudio_models[0] if _initial_lmstudio_models else ""
+
+                lmstudio_model = gr.Dropdown(
+                    choices=_initial_lmstudio_models,
+                    value=_initial_lmstudio_value,
+                    allow_custom_value=True,
+                    label=_("choose_lmstudio_model"),
+                    visible=False,
+                )
+
+                # Response language selector for AI assistant
+                response_language = gr.Radio(
+                    choices=["Italiano", "English"],
+                    value="Italiano",
+                    label=_("response_language_label"),
+                )
+
+                with gr.Row():
+                    preset_summary_button = gr.Button(_("preset_summary"), variant="secondary")
+                    preset_todo_button = gr.Button(_("preset_todo"), variant="secondary")
+                    preset_fix_button = gr.Button(_("preset_fix"), variant="secondary")
+
+                fix_text_mode = gr.State(False)
+                user_query = gr.Textbox(label=_("enter_query_label"))
+
+                with gr.Row():
+                    submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
+                    stop_query_btn = gr.Button(_("stop_btn"), variant="stop", visible=False)
+
+            preset_summary_button.click(
+                fn=preset_query_summary,
+                inputs=[],
+                outputs=[user_query],
+            ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
+
+            preset_todo_button.click(
+                fn=preset_query_todo,
+                inputs=[],
+                outputs=[user_query],
+            ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
+
+            preset_fix_button.click(
+                fn=preset_query_fix,
+                inputs=[],
+                outputs=[user_query],
+            ).then(fn=lambda: True, inputs=[], outputs=[fix_text_mode])
+
+            with gr.Accordion(_("ai_response_accordion")):
+                copy_response_button = gr.Button(_("copy_response"), variant="secondary", size="sm")
+                gemini_response = gr.Markdown(_("response_placeholder"), container=True, line_breaks=True, elem_classes="scrollable-markdown")
+
+            with gr.Row():
+                reset_button = gr.Button(_("reset_fields"), variant="secondary")
+
+
+        with gr.Tab(_("tab_settings")):
+            with gr.Row():
+                gr.Markdown(_("configurations_title"))
+            with gr.Row():
+                with gr.Accordion(label=_("explanation_accordion"), open=False):
+                    gr.Markdown(_("explanation_text"))
+
+            config_path_input = gr.State("settings/default.yaml")
+            with gr.Row():
+                device = gr.Dropdown(choices=default_values['configurations']['devices'], value=default_config_values["device"], label=_("device_label"))
+                cpu_threads = gr.Slider(minimum=default_values['configurations']['cpu_threads']['min'], value=default_config_values["cpu_threads"], step=1, label=_("cpu_threads_label"))
+                num_workers = gr.Slider(minimum=default_values['configurations']['num_workers']['min'], value=default_config_values["num_workers"], step=1, label=_("num_workers_label"))
+            with gr.Row():
+                language = gr.Dropdown(choices=default_values['configurations']['languages'], value=default_config_values["language"], label=_("language_label"))
+                whisper_model = gr.Dropdown(choices=default_values['configurations']['models'], value=default_config_values["whisper_model"], label=_("whisper_model_label"))
+                compute_type = gr.Dropdown(choices=default_values['configurations']['compute_types'], value=default_config_values["compute_type"], label=_("compute_type_label"))
+            with gr.Row():
+                temperature = gr.Slider(minimum=default_values['configurations']['temperature']['min'], value=default_config_values["temperature"], step=0.1, label=_("temperature_label"))
+                beam_size = gr.Slider(minimum=default_values['configurations']['beam_size']['min'], value=default_config_values["beam_size"], step=1, label=_("beam_size_label"))
+                batch_size = gr.Slider(minimum=default_values['configurations']['batch_size']['min'], value=default_config_values["batch_size"], step=1, label=_("batch_size_label"))
+            with gr.Row():
+                condition_on_previous_text = gr.Checkbox(value=default_config_values["condition_on_previous_text"], label=_("condition_on_previous_text_label"))
+                word_timestamps = gr.Checkbox(value=default_config_values["word_timestamps"], label=_("word_timestamps_label"))
+                output_format = gr.Radio(choices=[".txt", ".md"], value=".txt", label=_("output_format_label"))
+            with gr.Row():
+                _ui_lang_choices = ["italian", "english"]
+                _ui_lang_default = default_config_values.get("ui_language", "italian")
+                ui_language_dropdown = gr.Dropdown(
+                    choices=_ui_lang_choices,
+                    value=_ui_lang_default if _ui_lang_default in _ui_lang_choices else "italian",
+                    label=_("ui_language_label") if _("ui_language_label") != "ui_language_label" else "🌐 Interface Language (requires restart)",
+                )
+            save_configurations = gr.Button(_("save_configurations"), variant="secondary")
+
+            # ── Model Manager ─────────────────────────────────────────────────────────
+            with gr.Accordion(_("model_manager_accordion"), open=False):
+                gr.Markdown(
+                    "Manage downloaded Whisper models in the Hugging Face cache. "
+                    "Disk sizes are shown for downloaded models. "
+                    "**Deleting a model will remove it from disk — it can be re-downloaded anytime.**"
+                )
+
+                model_status_md = gr.Markdown(_("model_manager_status_initial"))
+                model_download_status = gr.Textbox(
+                    label="Download status",
+                    interactive=False,
+                    lines=2,
+                    visible=False,
+                )
+
+                with gr.Row():
+                    model_select = gr.Dropdown(
+                        choices=["tiny", "tiny.en", "base", "base.en", "small", "small.en",
+                                 "medium", "medium.en", "large-v1", "large-v2", "large-v3",
+                                 "large-v3-turbo", "turbo", "distil-large-v2", "distil-large-v3",
+                                 "distil-large-v3.5", "distil-medium.en", "distil-small.en"],
+                        value="large-v3",
+                        label="Select model",
+                        scale=3,
+                    )
+                    model_device_select = gr.Dropdown(
+                        choices=["cpu", "cuda"],
+                        value=default_config_values.get("device", "cpu"),
+                        label="Download device",
+                        scale=1,
+                    )
+
+                with gr.Row():
+                    refresh_models_btn = gr.Button(_("model_manager_refresh_btn"), variant="secondary", size="sm")
+                    download_model_btn = gr.Button(_("model_manager_download_btn"), variant="primary", size="sm")
+                    delete_model_btn = gr.Button(_("model_manager_delete_btn"), variant="stop", size="sm")
+
+                def _format_model_table(statuses):
+                    lines = ["| Model | Status | Size |", "|-------|--------|------|"]
+                    for s in statuses:
+                        icon = "🟢" if s["is_downloaded"] else "⚪"
+                        size_str = f"{s['size_mb']:.0f} MB" if s["is_downloaded"] else "—"
+                        lines.append(f"| `{s['name']}` | {icon} {'Downloaded' if s['is_downloaded'] else 'Not downloaded'} | {size_str} |")
+                    return "\n".join(lines)
+
+                def refresh_model_list():
+                    from model_manager import list_whisper_models_status
+                    statuses = list_whisper_models_status()
+                    return _format_model_table(statuses)
+
+                def do_download_model(model_name, device):
+                    from model_manager import download_model
+                    yield gr.update(visible=True, value=f"⏳ Starting download of '{model_name}'..."), gr.update()
+                    messages = []
+                    def _cb(msg):
+                        messages.append(msg)
+                    ok = download_model(model_name, device=device, compute_type="auto", progress_callback=_cb)
+                    status_msg = f"✅ '{model_name}' downloaded successfully!" if ok else f"❌ Download failed for '{model_name}'."
+                    table = refresh_model_list()
+                    yield gr.update(visible=True, value="\n".join(messages) + "\n" + status_msg), table
+
+                def do_delete_model(model_name):
+                    from model_manager import delete_model_cache, list_whisper_models_status
+                    ok = delete_model_cache(model_name)
+                    msg = f"✅ Deleted '{model_name}' cache." if ok else f"❌ Failed to delete '{model_name}'."
+                    statuses = list_whisper_models_status()
+                    return _format_model_table(statuses), gr.update(visible=True, value=msg)
+
+                refresh_models_btn.click(
+                    fn=refresh_model_list,
+                    inputs=[],
+                    outputs=[model_status_md],
+                )
+
+                download_model_btn.click(
+                    fn=do_download_model,
+                    inputs=[model_select, model_device_select],
+                    outputs=[model_download_status, model_status_md],
+                    stream_every=0.2,
+                )
+
+                delete_model_btn.click(
+                    fn=do_delete_model,
+                    inputs=[model_select],
+                    outputs=[model_status_md, model_download_status],
+                    js=f"(model) => {{ if (!confirm(`{_('model_manager_delete_confirm')}`)) {{ throw new Error('cancelled'); }} return [model]; }}",
+                )
+
+
+            gr.Markdown(f"### {_('config_modal_title')}")
+            gr.Markdown(f"### {_('config_modal_default_yaml_title')}\n{_('config_modal_default_yaml_desc')}")
+            gr.Markdown("---")
+            gr.Markdown(f"### {_('config_modal_gemini_yaml_title')}\n{_('config_modal_gemini_yaml_desc')}")
+
+            with gr.Row():
+                config_file_selector = gr.Dropdown(
+                    choices=["settings/default.yaml", "secrets/gemini.yaml"],
+                    value="settings/default.yaml",
+                    label=_("select_config_file_label"),
+                    scale=3,
+                )
+            config_editor = gr.Code(
+                value=read_config_file_text("settings/default.yaml"),
+                language="yaml",
+                label=_("config_content_label"),
+                lines=15,
             )
-        config_editor = gr.Code(
-            value=read_config_file_text("settings/default.yaml"),
-            language="yaml",
-            label=_("config_content_label"),
-            lines=15,
-        )
-        with gr.Row():
-            save_config_file_btn = gr.Button(_("save_config_file_btn"), variant="primary", size="sm")
-            open_in_notepad_btn = gr.Button(_("open_in_notepad_btn"), variant="secondary", size="sm")
-            close_config_modal_btn = gr.Button(_("config_modal_close_btn"), variant="secondary", size="sm")
-
-        gr.Markdown("---")
-        gr.Markdown("### 🔄 Controllo Aggiornamenti Applicazione")
-        with gr.Row():
-            update_status_md = gr.Markdown(f"**Versione installata:** `v{CURRENT_VERSION}`")
-            check_updates_btn = gr.Button("🔍 Verifica Aggiornamenti", variant="secondary", size="sm")
-            launch_updater_btn = gr.Button("🚀 Avvia Aggiornamento", variant="primary", size="sm", visible=False)
-
-    with gr.Row():
-        file_path_input = gr.Textbox(
-            label=_("media_file_path_label"),
-            placeholder=_("media_file_path_placeholder"),
-            lines=3,
-        )
-    with gr.Row():
-        browse_files_btn = gr.Button(_("dialog_btn_files"), variant="secondary")
-        browse_folders_btn = gr.Button(_("dialog_btn_folder"), variant="secondary")
-
-    with gr.Row():
-        output_dir_display = gr.Textbox(
-            label=_("output_dir_label"),
-            placeholder=_("output_dir_placeholder"),
-            lines=1,
-            interactive=True,
-        )
-    with gr.Row():
-        choose_output_dir_btn = gr.Button(_("choose_output_dir_btn"), variant="secondary")
-    
-    with gr.Row():
-        gr.Markdown(_("configurations_title"))
-    with gr.Row():
-        with gr.Accordion(label=_("explanation_accordion"), open=False):
-            gr.Markdown(_("explanation_text"))
-
-    config_path_input = gr.State("settings/default.yaml")
-    with gr.Row():
-        device = gr.Dropdown(choices=default_values['configurations']['devices'], value=default_config_values["device"], label=_("device_label"))
-        cpu_threads = gr.Slider(minimum=default_values['configurations']['cpu_threads']['min'], value=default_config_values["cpu_threads"], step=1, label=_("cpu_threads_label"))
-        num_workers = gr.Slider(minimum=default_values['configurations']['num_workers']['min'], value=default_config_values["num_workers"], step=1, label=_("num_workers_label"))
-    with gr.Row():
-        language = gr.Dropdown(choices=default_values['configurations']['languages'], value=default_config_values["language"], label=_("language_label"))
-        whisper_model = gr.Dropdown(choices=default_values['configurations']['models'], value=default_config_values["whisper_model"], label=_("whisper_model_label"))
-        compute_type = gr.Dropdown(choices=default_values['configurations']['compute_types'], value=default_config_values["compute_type"], label=_("compute_type_label"))
-    with gr.Row():
-        temperature = gr.Slider(minimum=default_values['configurations']['temperature']['min'], value=default_config_values["temperature"], step=0.1, label=_("temperature_label"))
-        beam_size = gr.Slider(minimum=default_values['configurations']['beam_size']['min'], value=default_config_values["beam_size"], step=1, label=_("beam_size_label"))
-        batch_size = gr.Slider(minimum=default_values['configurations']['batch_size']['min'], value=default_config_values["batch_size"], step=1, label=_("batch_size_label"))
-    with gr.Row():
-        condition_on_previous_text = gr.Checkbox(value=default_config_values["condition_on_previous_text"], label=_("condition_on_previous_text_label"))
-        word_timestamps = gr.Checkbox(value=default_config_values["word_timestamps"], label=_("word_timestamps_label"))
-        output_format = gr.Radio(choices=[".txt", ".md"], value=".txt", label=_("output_format_label"))
-    save_configurations = gr.Button(_("save_configurations"), variant="secondary")
-    
-    with gr.Row():
-        gr.Markdown(_("transcription_title"))
-    with gr.Accordion(_("transcription_accordion")):
-        copy_transcription_button = gr.Button(_("copy_transcription"), variant="secondary", size="sm")
-        output_text = gr.Markdown(_("transcription_placeholder"), container=True, line_breaks=True, elem_classes="scrollable-markdown")
-
-    transcript_file_path = gr.State()
-    save_transcript_button = gr.Button(_("save_transcript_as"), variant="primary", visible=False)
-    with gr.Row():
-        transcribe_button = gr.Button(_("transcribe_btn"), variant="secondary")
-        stop_transcribe_btn = gr.Button(_("stop_btn"), variant="stop", visible=False)
-
-    # Ensure UI elements exist for AI querying
-    gemini_model = None
-    user_query = None
-    gemini_response = None
-
-    gemini_api_key = get_gemini_api_key()
-    gemini_models = get_sorted_gemini_models(gemini_api_key)
-    has_gemini = len(gemini_models) > 0
-
-    with gr.Accordion(_("ai_provider_accordion"), open=True):
-        # Provider selection: if Gemini API key and models are present, allow all providers; otherwise only local providers
-        provider_choices = ["Google", "Ollama", "LM Studio"] if has_gemini else ["Ollama", "LM Studio"]
-        provider = gr.Radio(
-            choices=provider_choices,
-            value="Google" if has_gemini else "Ollama",
-            label=_("provider_label")
-        )
-
-        google_brand_radio = gr.Radio(
-            choices=["Gemini", "Gemma"],
-            value="Gemini",
-            label=_("model_family_label"),
-            visible=has_gemini,
-        )
+            with gr.Row():
+                save_config_file_btn = gr.Button(_("save_config_file_btn"), variant="primary", size="sm")
+                open_in_notepad_btn = gr.Button(_("open_in_notepad_btn"), variant="secondary", size="sm")
 
 
-        initial_filtered_models = [m for m in gemini_models if "gemini" in m.lower()]
-        if not initial_filtered_models and gemini_models:
-            initial_filtered_models = [m for m in gemini_models if "gemma" in m.lower()]
-
-        default_val = None
-        for m in initial_filtered_models:
-            if "gemini-flash-latest" in m.lower():
-                default_val = m
-                break
-        if not default_val and initial_filtered_models:
-            default_val = initial_filtered_models[0]
-
-        # Gemini model selector (only meaningful when using Gemini/Google)
-        gemini_model = gr.Dropdown(
-            choices=initial_filtered_models,
-            value=default_val,
-            allow_custom_value=True,
-            label=_("choose_gemini_model"),
-            visible=has_gemini,
-        )
-
-        # Ollama-specific model selector (populated from local Ollama)
-        # allow_custom_value=True prevents Gradio warning when choices are empty at init
-        try:
-            _initial_ollama_models = list_ollama_models() if not has_gemini else []
-        except Exception:
-            _initial_ollama_models = []
-        _initial_ollama_value = _initial_ollama_models[0] if _initial_ollama_models else ""
-
-        ollama_model = gr.Dropdown(
-            choices=_initial_ollama_models,
-            value=_initial_ollama_value,
-            allow_custom_value=True,
-            label=_("choose_ollama_model"),
-            visible=not has_gemini,
-        )
-
-        try:
-            _initial_lmstudio_models = []
-        except Exception:
-            _initial_lmstudio_models = []
-        _initial_lmstudio_value = _initial_lmstudio_models[0] if _initial_lmstudio_models else ""
-
-        lmstudio_model = gr.Dropdown(
-            choices=_initial_lmstudio_models,
-            value=_initial_lmstudio_value,
-            allow_custom_value=True,
-            label=_("choose_lmstudio_model"),
-            visible=False,
-        )
-
-        # Response language selector for AI assistant
-        response_language = gr.Radio(
-            choices=["Italiano", "English"],
-            value="Italiano",
-            label=_("response_language_label"),
-        )
-
-        with gr.Row():
-            preset_summary_button = gr.Button(_("preset_summary"), variant="secondary")
-            preset_todo_button = gr.Button(_("preset_todo"), variant="secondary")
-            preset_fix_button = gr.Button(_("preset_fix"), variant="secondary")
-
-        fix_text_mode = gr.State(False)
-        user_query = gr.Textbox(label=_("enter_query_label"))
-
-        with gr.Row():
-            submit_query_button = gr.Button(_("submit_query_btn"), variant="primary", visible=False)
-            stop_query_btn = gr.Button(_("stop_btn"), variant="stop", visible=False)
-
-    preset_summary_button.click(
-        fn=preset_query_summary,
-        inputs=[],
-        outputs=[user_query],
-    ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
-
-    preset_todo_button.click(
-        fn=preset_query_todo,
-        inputs=[],
-        outputs=[user_query],
-    ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
-
-    preset_fix_button.click(
-        fn=preset_query_fix,
-        inputs=[],
-        outputs=[user_query],
-    ).then(fn=lambda: True, inputs=[], outputs=[fix_text_mode])
-
-    with gr.Accordion(_("ai_response_accordion")):
-        copy_response_button = gr.Button(_("copy_response"), variant="secondary", size="sm")
-        gemini_response = gr.Markdown(_("response_placeholder"), container=True, line_breaks=True, elem_classes="scrollable-markdown")
+            gr.Markdown("---")
+            gr.Markdown(_("updater_title"))
+            with gr.Row():
+                update_status_md = gr.Markdown(_("installed_version").format(version=CURRENT_VERSION))
+                check_updates_btn = gr.Button(_("updater_check_btn"), variant="secondary", size="sm")
+                launch_updater_btn = gr.Button(_("updater_launch_btn"), variant="primary", size="sm", visible=False)
 
     browse_files_btn.click(
         fn=browse_local_files,
@@ -685,17 +816,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         outputs=[],
     )
 
-    show_config_info_btn.click(
-        fn=lambda: gr.update(visible=True),
-        inputs=[],
-        outputs=[config_modal],
-    )
 
-    close_config_modal_btn.click(
-        fn=lambda: gr.update(visible=False),
-        inputs=[],
-        outputs=[config_modal],
-    )
 
     def _provider_change(p):
         # show Gemini model choices only when Google selected
@@ -778,7 +899,6 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         cancels=[query_event]
     )
     with gr.Row():
-        reset_button = gr.Button(_("reset_fields"), variant="secondary")
         quit_button = gr.Button(_("quit"), variant="stop")
 
     config_path_input.change(
@@ -815,6 +935,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
             condition_on_previous_text,
             word_timestamps,
             gemini_model,
+            ui_language_dropdown,
         ],
         outputs=[]
     )
@@ -1009,13 +1130,13 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     def on_check_updates():
         res = check_for_updates()
         if res.get("has_update"):
-            msg = f"🚀 **Nuova versione v{res['latest_version']} disponibile!** (Attuale: `v{CURRENT_VERSION}`)"
+            msg = _("update_available").format(latest=res['latest_version'], current=CURRENT_VERSION)
             return msg, gr.update(visible=True)
         elif "check_failed" in str(res.get("status")):
-            msg = f"⚠ **Impossibile verificare aggiornamenti** (Attuale: `v{CURRENT_VERSION}`)"
+            msg = _("update_check_failed").format(current=CURRENT_VERSION)
             return msg, gr.update(visible=False)
         else:
-            msg = f"✅ **Whisper Utility è aggiornato all'ultima versione (`v{CURRENT_VERSION}`)**"
+            msg = _("update_up_to_date").format(current=CURRENT_VERSION)
             return msg, gr.update(visible=False)
 
     check_updates_btn.click(
@@ -1027,9 +1148,9 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     def on_launch_updater():
         success = launch_installer_update()
         if success:
-            gr.Info("L'installer di aggiornamento è stato avviato.")
+            gr.Info(_("update_installer_launched"))
         else:
-            gr.Error("Impossibile avviare l'installer.")
+            gr.Error(_("update_installer_failed"))
 
     launch_updater_btn.click(
         fn=on_launch_updater,
