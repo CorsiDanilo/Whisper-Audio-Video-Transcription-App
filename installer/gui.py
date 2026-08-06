@@ -161,6 +161,43 @@ class InstallerWizard(tk.Tk):
 
     # ── Page navigation ───────────────────────────────────────────────────────
 
+    def _create_entry(self, parent, textvariable, width=42, show=None) -> tk.Entry:
+        return tk.Entry(
+            parent,
+            textvariable=textvariable,
+            width=width,
+            show=show or "",
+            bg=SURFACE,
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            highlightbackground=MUTED,
+            highlightcolor=ACCENT,
+            highlightthickness=1,
+            font=FONT_BODY,
+        )
+
+    def _create_option_menu(self, parent, variable, values) -> tk.OptionMenu:
+        om = tk.OptionMenu(parent, variable, *values)
+        om.configure(
+            bg=SURFACE,
+            fg=TEXT,
+            activebackground=SURFACE,
+            activeforeground=TEXT,
+            highlightthickness=0,
+            bd=1,
+            relief="flat",
+            font=FONT_BODY,
+        )
+        om["menu"].configure(
+            bg=SURFACE,
+            fg=TEXT,
+            activebackground=ACCENT,
+            activeforeground="white",
+            font=FONT_BODY,
+        )
+        return om
+
     def _detect_hw_async(self) -> None:
         """Run hardware detection in background and update UI when done."""
         result = detect_hardware()
@@ -206,30 +243,23 @@ class InstallerWizard(tk.Tk):
         accent_bar.place(x=0, y=0, relheight=1)
 
         # ── Language selector row (top-right) ─────────────────────────────────
-        lang_row = ttk.Frame(f)
+        lang_row = tk.Frame(f, bg=BG)
         lang_row.pack(anchor="ne", pady=(0, 8))
-        _lang_label_it = "Language / Lingua:"
-        ttk.Label(lang_row, text=_lang_label_it, style="Muted.TLabel").pack(side="left", padx=(0, 6))
+        tk.Label(lang_row, text="Language / Lingua:", bg=BG, fg=MUTED, font=FONT_BODY).pack(side="left", padx=(0, 6))
         _lang_var = tk.StringVar(value=self._lang_code)
-        _lang_cb = ttk.Combobox(
-            lang_row,
-            textvariable=_lang_var,
-            values=["it", "en"],
-            state="readonly",
-            width=5,
-        )
-        _lang_cb.pack(side="left")
+        _lang_om = self._create_option_menu(lang_row, _lang_var, ["it", "en"])
+        _lang_om.pack(side="left")
 
-        def _on_lang_change(event=None):
-            self._reload_locale(_lang_var.get())
+        def _on_lang_change(val):
+            self._reload_locale(val)
 
-        _lang_cb.bind("<<ComboboxSelected>>", _on_lang_change)
+        _lang_var.trace_add("write", lambda *args: self._reload_locale(_lang_var.get()))
 
         ttk.Label(f, text=self.strings["welcome_heading"], style="Title.TLabel").pack(anchor="w", pady=(0, 4))
         ttk.Label(f, text=self.strings["welcome_sub"], style="Heading.TLabel").pack(anchor="w", pady=(0, 12))
 
         # System info card (live-updating)
-        card = ttk.Frame(f, style="Surface.TFrame", padding=12)
+        card = tk.Frame(f, bg=SURFACE, padx=14, pady=14)
         card.pack(fill="x", pady=(0, 10))
 
         self._hw_status_var = tk.StringVar()
@@ -242,14 +272,15 @@ class InstallerWizard(tk.Tk):
             self._hw_status_var.set(_detecting_it)
             self._hw_spinner_var.set("")
 
-        ttk.Label(card, textvariable=self._hw_status_var, style="Surface.TLabel", justify="left").pack(anchor="w")
-        ttk.Label(card, textvariable=self._hw_spinner_var, style="Surface.TLabel", foreground=MUTED).pack(anchor="w")
+        tk.Label(card, textvariable=self._hw_status_var, bg=SURFACE, fg=TEXT, font=FONT_BODY, justify="left").pack(anchor="w")
+        tk.Label(card, textvariable=self._hw_spinner_var, bg=SURFACE, fg=MUTED, font=FONT_BODY).pack(anchor="w")
 
         # Install path
         ttk.Label(f, text=self.strings["path_label"]).pack(anchor="w", pady=(8, 2))
-        row = ttk.Frame(f)
+        row = tk.Frame(f, bg=BG)
         row.pack(fill="x", pady=(0, 20))
-        ttk.Entry(row, textvariable=self.install_dir, width=52).pack(side="left", fill="x", expand=True, padx=(0, 6))
+        entry = self._create_entry(row, self.install_dir, width=52)
+        entry.pack(side="left", fill="x", expand=True, padx=(0, 6), ipady=3)
         ttk.Button(row, text=self.strings["btn_browse"], style="Ghost.TButton", command=self._browse).pack(side="left")
 
         # Navigation
@@ -265,19 +296,19 @@ class InstallerWizard(tk.Tk):
         ttk.Label(f, text=self.strings["summary_title"], style="Title.TLabel").pack(anchor="w", pady=(0, 16))
 
         items = [
-            ("📦", self.strings["summary_core"], "~120 MB"),
-            ("🎬", self.strings["summary_ffmpeg"], "~80 MB"),
+            ("[App]", self.strings["summary_core"], "~120 MB"),
+            ("[FFmpeg]", self.strings["summary_ffmpeg"], "~80 MB"),
         ]
         if self.hardware.has_nvidia_gpu:
-            items.append(("⚡", self.strings["summary_cuda"], "~350 MB"))
+            items.append(("[CUDA]", self.strings["summary_cuda"], "~350 MB"))
 
-        card = ttk.Frame(f, style="Surface.TFrame", padding=14)
+        card = tk.Frame(f, bg=SURFACE, padx=14, pady=14)
         card.pack(fill="x", pady=(0, 20))
         for icon, label, size in items:
-            row = ttk.Frame(card, style="Surface.TFrame")
-            row.pack(fill="x", pady=3)
-            ttk.Label(row, text=f"{icon}  {label}", style="Surface.TLabel", width=46).pack(side="left")
-            ttk.Label(row, text=size, style="Surface.TLabel", foreground=MUTED).pack(side="right")
+            r = tk.Frame(card, bg=SURFACE)
+            r.pack(fill="x", pady=3)
+            tk.Label(r, text=f"{icon}  {label}", bg=SURFACE, fg=TEXT, font=FONT_BODY, anchor="w").pack(side="left")
+            tk.Label(r, text=size, bg=SURFACE, fg=MUTED, font=FONT_BODY).pack(side="right")
 
         ttk.Label(
             f,
@@ -318,21 +349,22 @@ class InstallerWizard(tk.Tk):
         ttk.Label(f, text=self.strings.get("config_sub", "Customize settings"), style="Muted.TLabel").pack(anchor="w", pady=(0, 10))
 
         if existing["has_existing"]:
-            note_card = ttk.Frame(f, style="Surface.TFrame", padding=8)
+            note_card = tk.Frame(f, bg=SURFACE, padx=10, pady=8)
             note_card.pack(fill="x", pady=(0, 10))
-            ttk.Label(
+            tk.Label(
                 note_card,
                 text=self.strings.get("config_existing_detected", "Existing settings detected"),
-                style="Surface.TLabel",
-                foreground=ACCENT,
+                bg=SURFACE,
+                fg=ACCENT,
+                font=FONT_BODY,
             ).pack(anchor="w")
 
-        form = ttk.Frame(f)
+        form = tk.Frame(f, bg=BG)
         form.pack(fill="x", expand=True, pady=(0, 10))
 
         # Gemini API Key
-        ttk.Label(form, text=self.strings.get("lbl_gemini_key", "Gemini API Key:")).grid(row=0, column=0, sticky="w", pady=4, padx=(0, 10))
-        key_entry = ttk.Entry(form, textvariable=self.gemini_key_var, width=42, show="•")
+        tk.Label(form, text=self.strings.get("lbl_gemini_key", "Gemini API Key:"), bg=BG, fg=TEXT, font=FONT_BODY).grid(row=0, column=0, sticky="w", pady=4, padx=(0, 10))
+        key_entry = self._create_entry(form, self.gemini_key_var, width=42, show="•")
         key_entry.grid(row=0, column=1, sticky="w", pady=4)
 
         show_var = tk.BooleanVar(value=False)
@@ -340,25 +372,25 @@ class InstallerWizard(tk.Tk):
         def _toggle_key():
             key_entry.configure(show="" if show_var.get() else "•")
 
-        ttk.Checkbutton(form, text="👁", variable=show_var, command=_toggle_key).grid(row=0, column=2, sticky="w", padx=4)
+        ttk.Checkbutton(form, text="Show", variable=show_var, command=_toggle_key).grid(row=0, column=2, sticky="w", padx=4)
 
         # UI Language
-        ttk.Label(form, text=self.strings.get("lbl_ui_language", "Interface Language:")).grid(row=1, column=0, sticky="w", pady=4, padx=(0, 10))
-        lang_cb = ttk.Combobox(form, textvariable=self.ui_lang_var, values=["italian", "english", "spanish", "french", "german"], state="readonly", width=39)
-        lang_cb.grid(row=1, column=1, sticky="w", pady=4)
+        tk.Label(form, text=self.strings.get("lbl_ui_language", "Interface Language:"), bg=BG, fg=TEXT, font=FONT_BODY).grid(row=1, column=0, sticky="w", pady=4, padx=(0, 10))
+        lang_om = self._create_option_menu(form, self.ui_lang_var, ["italian", "english", "spanish", "french", "german"])
+        lang_om.grid(row=1, column=1, sticky="w", pady=4)
 
         # Whisper Model
-        ttk.Label(form, text=self.strings.get("lbl_whisper_model", "Whisper Model:")).grid(row=2, column=0, sticky="w", pady=4, padx=(0, 10))
-        model_cb = ttk.Combobox(form, textvariable=self.whisper_model_var, values=["large-v3", "medium", "base", "small", "tiny", "large-v3-turbo", "distil-large-v3"], state="readonly", width=39)
-        model_cb.grid(row=2, column=1, sticky="w", pady=4)
+        tk.Label(form, text=self.strings.get("lbl_whisper_model", "Whisper Model:"), bg=BG, fg=TEXT, font=FONT_BODY).grid(row=2, column=0, sticky="w", pady=4, padx=(0, 10))
+        model_om = self._create_option_menu(form, self.whisper_model_var, ["large-v3", "medium", "base", "small", "tiny", "large-v3-turbo", "distil-large-v3"])
+        model_om.grid(row=2, column=1, sticky="w", pady=4)
 
         # Device
-        ttk.Label(form, text=self.strings.get("lbl_device", "Computation Device:")).grid(row=3, column=0, sticky="w", pady=4, padx=(0, 10))
-        dev_cb = ttk.Combobox(form, textvariable=self.device_var, values=["cuda", "cpu"], state="readonly", width=39)
-        dev_cb.grid(row=3, column=1, sticky="w", pady=4)
+        tk.Label(form, text=self.strings.get("lbl_device", "Computation Device:"), bg=BG, fg=TEXT, font=FONT_BODY).grid(row=3, column=0, sticky="w", pady=4, padx=(0, 10))
+        dev_om = self._create_option_menu(form, self.device_var, ["cuda", "cpu"])
+        dev_om.grid(row=3, column=1, sticky="w", pady=4)
 
         # CPU Threads
-        ttk.Label(form, text=self.strings.get("lbl_cpu_threads", "CPU Threads:")).grid(row=4, column=0, sticky="w", pady=4, padx=(0, 10))
+        tk.Label(form, text=self.strings.get("lbl_cpu_threads", "CPU Threads:"), bg=BG, fg=TEXT, font=FONT_BODY).grid(row=4, column=0, sticky="w", pady=4, padx=(0, 10))
         cpu_sb = ttk.Spinbox(form, from_=1, to=16, textvariable=self.cpu_threads_var, width=10)
         cpu_sb.grid(row=4, column=1, sticky="w", pady=4)
 
