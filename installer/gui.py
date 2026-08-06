@@ -101,7 +101,7 @@ class InstallerWizard(tk.Tk):
         self._center_window()
 
         try:
-            self.iconbitmap(self._resource("logo.ico"))
+            self.iconbitmap(_resource("logo.ico"))
         except Exception:
             pass
 
