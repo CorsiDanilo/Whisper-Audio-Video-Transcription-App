@@ -18,10 +18,21 @@ if PARENT_DIR not in sys.path:
     sys.path.insert(0, PARENT_DIR)
 
 
+from installer.splash import InstallerSplashScreen
+
+_splash = InstallerSplashScreen()
+_splash.update_status("init", 15)
+
+from installer.hardware_detector import detect_hardware  # noqa: F401  (warms up hw detection module)
+_splash.update_status("hw", 45)
+
 from installer.gui import InstallerWizard
+_splash.update_status("gui", 80)
 
 
 def main() -> None:
+    _splash.update_status("ready", 100)
+    _splash.close()
     app = InstallerWizard()
     app.mainloop()
 
