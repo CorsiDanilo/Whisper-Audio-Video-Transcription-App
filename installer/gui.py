@@ -163,8 +163,8 @@ class InstallerWizard(tk.Tk):
         result = detect_hardware()
         self._hw_ready = True
         self.hardware = result
-        # Update device_var based on actual hardware
-        self.device_var.set("cuda" if result.has_nvidia_gpu else "cpu")
+        # Update device_var based on actual hardware safely on the main thread
+        self.after(0, lambda: self.device_var.set("cuda" if result.has_nvidia_gpu else "cpu"))
         # Update the welcome page hardware info label if still visible
         self.after(0, self._refresh_hw_label)
 
