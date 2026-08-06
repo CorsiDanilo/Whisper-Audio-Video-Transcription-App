@@ -17,20 +17,12 @@ PARENT_DIR = os.path.dirname(CURRENT_DIR)
 if PARENT_DIR not in sys.path:
     sys.path.insert(0, PARENT_DIR)
 
-from installer.splash import InstallerSplashScreen
+
 from installer.gui import InstallerWizard
 
 
 def main() -> None:
-    splash = InstallerSplashScreen()
-    splash.update_status("init", 25)
-    
-    splash.update_status("hw", 60)
     app = InstallerWizard()
-    
-    splash.update_status("ready", 100)
-    splash.close()
-    
     app.mainloop()
 
 
