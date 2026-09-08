@@ -111,8 +111,38 @@ result = transcribe_file(
 )
 ```
 
+## Remote Transcription Engine (REST API)
+
+Starting in version 3.2.0, `whisper-utility` supports offloading transcription to a self-hosted Whisper STT REST server (e.g. running in Docker on a NAS, homelab server, or cloud instance).
+
+### Architecture & Endpoints
+
+When `transcription_backend` is set to `remote`, the client relies on `remote_transcription.py` rather than running local CTranslate2 inference.
+
+```mermaid
+graph LR
+    Client[Whisper Utility UI] -->|POST /v1/audio/transcriptions| Server[Whisper STT Server]
+    Client -->|GET /health| Server
+    Client -->|GET /api/models| Server
+    Client -->|POST /api/models/load| Server
+```
+
+| Endpoint | Method | Purpose |
+| :--- | :--- | :--- |
+| `/health` | `GET` | Health check returning active model, compute type, device, and server status. |
+| `/api/models` | `GET` | Lists available models, active model, and whether models are cached/downloaded on the server. |
+| `/api/models/load` | `POST` | Hot-swaps the active model in server memory and re-quantizes compute precision. |
+| `/v1/audio/transcriptions` | `POST` | OpenAI-compatible endpoint that receives media files and returns segment-level transcripts. |
+
+### Remote Parameters
+
+*   **VAD Threshold (`vad_threshold`):** Controls Voice Activity Detection sensitivity on the server (0.1 to 0.95).
+*   **Silence Timeout (`silence_threshold`):** Duration of silence required before finalizing a sentence segment (0.2 to 3.0s).
+*   **Initial Prompt (`initial_prompt`):** Specialized vocabulary, acronyms, or punctuation guide passed to guide Whisper's capitalization and terminology.
+
 ## Troubleshooting
 
+*   **Connection Errors (Remote):** Verify the remote server URL (e.g. `http://192.168.1.32:8088`), ensure the Docker container is running, and click **Test Connection** in the UI.
 *   **Memory Errors:** If encountering `OutOfMemory` errors on GPU, reduce the `batch_size` or switch `compute_type` to `int8`.
 *   **Slow Transcription:** If CPU usage is high but transcription is slow, adjust `cpu_threads` to match the physical core count of the host machine.
 *   **File Format Issues:** If the engine fails to process a file, verify that `ffmpeg` is installed and accessible in the system PATH, as `audio_processing.py` relies on it for conversion tasks.

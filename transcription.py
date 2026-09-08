@@ -35,7 +35,13 @@ try:
 except ImportError:
     pass
 
-from faster_whisper import WhisperModel, BatchedInferencePipeline
+try:
+    from faster_whisper import WhisperModel, BatchedInferencePipeline
+except ImportError:
+    WhisperModel = None
+    BatchedInferencePipeline = None
+from config import get_translation as _
+from remote_transcription import transcribe_remote_file
 from audio_processing import is_video_file, extract_audio_from_video, is_whatsapp_audio_file, convert_whatsapp_audio_to_mp3, is_audio_file, convert_audio_to_mp3
 from security_utils import (
     SecurityError,
@@ -56,11 +62,30 @@ def load_model(model_size, compute_type, device, cpu_threads, num_workers):
         logging.error(f"Error loading model: {e}")
         return None
 
-def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir=None, common_root=None):
+def transcribe_file(
+    file_paths,
+    device,
+    cpu_threads,
+    num_workers,
+    language,
+    whisper_model,
+    compute_type,
+    temperature,
+    beam_size,
+    batch_size,
+    condition_on_previous_text,
+    word_timestamps,
+    output_format=".txt",
+    output_dir=None,
+    common_root=None,
+    backend="local",
+    remote_server_url="http://192.168.1.32:8088",
+    initial_prompt: str = "",
+):
     """
     Transcribe the provided files:
       - Convert the file (video/WhatsApp/audio) to MP3 if necessary.
-      - Use the Whisper model to transcribe the content.
+      - Use the Whisper model (local or remote server) to transcribe the content.
       - Save the transcript to a file and return the transcription, output file path, and folder.
     """
     try:
@@ -72,13 +97,19 @@ def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whis
         if isinstance(file_paths, str):
             file_paths = [file_paths]
 
-        logging.info(f"Using device: {device}")
-        model = load_model(whisper_model, compute_type, device, cpu_threads, num_workers)
-        if model is None:
-            yield "Error loading model", None, None
-            return
-
-        batched_model = BatchedInferencePipeline(model=model)
+        if backend == "remote":
+            logging.info(f"Using remote server backend at {remote_server_url}")
+            batched_model = None
+        else:
+            if WhisperModel is None:
+                yield "Error: faster_whisper is not installed. Please install it or use the Remote Server backend.", None, None
+                return
+            logging.info(f"Using local device: {device}")
+            model = load_model(whisper_model, compute_type, device, cpu_threads, num_workers)
+            if model is None:
+                yield "Error loading model", None, None
+                return
+            batched_model = BatchedInferencePipeline(model=model)
         
         session_transcription = ""
         total_files = len(file_paths)
@@ -117,8 +148,11 @@ def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whis
                         convert_whatsapp_audio_to_mp3(current_file_path, str(audio_file), device=device)
                         current_file_path = str(audio_file)
                     elif is_audio_file(current_file_path):
-                        convert_audio_to_mp3(current_file_path, str(audio_file), device=device)
-                        current_file_path = str(audio_file)
+                        try:
+                            convert_audio_to_mp3(current_file_path, str(audio_file), device=device)
+                            current_file_path = str(audio_file)
+                        except Exception as conv_err:
+                            logging.warning("Could not convert audio to MP3 (%s), using original audio file: %s", conv_err, current_file_path)
                     else:
                         error_msg = "Invalid file type"
                         yield session_transcription + header + error_msg, None, folder_path
@@ -133,61 +167,101 @@ def transcribe_file(file_paths, device, cpu_threads, num_workers, language, whis
                         except Exception as e:
                             logging.warning(f"Could not copy MP3 to output directory: {e}")
 
-                logging.info(f"Transcribing {current_file_path}...")
-                yield session_transcription + header + "Transcribing...", None, folder_path
-
-                segments, info = batched_model.transcribe(
-                    current_file_path,
-                    batch_size=batch_size,
-                    language=language,
-                    beam_size=beam_size,
-                    condition_on_previous_text=condition_on_previous_text,
-                    word_timestamps=word_timestamps,
-                    temperature=temperature
-                )
-
-                logging.info("File transcribed successfully, generating transcript...")
-                accumulated_transcription = ""
-
-                if output_format == ".md" and not word_timestamps:
-                    # Group segments into paragraphs based on pause length or sentence ending
-                    prev_end = None
-                    paragraph_words = []
-                    paragraphs = []
-                    for segment in segments:
-                        text = segment.text.strip()
-                        if not text:
-                            continue
-                        
-                        start_new = False
-                        if prev_end is not None and (segment.start - prev_end) > 2.0:
-                            start_new = True
-                        elif len(paragraph_words) >= 60 and text[-1] in {".", "?", "!"}:
-                            start_new = True
-                        
-                        if start_new and paragraph_words:
-                            paragraphs.append(" ".join(paragraph_words))
-                            paragraph_words = []
-                        
-                        paragraph_words.append(text)
-                        prev_end = segment.end
-                        
-                        accumulated_transcription = "\n\n".join(paragraphs + [" ".join(paragraph_words)])
-                        yield session_transcription + header + accumulated_transcription, None, folder_path
-                else:
-                    # Iterate over segments and yield progressively
-                    for segment in segments:
-                        if word_timestamps:
-                            if output_format == ".md":
-                                chunk = "\n".join(f"* **[{word.start:.2f}s -> {word.end:.2f}s]** {word.word}" for word in segment.words) + "\n"
-                            else:
-                                chunk = "\n".join(f"{word.start:.2f} -> {word.end:.2f} {word.word}" for word in segment.words) + "\n"
+                if backend == "remote":
+                    logging.info(f"Sending {current_file_path} to remote server at {remote_server_url} (/v1/audio/transcriptions)...")
+                    yield session_transcription + header + _("progress_uploading_remote"), None, folder_path
+                    raw_text, meta = transcribe_remote_file(
+                        current_file_path,
+                        server_url=remote_server_url,
+                        language=language,
+                        temperature=temperature,
+                        prompt=initial_prompt,
+                        beam_size=beam_size,
+                        condition_on_previous_text=condition_on_previous_text,
+                        word_timestamps=word_timestamps,
+                    )
+                    accumulated_transcription = raw_text.strip()
+                    if word_timestamps and meta.get("words"):
+                        words_data = meta["words"]
+                        if output_format == ".md":
+                            accumulated_transcription = "\n".join(
+                                f"* **[{w.get('start', 0):.2f}s -> {w.get('end', 0):.2f}s]** {w.get('word', '')}"
+                                for w in words_data
+                            ) + "\n"
                         else:
-                            chunk = segment.text + "\n"
+                            accumulated_transcription = "\n".join(
+                                f"{w.get('start', 0):.2f} -> {w.get('end', 0):.2f} {w.get('word', '')}"
+                                for w in words_data
+                            ) + "\n"
+                    elif output_format == ".md" and accumulated_transcription:
+                        words = accumulated_transcription.split()
+                        paragraphs = []
+                        curr_para = []
+                        for w in words:
+                            curr_para.append(w)
+                            if len(curr_para) >= 60 and w and w[-1] in {".", "?", "!"}:
+                                paragraphs.append(" ".join(curr_para))
+                                curr_para = []
+                        if curr_para:
+                            paragraphs.append(" ".join(curr_para))
+                        accumulated_transcription = "\n\n".join(paragraphs) if paragraphs else accumulated_transcription
 
-                        accumulated_transcription += chunk
-                        # Yield partial result. Output path is None until transcription is complete.
-                        yield session_transcription + header + accumulated_transcription, None, folder_path
+                else:
+                    logging.info(f"Transcribing {current_file_path}...")
+                    yield session_transcription + header + "Transcribing...", None, folder_path
+
+                    segments, info = batched_model.transcribe(
+                        current_file_path,
+                        batch_size=batch_size,
+                        language=language,
+                        beam_size=beam_size,
+                        condition_on_previous_text=condition_on_previous_text,
+                        word_timestamps=word_timestamps,
+                        temperature=temperature
+                    )
+
+                    logging.info("File transcribed successfully, generating transcript...")
+                    accumulated_transcription = ""
+
+                    if output_format == ".md" and not word_timestamps:
+                        # Group segments into paragraphs based on pause length or sentence ending
+                        prev_end = None
+                        paragraph_words = []
+                        paragraphs = []
+                        for segment in segments:
+                            text = segment.text.strip()
+                            if not text:
+                                continue
+                            
+                            start_new = False
+                            if prev_end is not None and (segment.start - prev_end) > 2.0:
+                                start_new = True
+                            elif len(paragraph_words) >= 60 and text[-1] in {".", "?", "!"}:
+                                start_new = True
+                            
+                            if start_new and paragraph_words:
+                                paragraphs.append(" ".join(paragraph_words))
+                                paragraph_words = []
+                            
+                            paragraph_words.append(text)
+                            prev_end = segment.end
+                            
+                            accumulated_transcription = "\n\n".join(paragraphs + [" ".join(paragraph_words)])
+                            yield session_transcription + header + accumulated_transcription, None, folder_path
+                    else:
+                        # Iterate over segments and yield progressively
+                        for segment in segments:
+                            if word_timestamps:
+                                if output_format == ".md":
+                                    chunk = "\n".join(f"* **[{word.start:.2f}s -> {word.end:.2f}s]** {word.word}" for word in segment.words) + "\n"
+                                else:
+                                    chunk = "\n".join(f"{word.start:.2f} -> {word.end:.2f} {word.word}" for word in segment.words) + "\n"
+                            else:
+                                chunk = segment.text + "\n"
+
+                            accumulated_transcription += chunk
+                            # Yield partial result. Output path is None until transcription is complete.
+                            yield session_transcription + header + accumulated_transcription, None, folder_path
 
                 logging.info(f"Transcript generated. Saving transcript to folder: {folder_path}...")
                 if output_dir is not None and common_root is not None:

@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.2.0] - 2026-09-08
+
+### Added
+- **Remote Whisper STT Service Integration**: Added full client integration with a self-hosted Whisper STT REST server (e.g., Docker container running on a NAS or server). Users can seamlessly choose between local execution (`🖥️ Local (Faster-Whisper)`) and remote execution (`🌐 Remote Server`).
+- **Standardized REST Client (`remote_transcription.py`)**: Implemented remote client communicating over standard endpoints:
+  - `GET /health` for server health and status monitoring.
+  - `GET /api/models` for querying model caches (with support for filtering only cached/downloaded models on the server).
+  - `POST /api/models/load` for real-time model and compute precision hot-swapping in server memory.
+  - `POST /v1/audio/transcriptions` for standard multipart/form-data audio and video file transcription with segment reconstruction.
+- **Dynamic UI Mode Toggling**: The Gradio interface dynamically shifts controls based on the selected backend:
+  - When **Local** is selected, local hardware options (`device`, `cpu_threads`, `num_workers`, `batch_size`, `beam_size`, etc.) and the "Save configurations" button are displayed.
+  - When **Remote Server** is selected, local hardware controls and the save button are cleanly hidden, and remote controls (Server URL, active remote model dropdown, "Test Connection" button, VAD speech threshold, silence timeout, and initial prompt) are revealed.
+- **Initial Prompt & Vocabulary Guidance**: Added support for passing custom vocabulary, jargon, acronyms, and punctuation guidance to Whisper for both local and remote transcriptions.
+- **Connection Diagnostics with Retries**: Implemented robust exponential backoff and retry mechanisms for remote health checks and model synchronization with immediate user-friendly feedback badges.
+
+### Changed
+- **Configurable Default Configuration File**: Fully documented `settings/default.yaml` with exhaustive English comments, detailed descriptions, and all available options for every parameter.
+- **Relocated Output Format Radio**: Moved the output format selection (`.txt`, `.md`) next to the output directory selector for a cleaner, unified file output section.
+- **Cleaned Up Server Resource Management**: CPU execution threads are now managed strictly at the Docker environment level on the NAS container, eliminating redundant remote CPU thread controls.
+
+### Fixed
+- **UI State and Variable Scoping**: Fixed variable scoping across event handlers (`UnboundLocalError` on translation helper `_`) and ensured smooth dropdown updates when switching active models.
+- **Connection Test Button Visibility**: Ensured the "Test Connection" button is strictly visible only when the remote server backend is active.
+
 ## [3.1.0] - 2026-08-06
 
 ### Changed

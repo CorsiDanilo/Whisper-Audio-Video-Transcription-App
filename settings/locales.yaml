@@ -188,6 +188,28 @@ english:
   update_up_to_date: "✅ **Whisper Utility is up to date (`v{current}`)**"
   update_installer_launched: Update installer launched successfully.
   update_installer_failed: Failed to launch the installer.
+  backend_label: Transcription Engine
+  backend_local: 🖥️ Local (Faster-Whisper)
+  backend_remote: 🌐 Remote Server
+  remote_url_label: Remote Server URL
+  remote_model_label: Active Model
+  test_connection_btn: 🔍 Test Connection
+  remote_connected_status: "🟢 **Connected!** Active model: `{model}` ({device})"
+  remote_error_status: "🔴 **Connection error:** {error}"
+  progress_uploading_remote: Uploading audio to remote server (/v1/audio/transcriptions)...
+  progress_transcribing_remote: Remote transcription in progress...
+  remote_model_switched: "✅ Remote model successfully switched to: `{model}`"
+  remote_switch_error: "🔴 Failed to switch model on remote server: {error}"
+  remote_connection_failed: "Could not connect to {url}. Please verify that the remote server is running."
+  remote_prompt_test: "*Click 'Test Connection' to verify server status and synchronize configurations.*"
+  vad_threshold_label: "VAD Speech Probability Threshold"
+  silence_threshold_label: "Phrase End Silence Timeout (Seconds)"
+  initial_prompt_label: "Custom Vocabulary & Initial Prompt (Punctuation & Keywords)"
+  initial_prompt_placeholder: "e.g. Terms, keywords, proper nouns: Docker, TrueNAS, Portainer, FastAPI..."
+  remote_settings_saved: "✅ Configurations saved on remote NAS server and locally!"
+  configurations_accordion: "⚙️ Advanced Configurations"
+  explanation_remote_text: "- **Model**: The active Whisper model on the remote server (only downloaded models are shown).\n\n- **Computational Type**: Numerical precision on the server (int8, float16, auto).\n\n- **Language**: Default transcription language on the remote server.\n\n- **VAD Threshold**: Speech detection sensitivity (higher requires clearer speech).\n\n- **Silence Timeout**: Silence duration required before finalizing a sentence segment.\n\n- **Initial Prompt**: Custom vocabulary guide for capitalization, proper nouns, and punctuation."
+  settings_interface_title: "## 🌐 Interface & Updates"
 italian:
   title: '# 🎤 Trascrizione Audio/Video con Modello Whisper'
   browse: 📁 Sfoglia...
@@ -384,3 +406,26 @@ italian:
   update_up_to_date: "✅ **Whisper Utility è aggiornato all'ultima versione (`v{current}`)**"
   update_installer_launched: L'installer di aggiornamento è stato avviato.
   update_installer_failed: Impossibile avviare l'installer.
+  backend_label: Motore di Trascrizione
+  backend_local: 🖥️ Locale (Faster-Whisper)
+  backend_remote: 🌐 Server Remoto
+  remote_url_label: URL Server Remoto
+  remote_model_label: Modello attivo 
+  test_connection_btn: 🔍 Test Connessione
+  remote_connected_status: "🟢 **Connesso!** Modello attivo: `{model}` ({device})"
+  remote_error_status: "🔴 **Errore connessione:** {error}"
+  progress_uploading_remote: Invio audio al server remoto (/v1/audio/transcriptions)...
+  progress_transcribing_remote: Trascrizione remota in corso...
+  remote_model_switched: "✅ Modello sul server commutato con successo in: `{model}`"
+  remote_switch_error: "🔴 Impossibile cambiare modello sul server: {error}"
+  remote_connection_failed: "Impossibile connettersi a {url}. Verifica che il server sia attivo."
+  remote_prompt_test: "*Clicca 'Test Connessione' per verificare lo stato del server e sincronizzare le configurazioni.*"
+  vad_threshold_label: "Soglia Rilevamento Voce (VAD)"
+  silence_threshold_label: "Timeout Fine Frase Silenzio (secondi)"
+  initial_prompt_label: "Prompt Iniziale & Vocabolario Personalizzato (Punteggiatura e Parole Chiave)"
+  initial_prompt_placeholder: "es. Termini tecnici, nomi propri o acronimi: Docker, TrueNAS, Portainer, FastAPI..."
+  remote_settings_saved: "✅ Configurazioni salvate con successo sul server NAS e in locale!"
+  configurations_accordion: "⚙️ Configurazioni Avanzate"
+  explanation_remote_text: "- **Modello**: Il modello Whisper attivo sul server (mostra SOLO i modelli scaricati).\n\n- **Tipo di Calcolo**: Precisione numerica sul server (int8, float16, auto).\n\n- **Lingua**: Lingua di trascrizione predefinita sul server.\n\n- **Soglia VAD**: Sensibilità di rilevamento vocale (valori più alti richiedono voce più chiara).\n\n- **Timeout Silenzio**: Pausa necessaria per considerare terminata una frase.\n\n- **Prompt Iniziale**: Guida di stile per punteggiatura, parole chiave e termini tecnici."
+  settings_interface_title: "## 🌐 Interfaccia e Aggiornamenti"
+

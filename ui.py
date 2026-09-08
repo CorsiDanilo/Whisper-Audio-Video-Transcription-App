@@ -19,6 +19,13 @@ from config import load_default_values, load_default_config, get_gemini_api_key,
 from llms import query_gemini, list_ollama_models, list_lmstudio_models, get_sorted_gemini_models  # noqa: E402
 from config import setup_logging  # noqa: E402
 from updater import check_for_updates, launch_installer_update, CURRENT_VERSION  # noqa: E402
+from remote_transcription import (  # noqa: E402
+    check_server_health,
+    fetch_remote_models,
+    fetch_remote_settings,
+    switch_remote_model,
+    update_remote_settings,
+)
 
 default_values = load_default_values()
 NO_MODELS_FOUND = "No models found"
@@ -90,10 +97,16 @@ def save_config(
         word_timestamps,
         gemini_model,
         ui_language="italian",
+        transcription_backend="local",
+        remote_server_url="http://192.168.1.32:8088",
+        vad_threshold=0.5,
+        silence_threshold=0.6,
+        initial_prompt="",
     ):
     """Save configuration to both local settings/default.yaml and system AppData."""
     from config import get_app_config_dir
     try:
+        backend_val = "remote" if (str(transcription_backend) == _("backend_remote") or str(transcription_backend) == "remote") else "local"
         config = {
             "ui_language": ui_language,
             "device": device,
@@ -108,6 +121,11 @@ def save_config(
             "condition_on_previous_text": condition_on_previous_text,
             "word_timestamps": word_timestamps,
             "gemini_model": gemini_model,
+            "transcription_backend": backend_val,
+            "remote_server_url": remote_server_url,
+            "vad_threshold": float(vad_threshold) if vad_threshold is not None else 0.5,
+            "silence_threshold": float(silence_threshold) if silence_threshold is not None else 0.6,
+            "initial_prompt": str(initial_prompt or ""),
         }
 
         # 1. Write local copy
@@ -115,11 +133,10 @@ def save_config(
         with open("settings/default.yaml", "w", encoding="utf-8") as file:
             yaml.dump(config, file, sort_keys=False, allow_unicode=True)
 
-        # 2. Write system AppData copy (so the app always reads the right one)
+        # 2. Write system AppData copy
         sys_settings_dir = os.path.join(get_app_config_dir(), "settings")
         os.makedirs(sys_settings_dir, exist_ok=True)
         sys_path = os.path.join(sys_settings_dir, "default.yaml")
-        # Merge: preserve any keys not managed by this UI (e.g. future additions)
         existing: dict = {}
         if os.path.exists(sys_path):
             try:
@@ -133,7 +150,25 @@ def save_config(
         with open(sys_path, "w", encoding="utf-8") as file:
             yaml.dump(existing, file, sort_keys=False, allow_unicode=True)
 
+        if backend_val == "remote" and remote_server_url:
+            rem_payload = {
+                "WHISPER_LANGUAGE": language,
+                "WHISPER_COMPUTE_TYPE": compute_type,
+                "VAD_THRESHOLD": float(vad_threshold) if vad_threshold is not None else 0.5,
+                "SILENCE_DURATION_THRESHOLD": float(silence_threshold) if silence_threshold is not None else 0.6,
+                "INITIAL_PROMPT": str(initial_prompt or ""),
+            }
+            ok_rem, rem_msg = update_remote_settings(remote_server_url, rem_payload)
+            if ok_rem:
+                gr.Info(_("remote_settings_saved"))
+                return
+            else:
+                gr.Warning(f"Avviso salvataggio NAS: {rem_msg}")
+
         gr.Info(_("settings_saved_toast") if _("settings_saved_toast") != "settings_saved_toast" else "✅ Settings saved successfully!")
+    except Exception as e:
+        logging.error(f"Error saving settings: {e}")
+        gr.Warning(f"Error saving settings: {e}")
     except Exception as e:
         logging.error(f"Error saving settings: {e}")
         gr.Warning(f"Error saving settings: {e}")
@@ -473,6 +508,141 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
             status_badge = gr.Markdown(_("status_waiting"), elem_id="status_badge")
     with gr.Tabs():
         with gr.Tab(_("tab_transcription")):
+            _init_is_remote = (default_config_values.get("transcription_backend", "local") == "remote")
+            _init_remote_choices = []
+            _init_remote_active = ""
+            _init_remote_compute = "int8"
+            _init_remote_status = ""
+            if _init_is_remote:
+                try:
+                    _u = default_config_values.get("remote_server_url", "http://192.168.1.32:8088")
+                    _choices, _active, _raw_models, _err = fetch_remote_models(_u, only_downloaded=True, retries=1)
+                    if not _err:
+                        _init_remote_choices = _choices
+                        _init_remote_active = _active
+                        _ok, _h, _h_err = check_server_health(_u, retries=1)
+                        if _ok:
+                            _init_remote_compute = _h.get("compute_type", "int8")
+                            _dev_str = f"{_h.get('device', 'cpu').upper()}, {_init_remote_compute}"
+                            _init_remote_status = _("remote_connected_status").format(model=_active, device=_dev_str)
+                except Exception:
+                    pass
+
+            with gr.Row():
+                transcription_backend = gr.Radio(
+                    choices=[_("backend_local"), _("backend_remote")],
+                    value=_("backend_remote") if _init_is_remote else _("backend_local"),
+                    label=_("backend_label"),
+                )
+            with gr.Row(visible=_init_is_remote) as remote_server_box:
+                remote_server_url = gr.Textbox(
+                    label=_("remote_url_label"),
+                    value=default_config_values.get("remote_server_url", "http://192.168.1.32:8088"),
+                    scale=2,
+                )
+                remote_model = gr.Dropdown(
+                    label=_("remote_model_label"),
+                    choices=_init_remote_choices,
+                    value=_init_remote_active,
+                    scale=2,
+                    allow_custom_value=True,
+                )
+            test_remote_btn = gr.Button(_("test_connection_btn"), variant="secondary", scale=1, visible=_init_is_remote)
+            remote_status_badge = gr.Markdown(_init_remote_status, visible=_init_is_remote)
+
+            with gr.Accordion(_("configurations_accordion"), open=False) as config_accordion:
+                with gr.Accordion(label=_("explanation_accordion"), open=False):
+                    explanation_md = gr.Markdown(
+                        _("explanation_remote_text") if _init_is_remote else _("explanation_text")
+                    )
+
+                # Local Whisper hardware configurations (visible ONLY when backend is local)
+                with gr.Column(visible=not _init_is_remote) as local_only_box:
+                    with gr.Row():
+                        device = gr.Dropdown(choices=default_values['configurations']['devices'], value=default_config_values["device"], label=_("device_label"))
+                        cpu_threads = gr.Slider(
+                            minimum=1,
+                            maximum=32,
+                            value=default_config_values["cpu_threads"],
+                            step=1,
+                            label=_("cpu_threads_label"),
+                        )
+                        num_workers = gr.Slider(minimum=default_values['configurations']['num_workers']['min'], value=default_config_values["num_workers"], step=1, label=_("num_workers_label"))
+                    with gr.Row():
+                        batch_size = gr.Slider(minimum=default_values['configurations']['batch_size']['min'], value=default_config_values["batch_size"], step=1, label=_("batch_size_label"))
+                        beam_size = gr.Slider(
+                            minimum=default_values['configurations']['beam_size']['min'],
+                            value=default_config_values["beam_size"],
+                            step=1,
+                            label=_("beam_size_label"),
+                        )
+                        temperature = gr.Slider(minimum=default_values['configurations']['temperature']['min'], value=default_config_values["temperature"], step=0.1, label=_("temperature_label"))
+                    with gr.Row():
+                        condition_on_previous_text = gr.Checkbox(value=default_config_values["condition_on_previous_text"], label=_("condition_on_previous_text_label"))
+                        word_timestamps = gr.Checkbox(value=default_config_values["word_timestamps"], label=_("word_timestamps_label"))
+
+                # Core configurations (model, compute_type, language - present on both local and server)
+                _model_choices = _init_remote_choices if (_init_is_remote and _init_remote_choices) else default_values['configurations']['models']
+                _model_val = _init_remote_active if (_init_is_remote and _init_remote_active) else default_config_values["whisper_model"]
+                _compute_choices = ["int8", "float16", "auto"] if _init_is_remote else default_values['configurations']['compute_types']
+                _compute_val = _init_remote_compute if _init_is_remote else default_config_values["compute_type"]
+
+                with gr.Row():
+                    whisper_model = gr.Dropdown(
+                        choices=_model_choices,
+                        value=_model_val,
+                        label=_("whisper_model_label"),
+                        scale=2,
+                        allow_custom_value=True,
+                    )
+                    compute_type = gr.Dropdown(
+                        choices=_compute_choices,
+                        value=_compute_val,
+                        label=_("compute_type_label"),
+                        scale=1,
+                        allow_custom_value=True,
+                    )
+                    _available_languages = list(default_values['configurations']['languages'])
+                    if "auto" not in _available_languages:
+                        _available_languages = ["auto"] + _available_languages
+                    language = gr.Dropdown(
+                        choices=_available_languages,
+                        value=default_config_values["language"],
+                        label=_("language_label"),
+                        scale=1,
+                        allow_custom_value=True,
+                    )
+
+                # Remote-only configurations (VAD, silence timeout, initial prompt - returned by server)
+                with gr.Column(visible=_init_is_remote) as remote_only_box:
+                    with gr.Row():
+                        vad_threshold = gr.Slider(
+                            minimum=0.1,
+                            maximum=0.95,
+                            value=float(default_config_values.get("vad_threshold", 0.5)),
+                            step=0.05,
+                            label=_("vad_threshold_label"),
+                        )
+                        silence_threshold = gr.Slider(
+                            minimum=0.2,
+                            maximum=3.0,
+                            value=float(default_config_values.get("silence_threshold", 0.6)),
+                            step=0.1,
+                            label=_("silence_threshold_label"),
+                        )
+                    with gr.Row():
+                        initial_prompt = gr.Textbox(
+                            label=_("initial_prompt_label"),
+                            placeholder=_("initial_prompt_placeholder"),
+                            value=str(default_config_values.get("initial_prompt", "")),
+                            lines=2,
+                        )
+
+                with gr.Row():
+                    save_configurations = gr.Button(_("save_configurations"), variant="secondary", visible=not _init_is_remote)
+
+            config_path_input = gr.State("settings/default.yaml")
+
             with gr.Row():
                 file_path_input = gr.Textbox(
                     label=_("media_file_path_label"),
@@ -489,7 +659,9 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
                     placeholder=_("output_dir_placeholder"),
                     lines=1,
                     interactive=True,
+                    scale=4,
                 )
+                output_format = gr.Radio(choices=[".txt", ".md"], value=".txt", label=_("output_format_label"), scale=1)
             with gr.Row():
                 choose_output_dir_btn = gr.Button(_("choose_output_dir_btn"), variant="secondary")
 
@@ -629,28 +801,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
 
         with gr.Tab(_("tab_settings")):
             with gr.Row():
-                gr.Markdown(_("configurations_title"))
-            with gr.Row():
-                with gr.Accordion(label=_("explanation_accordion"), open=False):
-                    gr.Markdown(_("explanation_text"))
-
-            config_path_input = gr.State("settings/default.yaml")
-            with gr.Row():
-                device = gr.Dropdown(choices=default_values['configurations']['devices'], value=default_config_values["device"], label=_("device_label"))
-                cpu_threads = gr.Slider(minimum=default_values['configurations']['cpu_threads']['min'], value=default_config_values["cpu_threads"], step=1, label=_("cpu_threads_label"))
-                num_workers = gr.Slider(minimum=default_values['configurations']['num_workers']['min'], value=default_config_values["num_workers"], step=1, label=_("num_workers_label"))
-            with gr.Row():
-                language = gr.Dropdown(choices=default_values['configurations']['languages'], value=default_config_values["language"], label=_("language_label"))
-                whisper_model = gr.Dropdown(choices=default_values['configurations']['models'], value=default_config_values["whisper_model"], label=_("whisper_model_label"))
-                compute_type = gr.Dropdown(choices=default_values['configurations']['compute_types'], value=default_config_values["compute_type"], label=_("compute_type_label"))
-            with gr.Row():
-                temperature = gr.Slider(minimum=default_values['configurations']['temperature']['min'], value=default_config_values["temperature"], step=0.1, label=_("temperature_label"))
-                beam_size = gr.Slider(minimum=default_values['configurations']['beam_size']['min'], value=default_config_values["beam_size"], step=1, label=_("beam_size_label"))
-                batch_size = gr.Slider(minimum=default_values['configurations']['batch_size']['min'], value=default_config_values["batch_size"], step=1, label=_("batch_size_label"))
-            with gr.Row():
-                condition_on_previous_text = gr.Checkbox(value=default_config_values["condition_on_previous_text"], label=_("condition_on_previous_text_label"))
-                word_timestamps = gr.Checkbox(value=default_config_values["word_timestamps"], label=_("word_timestamps_label"))
-                output_format = gr.Radio(choices=[".txt", ".md"], value=".txt", label=_("output_format_label"))
+                gr.Markdown(_("settings_interface_title"))
             with gr.Row():
                 _ui_lang_choices = ["italian", "english"]
                 _ui_lang_default = default_config_values.get("ui_language", "italian")
@@ -658,8 +809,9 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
                     choices=_ui_lang_choices,
                     value=_ui_lang_default if _ui_lang_default in _ui_lang_choices else "italian",
                     label=_("ui_language_label") if _("ui_language_label") != "ui_language_label" else "🌐 Interface Language (requires restart)",
+                    scale=3,
                 )
-            save_configurations = gr.Button(_("save_configurations"), variant="secondary")
+            save_settings_btn = gr.Button(_("save_configurations"), variant="secondary", scale=1)
 
             # ── Model Manager ─────────────────────────────────────────────────────────
             with gr.Accordion(_("model_manager_accordion"), open=False):
@@ -792,6 +944,195 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         outputs=[file_path_input],
     )
 
+    def _on_backend_change(b_choice):
+        is_remote = (b_choice == _("backend_remote"))
+        exp_text = _("explanation_remote_text") if is_remote else _("explanation_text")
+        if not is_remote:
+            return (
+                gr.update(visible=False),
+                gr.update(visible=False, value=""),
+                gr.update(choices=[], value=""),
+                gr.update(choices=default_values['configurations']['models'], value=default_config_values["whisper_model"]),
+                gr.update(choices=default_values['configurations']['compute_types'], value=default_config_values["compute_type"]),
+                gr.update(visible=True),  # local_only_box (SHOW local options)
+                gr.update(visible=False), # remote_only_box (HIDE remote options)
+                gr.update(value=exp_text),
+                gr.update(visible=True),  # save_configurations (SHOW on local)
+                gr.update(visible=False), # test_remote_btn (HIDE on local)
+            )
+        # For remote: DO NOT make network calls automatically! Only show remote controls and prompt to test
+        prompt_text = _("remote_prompt_test")
+        return (
+            gr.update(visible=True),
+            gr.update(visible=True, value=prompt_text),
+            gr.update(),
+            gr.update(),
+            gr.update(choices=["int8", "float16", "auto"]),
+            gr.update(visible=False), # local_only_box (HIDES ALL NON-SERVER OPTIONS!)
+            gr.update(visible=True),  # remote_only_box (SHOWS SERVER OPTIONS!)
+            gr.update(value=exp_text),
+            gr.update(visible=False), # save_configurations (HIDE on remote)
+            gr.update(visible=True),  # test_remote_btn (SHOW on remote)
+        )
+
+    transcription_backend.change(
+        fn=_on_backend_change,
+        inputs=[transcription_backend],
+        outputs=[
+            remote_server_box,
+            remote_status_badge,
+            remote_model,
+            whisper_model,
+            compute_type,
+            local_only_box,
+            remote_only_box,
+            explanation_md,
+            save_configurations,
+            test_remote_btn,
+        ],
+    )
+
+    def _test_remote_conn(current_url):
+        # Fetch models with retries
+        choices, active_model, _raw_models, err = fetch_remote_models(current_url, only_downloaded=True, retries=3, retry_delay=1.0)
+        if err:
+            err_msg = _("remote_error_status").format(error=err)
+            gr.Warning(err_msg)
+            return (
+                gr.update(visible=True, value=err_msg),
+                gr.update(),
+                gr.update(),
+                gr.update(choices=["int8", "float16", "auto"]),
+                gr.update(),
+                gr.update(),
+                gr.update(),
+                gr.update(),
+            )
+
+        # Retrieve remote settings and health with retries
+        settings_dict, _s_err = fetch_remote_settings(current_url, retries=3, retry_delay=1.0)
+        ok, health, _h_err = check_server_health(current_url, retries=3, retry_delay=1.0)
+
+        # Extract values from server
+        active_model = settings_dict.get("WHISPER_MODEL") or active_model or (health.get("model", "") if ok else "")
+        c_type = settings_dict.get("WHISPER_COMPUTE_TYPE") or (health.get("compute_type", "int8") if ok else "int8")
+        server_lang = settings_dict.get("WHISPER_LANGUAGE") or (health.get("default_language", "it") if ok else "it")
+        server_device = settings_dict.get("WHISPER_DEVICE") or (health.get("device", "cpu") if ok else "cpu")
+        server_vad = settings_dict.get("VAD_THRESHOLD", 0.5)
+        server_silence = settings_dict.get("SILENCE_DURATION_THRESHOLD", 0.6)
+        server_prompt = settings_dict.get("INITIAL_PROMPT", "")
+
+        dev_str = f"{server_device.upper()}, {c_type}"
+        status_msg = _("remote_connected_status").format(model=active_model, device=dev_str)
+        model_val = active_model if (active_model in choices) else (choices[0] if choices else "")
+
+        # Compute updates for ⚙️ Advanced Configurations
+        lang_update = gr.update(value=server_lang.lower()) if server_lang else gr.update()
+        vad_update = gr.update(value=float(server_vad))
+        silence_update = gr.update(value=float(server_silence))
+        prompt_update = gr.update(value=str(server_prompt))
+
+        return (
+            gr.update(visible=True, value=status_msg),
+            gr.update(choices=choices, value=model_val),
+            gr.update(choices=choices, value=model_val),
+            gr.update(choices=["int8", "float16", "auto"], value=c_type),
+            lang_update,
+            vad_update,
+            silence_update,
+            prompt_update,
+        )
+
+    test_remote_btn.click(
+        fn=_test_remote_conn,
+        inputs=[remote_server_url],
+        outputs=[
+            remote_status_badge,
+            remote_model,
+            whisper_model,
+            compute_type,
+            language,
+            vad_threshold,
+            silence_threshold,
+            initial_prompt,
+        ],
+    )
+
+    def _on_remote_model_change(selected_model, current_url, current_compute):
+        if not selected_model or not current_url:
+            return gr.update(), gr.update()
+        ok, health, _h_err = check_server_health(current_url, retries=2)
+        if ok and health.get("model") == selected_model and health.get("compute_type") == current_compute:
+            dev_str = f"{health.get('device', 'cpu').upper()}, {health.get('compute_type', 'int8')}"
+            return gr.update(value=_("remote_connected_status").format(model=selected_model, device=dev_str)), gr.update(value=selected_model)
+        switched, msg = switch_remote_model(current_url, selected_model, compute_type=current_compute, retries=2)
+        if switched:
+            msg_text = _("remote_model_switched").format(model=selected_model)
+            gr.Info(msg_text)
+            ok, health, _h_err2 = check_server_health(current_url, retries=2)
+            dev_str = f"{health.get('device', 'cpu').upper()}, {health.get('compute_type', current_compute or 'int8')}" if ok else "online"
+            badge_text = _("remote_connected_status").format(model=selected_model, device=dev_str)
+            return gr.update(value=badge_text), gr.update(value=selected_model)
+        else:
+            err_text = _("remote_switch_error").format(error=msg)
+            gr.Warning(err_text)
+            return gr.update(value=err_text), gr.update()
+
+    remote_model.change(
+        fn=_on_remote_model_change,
+        inputs=[remote_model, remote_server_url, compute_type],
+        outputs=[remote_status_badge, whisper_model],
+    )
+
+    def _on_whisper_model_change(selected_model, b_choice, current_url, current_compute):
+        is_remote = (b_choice == _("backend_remote"))
+        if not is_remote or not selected_model or not current_url:
+            return gr.update(), gr.update()
+        ok, health, _h_err = check_server_health(current_url, retries=2)
+        if ok and health.get("model") == selected_model and health.get("compute_type") == current_compute:
+            dev_str = f"{health.get('device', 'cpu').upper()}, {health.get('compute_type', 'int8')}"
+            return gr.update(value=_("remote_connected_status").format(model=selected_model, device=dev_str)), gr.update(value=selected_model)
+        switched, msg = switch_remote_model(current_url, selected_model, compute_type=current_compute, retries=2)
+        if switched:
+            msg_text = _("remote_model_switched").format(model=selected_model)
+            gr.Info(msg_text)
+            ok, health, _h_err2 = check_server_health(current_url, retries=2)
+            dev_str = f"{health.get('device', 'cpu').upper()}, {health.get('compute_type', current_compute or 'int8')}" if ok else "online"
+            badge_text = _("remote_connected_status").format(model=selected_model, device=dev_str)
+            return gr.update(value=badge_text), gr.update(value=selected_model)
+        else:
+            err_text = _("remote_switch_error").format(error=msg)
+            gr.Warning(err_text)
+            return gr.update(value=err_text), gr.update()
+
+    whisper_model.change(
+        fn=_on_whisper_model_change,
+        inputs=[whisper_model, transcription_backend, remote_server_url, compute_type],
+        outputs=[remote_status_badge, remote_model],
+    )
+
+    def _on_compute_type_change(new_compute, b_choice, current_url, current_model):
+        is_remote = (b_choice == _("backend_remote"))
+        if not is_remote or not current_url or not current_model:
+            return gr.update()
+        switched, msg = switch_remote_model(current_url, current_model, compute_type=new_compute, retries=2)
+        if switched:
+            ok, health, _h_err = check_server_health(current_url, retries=2)
+            dev_str = f"{health.get('device', 'cpu').upper()}, {health.get('compute_type', new_compute)}" if ok else "online"
+            badge_text = _("remote_connected_status").format(model=current_model, device=dev_str)
+            gr.Info(f"Compute type commutato su: {new_compute}")
+            return gr.update(value=badge_text)
+        else:
+            err_text = _("remote_switch_error").format(error=msg)
+            gr.Warning(err_text)
+            return gr.update(value=err_text)
+
+    compute_type.change(
+        fn=_on_compute_type_change,
+        inputs=[compute_type, transcription_backend, remote_server_url, whisper_model],
+        outputs=[remote_status_badge],
+    )
+
     choose_output_dir_btn.click(
         fn=browse_output_folder,
         inputs=[file_path_input, output_dir_display],
@@ -920,25 +1261,31 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         ]
     )
 
-    save_configurations.click(
-        fn=save_config,
-        inputs=[
-            device,
-            cpu_threads,
-            num_workers,
-            language,
-            whisper_model,
-            compute_type,
-            temperature,
-            beam_size,
-            batch_size,
-            condition_on_previous_text,
-            word_timestamps,
-            gemini_model,
-            ui_language_dropdown,
-        ],
-        outputs=[]
-    )
+    for btn in [save_configurations, save_settings_btn]:
+        btn.click(
+            fn=save_config,
+            inputs=[
+                device,
+                cpu_threads,
+                num_workers,
+                language,
+                whisper_model,
+                compute_type,
+                temperature,
+                beam_size,
+                batch_size,
+                condition_on_previous_text,
+                word_timestamps,
+                gemini_model,
+                ui_language_dropdown,
+                transcription_backend,
+                remote_server_url,
+                vad_threshold,
+                silence_threshold,
+                initial_prompt,
+            ],
+            outputs=[]
+        )
 
     reset_button.click(
         fn=reset_fields,
@@ -946,10 +1293,13 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button, output_format, status_badge, provider, google_brand_radio]
     ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
-    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir_override="", progress=gr.Progress(track_tqdm=False)):
+    def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir_override="", backend_choice=None, remote_url="http://192.168.1.32:8088", initial_prompt="", progress=gr.Progress(track_tqdm=False)):
         if not file_paths_text or not file_paths_text.strip():
             yield _("invalid_file").format("No file selected"), None, gr.update(visible=False), gr.update(visible=False), gr.update()
             return
+
+        is_remote = (backend_choice == _("backend_remote") or backend_choice == "remote")
+        backend_val = "remote" if is_remote else "local"
 
         progress(0.05, desc=_("progress_prep_transcription"))
         yield _("transcription_in_progress"), None, gr.update(visible=False), gr.update(visible=False), gr.update()
@@ -990,12 +1340,15 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         session_transcription = ""
         last_output_path = None
 
-        progress(0.15, desc=_("progress_loading_whisper"))
+        progress_desc = _("progress_uploading_remote") if is_remote else _("progress_loading_whisper")
+        progress(0.15, desc=progress_desc)
         for transcription, output_path, _folder_path in transcribe_file(
             valid_paths, device, cpu_threads, num_workers, language,
             whisper_model, compute_type, temperature, beam_size,
             batch_size, condition_on_previous_text, word_timestamps,
-            output_format, output_dir=output_dir, common_root=common_root
+            output_format, output_dir=output_dir, common_root=common_root,
+            backend=backend_val, remote_server_url=remote_url,
+            initial_prompt=initial_prompt,
         ):
             if output_path:
                 last_output_path = output_path
@@ -1021,7 +1374,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     )
     proc_event = proc_start.then(
         fn=transcribe_wrapper,
-        inputs=[file_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format, output_dir_display],
+        inputs=[file_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format, output_dir_display, transcription_backend, remote_server_url, initial_prompt],
         outputs=[output_text, transcript_file_path, save_transcript_button, submit_query_button, file_path_input],
         stream_every=0.1
     )

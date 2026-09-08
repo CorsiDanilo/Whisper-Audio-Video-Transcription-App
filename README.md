@@ -6,6 +6,10 @@ This project is a transcription app built using the [Faster Whisper model](https
 
 ## ✨ Features
 - 🎧 Transcribe both audio and video files (e.g., MP3, MP4, AVI, etc.)
+- 🌐 **Dual Transcription Engine**: Seamlessly toggle between local Faster-Whisper processing (`🖥️ Local`) and offloading tasks to a self-hosted Whisper STT REST server (`🌐 Remote Server`, e.g., on NAS/Docker).
+- 🔄 **Remote Model Hot-Swapping & Caching**: Discover and filter only cached models on the remote server with on-the-fly model switching and compute precision selection (`int8`, `float16`, `auto`).
+- 🎛️ **Server-Side VAD & Silence Tuning**: Fine-tune Voice Activity Detection (VAD) speech thresholds and phrase-end silence duration timeouts.
+- 💬 **Custom Vocabulary & Initial Prompt**: Provide domain-specific keywords, proper nouns, and punctuation primers to guide Whisper's capitalization and terminology.
 - ⚖️ Supports multiple model sizes for performance vs. accuracy balance
 - 🚀 GPU support for faster transcription using CUDA
 - 🎥 Extracts audio from video files automatically
@@ -29,6 +33,13 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🐍 [Python 3.11+](https://apps.microsoft.com/detail/9ncvdn91xzqp)
 - 🎬 [FFmpeg](https://www.ffmpeg.org) (must be installed and added to your system's PATH)
 - 🖼️ [Gradio](https://www.gradio.app)
+
+### 🌐 Remote Server Backend (NAS / Docker)
+Whisper Utility can connect to a self-hosted Whisper STT REST server (e.g., [`whisper-stt-service`](https://github.com/CorsiDanilo/whisper-stt-service) running in Docker on a NAS or homelab server):
+- In the UI, switch **Transcription Engine** to `🌐 Remote Server`.
+- Enter your server URL (default: `http://192.168.1.32:8088`) and click **Test Connection**.
+- The app automatically verifies connectivity, queries downloaded models, syncs server compute precision, and reveals server-side controls (VAD sensitivity, silence timeout, and initial vocabulary prompt).
+- Local hardware settings (device, CPU threads, num workers) are automatically hidden to keep the interface clutter-free.
 
 ### (Optional) AI Providers
 

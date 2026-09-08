@@ -34,6 +34,7 @@ whisper-utility/
 ├── requirements_gpu.txt
 ├── runtime_hook.py
 ├── transcription.py
+├── remote_transcription.py
 ├── ui.py
 └── whisper.spec
 ```
@@ -42,8 +43,8 @@ whisper-utility/
 
 The application follows a layered architecture:
 
-1.  **UI Layer (`ui.py`, `app_main.py`):** Manages the Gradio interface and application lifecycle.
-2.  **Processing Layer (`transcription.py`, `audio_processing.py`):** Handles audio file conversion, FFmpeg operations, and the `faster-whisper` inference pipeline.
+1.  **UI Layer (`ui.py`, `app_main.py`):** Manages the Gradio interface, backend toggling, and application lifecycle.
+2.  **Processing Layer (`transcription.py`, `remote_transcription.py`, `audio_processing.py`):** Handles media extraction, local `faster-whisper` inference, and remote REST transcription communication.
 3.  **Integration Layer (`llms.py`):** Interfaces with external AI providers (Google Gemini) and local models (Ollama).
 4.  **Configuration Layer (`config.py`, `settings/`):** Manages environment-specific settings and default values.
 

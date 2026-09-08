@@ -8,11 +8,11 @@ The utility is engineered to handle diverse input formats, including WhatsApp au
 
 ## Key Features and Capabilities
 
-*   **High-Performance Transcription:** Utilizes `faster-whisper` to transcribe audio files with support for GPU acceleration and configurable batch sizes.
+*   **High-Performance Dual Engine:** Seamlessly switch between local `faster-whisper` execution (with CPU/CUDA acceleration) and offloading transcription to a self-hosted Whisper STT REST server (e.g., Docker container on NAS/homelab).
 *   **Automated Preprocessing:** The `audio_processing.py` module detects file types and automatically converts WhatsApp `.opus` files and video formats into compatible MP3 audio.
 *   **LLM Integration:** Seamlessly integrates with Google Gemini, local Ollama, and LM Studio instances via `llms.py`.
 *   **Desktop-Native Experience:** Uses `pywebview` to wrap the Gradio interface, providing a standalone application feel.
-*   **Configurable Environment:** Supports granular control over transcription parameters (temperature, beam size, word timestamps) via YAML configuration files located in `settings/`.
+*   **Configurable Environment:** Supports granular control over transcription parameters (temperature, beam size, word timestamps, VAD thresholds, initial prompt) via YAML configuration files located in `settings/`.
 *   **Portable Deployment:** Packaged as a standalone executable using `PyInstaller` with custom hooks for Gradio and multiprocessing support.
 
 ## Technology Stack
@@ -22,23 +22,28 @@ The utility is engineered to handle diverse input formats, including WhatsApp au
 | **Language** | Python 3.x |
 | **UI Framework** | Gradio |
 | **Desktop Wrapper** | pywebview |
-| **Transcription Engine** | faster-whisper |
+| **Transcription Engine** | faster-whisper (Local) / FastAPI REST (Remote) |
 | **LLM Clients** | Google GenAI SDK, Requests (for Ollama/LM Studio) |
 | **Packaging** | PyInstaller |
 | **Configuration** | PyYAML |
 
 ## High-Level Architecture
 
-The application follows a modular architecture where the UI layer orchestrates data flow between the audio processing pipeline, the transcription engine, and the LLM service layer.
+The application follows a modular architecture where the UI layer orchestrates data flow between the audio processing pipeline, the local/remote transcription engines, and the LLM service layer.
 
 ```mermaid
 graph TD
-    UI[ui.py - Gradio/pywebview] -->|User Input/File| Trans[transcription.py]
+    UI[ui.py - Gradio/pywebview] -->|Local Engine| Trans[transcription.py]
+    UI -->|Remote Engine| RemoteTrans[remote_transcription.py]
     UI -->|Query/Prompt| LLM[llms.py]
     
-    subgraph "Processing Pipeline"
+    subgraph "Local Processing Pipeline"
         Trans -->|Convert| Audio[audio_processing.py]
         Trans -->|Inference| Whisper[faster-whisper]
+    end
+
+    subgraph "Remote Processing Service"
+        RemoteTrans -->|REST API /v1/audio/transcriptions| RemoteServer[Whisper STT Server]
     end
     
     subgraph "LLM Services"
@@ -56,8 +61,9 @@ graph TD
 | File | Primary Responsibility |
 | :--- | :--- |
 | `app_main.py` | Entry point for the PyInstaller executable. |
-| `ui.py` | Gradio interface definition and event handling. |
-| `transcription.py` | Whisper model loading and inference execution. |
+| `ui.py` | Gradio interface definition, backend toggling, and event handling. |
+| `transcription.py` | Local Faster-Whisper model loading and inference execution. |
+| `remote_transcription.py` | Remote Whisper STT REST client (model switching, health, transcription). |
 | `audio_processing.py` | File conversion logic (FFmpeg wrappers). |
 | `llms.py` | API communication with Gemini, Ollama, and LM Studio. |
 | `config.py` | YAML configuration loading and logging setup. |

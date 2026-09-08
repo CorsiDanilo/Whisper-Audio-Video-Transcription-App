@@ -3,7 +3,10 @@ dist
 build
 *.log
 secrets
-.docgen-agent
 
-# graphify-axet
-.graphify/
+# Virtual environments
+.venv/
+venv/
+
+# Scripts
+scripts/

@@ -70,22 +70,28 @@ def load_default_values():
 
 def load_default_config():
     """Carica la configurazione di default dando precedenza alla cartella dati di sistema AppData."""
+    data = {}
     sys_config_path = os.path.join(get_app_config_dir(), "settings", "default.yaml")
     if os.path.exists(sys_config_path):
         try:
             with open(sys_config_path, "r", encoding="utf-8") as ymlfile:
-                data = yaml.safe_load(ymlfile)
-                if isinstance(data, dict):
-                    return data
+                loaded = yaml.safe_load(ymlfile)
+                if isinstance(loaded, dict):
+                    data = loaded
         except Exception as e:
             logging.warning(f"Error loading system config from {sys_config_path}: {e}")
 
-    local_path = "settings/default.yaml"
-    if os.path.exists(local_path):
-        with open(local_path, "r", encoding="utf-8") as ymlfile:
-            return yaml.safe_load(ymlfile)
+    if not data:
+        local_path = "settings/default.yaml"
+        if os.path.exists(local_path):
+            with open(local_path, "r", encoding="utf-8") as ymlfile:
+                loaded = yaml.safe_load(ymlfile)
+                if isinstance(loaded, dict):
+                    data = loaded
 
-    return {}
+    data.setdefault("transcription_backend", "local")
+    data.setdefault("remote_server_url", "http://192.168.1.32:8088")
+    return data
     
 def get_gemini_api_key():
     """Retrieve the Gemini API key without logging or exposing the secret."""
@@ -122,7 +128,10 @@ def get_gemini_api_key():
 def setup_logging(log_file="whisper.log"):
     """Configura il logging: elimina il file di log precedente e imposta i gestori."""
     if os.path.exists(log_file):
-        os.remove(log_file)
+        try:
+            os.remove(log_file)
+        except OSError:
+            pass
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
