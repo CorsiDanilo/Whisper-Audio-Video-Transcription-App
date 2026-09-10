@@ -9,7 +9,7 @@ from typing import Dict, Any
 from packaging.version import parse as parse_version
 from installer.manifest import Manifest, ManifestError
 
-CURRENT_VERSION = "3.2.0"
+CURRENT_VERSION = "3.2.1"
 
 
 def check_for_updates() -> Dict[str, Any]:

@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.2.1] - 2026-09-10
+
+### Added
+- **Automatic Model Fallback & Resiliency for Google Gemini**: Implemented sequential cascading fallback in `query_gemini` (`llms.py`). If a requested or default model fails (e.g., HTTP 429 quota exhaustion, HTTP 500 upstream server error, HTTP 404 unsupported model), the system immediately issues a transient alert to the UI and retries with the next best available model in order (`gemini-flash-latest`, `gemini-3.8-flash`, `gemini-3.7-flash`, etc.) without interrupting transcription workflows or crashing the application.
+- **In-Memory Models Cache**: Added a 15-minute in-memory cache to `get_sorted_gemini_models` in `llms.py` to eliminate redundant remote Google API roundtrips (`client.models.list()`) on consecutive requests and dropdown interactions.
+
+### Changed
+- **Comprehensive English Codebase Localization**: Translated all internal comments, docstrings, and logging messages in `llms.py` and `scripts/list_gemini_models.py` into English for clean, professional consistency.
+- **Console Output Safety**: Replaced problematic Unicode alert symbols with standard ASCII tags in terminal notices to ensure complete cross-platform compatibility on Windows consoles without UTF-8 reconfiguration.
+
 ## [3.2.0] - 2026-09-08
 
 ### Added

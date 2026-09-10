@@ -439,8 +439,9 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
             return
 
         # Use Gemini
+        api_key = get_gemini_api_key()
         client = initialize_client()
-        if not client:
+        if not client or not api_key:
             yield "Error: Gemini API key not found."
             return
 
@@ -459,40 +460,110 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
 
         config = get_gemini_config(system_instruction=sys_prompt)
 
-        accumulated = ""
-        for chunk in client.models.generate_content_stream(
-            model=gemini_model,
-            contents=[user_prompt],
-            config=config,
-        ):
-            if chunk.text:
-                accumulated += chunk.text
-                yield accumulated
+        # Build candidate models sequence for fallback:
+        # 1. User-selected model (if specified)
+        # 2. All other valid models ordered from newest/best downwards
+        available_models = get_sorted_gemini_models(api_key)
+        candidate_models = []
+        if gemini_model and str(gemini_model).strip():
+            candidate_models.append(str(gemini_model).strip())
+        for m in available_models:
+            if m not in candidate_models:
+                candidate_models.append(m)
+
+        if not candidate_models:
+            candidate_models = ["gemini-flash-latest", "gemini-3.8-flash", "gemini-2.5-flash"]
+
+        last_error = None
+        for i, current_model in enumerate(candidate_models):
+            accumulated = ""
+            received_any_chunk = False
+            try:
+                logging.info(f"Attempting query to Gemini with model: '{current_model}' ({i+1}/{len(candidate_models)})")
+                stream = client.models.generate_content_stream(
+                    model=current_model,
+                    contents=[user_prompt],
+                    config=config,
+                )
+                for chunk in stream:
+                    if chunk.text:
+                        received_any_chunk = True
+                        accumulated += chunk.text
+                        yield accumulated
+
+                # If text was successfully generated, request is complete
+                if received_any_chunk and accumulated.strip():
+                    return
+
+            except Exception as e:
+                last_error = e
+                logging.warning(f"Gemini query error with model '{current_model}': {e}")
+
+                # If there are other models in the fallback chain, try the next one
+                if i + 1 < len(candidate_models):
+                    next_model = candidate_models[i + 1]
+                    err_str = str(e)
+                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                        err_summary = "Quota esaurita / Rate limit (429)"
+                    elif "500" in err_str or "INTERNAL" in err_str:
+                        err_summary = "Errore server Google (500)"
+                    elif "404" in err_str or "NOT_FOUND" in err_str:
+                        err_summary = "Modello non supportato (404)"
+                    else:
+                        err_summary = err_str.split("\n")[0][:45]
+
+                    if is_english:
+                        notice = f"[!] Model '{current_model}' unavailable ({err_summary}). Retrying with '{next_model}'...\n\n"
+                    else:
+                        notice = f"[!] Modello '{current_model}' non disponibile ({err_summary}). Tentativo con '{next_model}' in corso...\n\n"
+
+                    yield notice
+                    time.sleep(0.3)
+                    continue
+                else:
+                    break
+
+        err_detail = str(last_error) if last_error else "All candidate models failed."
+        logging.error(f"All candidate Gemini models failed: {err_detail}")
+        if is_english:
+            yield f"Error querying AI provider: All candidate Gemini models failed. Last error: {err_detail}"
+        else:
+            yield f"Errore durante la richiesta a Gemini: tutti i modelli disponibili hanno fallito. Ultimo errore: {err_detail}"
     except Exception as e:
         logging.error(f"Error querying AI provider: {e}")
         yield f"Error querying AI provider: {e}"
 
 
-def get_sorted_gemini_models(api_key: str) -> list[str]:
+_GEMINI_MODELS_CACHE = {"key": None, "models": [], "timestamp": 0}
+
+
+def get_sorted_gemini_models(api_key: str, force_refresh: bool = False) -> list[str]:
     """
-    Recupera tutti i modelli Gemini e Gemma disponibili tramite API
-    e li ordina posizionando il più recente all'inizio.
+    Retrieve all available Gemini and Gemma models via API
+    and sort them placing the most recent/best first.
+    Includes a 15-minute cache to avoid repeated client.models.list() calls.
     """
     if not api_key:
         return []
-        
+
+    global _GEMINI_MODELS_CACHE
+    now = time.time()
+    if not force_refresh and _GEMINI_MODELS_CACHE["key"] == api_key and _GEMINI_MODELS_CACHE["models"]:
+        if (now - _GEMINI_MODELS_CACHE["timestamp"]) < 900:
+            return list(_GEMINI_MODELS_CACHE["models"])
+
     try:
         import re
         client = genai.Client(api_key=api_key)
         retrieved_models = []
-        
-        # 1. Recupera i modelli dall'API
+
+        # 1. Retrieve models from API
         for model in client.models.list():
             name_lower = model.name.lower()
-            # Includi solo modelli generativi per testo/visione che siano Gemini o Gemma
+            # Include only generative text/vision models matching Gemini or Gemma
             if model.supported_actions and "generateContent" in model.supported_actions:
                 if "gemini" in name_lower or "gemma" in name_lower:
-                    # Escludi esplicitamente modelli di embeddings, audio, image, tts, video, tool, robotics, computer
+                    # Explicitly exclude embeddings, audio, image, tts, video, tool, robotics, and computer models
                     exclude_keywords = ["embed", "audio", "image", "tts", "video", "tool", "robotics", "computer"]
                     if any(kw in name_lower for kw in exclude_keywords):
                         continue
@@ -507,18 +578,17 @@ def get_sorted_gemini_models(api_key: str) -> list[str]:
         if not retrieved_models:
             retrieved_models = always_present.copy()
 
-
-        # 2. Algoritmo di ordinamento semantico (Latest-First)
+        # 2. Semantic sorting algorithm (Latest-First)
         def get_sort_key(name):
             name_lower = name.lower()
-            
-            # Priorità per i modelli 'latest' (0 = prima, 1 = dopo)
+
+            # Priority for 'latest' models (0 = first, 1 = after)
             is_latest = 0 if "latest" in name_lower else 1
-            
-            # Priorità del brand (Gemini prima di Gemma)
+
+            # Brand priority (Gemini before Gemma)
             brand_priority = 1 if "gemini" in name_lower else 2
-            
-            # Estrazione della versione numerica principale
+
+            # Extract main numeric version
             version = 1.0
             brand_match = re.search(r'(?:gemini|gemma)-?(\d+(?:\.\d+)?)', name_lower)
             if brand_match:
@@ -529,24 +599,26 @@ def get_sorted_gemini_models(api_key: str) -> list[str]:
                     version = 1.0
                 else:
                     version = float(val_str)
-                    
-            # Priorità del tipo di modello (preferiamo 'flash' per il default, poi 'pro', poi altri)
+
+            # Flavor priority (prefer 'flash' as default, then 'pro', then others)
             flavor_priority = 3
             if "flash" in name_lower:
                 flavor_priority = 1
             elif "pro" in name_lower:
                 flavor_priority = 2
-                
-            # Restituiamo una tupla per ordinare:
-            # - is_latest (latest in cima)
-            # - version decrescente (-version)
-            # - brand_priority crescente (Gemini prima di Gemma)
-            # - flavor_priority crescente (Flash prima di Pro)
-            # - nome alfabetico decrescente per tie-break
+
+            # Return a sort key tuple:
+            # - is_latest (latest on top)
+            # - descending version (-version)
+            # - ascending brand_priority (Gemini before Gemma)
+            # - ascending flavor_priority (Flash before Pro)
+            # - descending alphabetical name for tie-breaking
             return (is_latest, -version, brand_priority, flavor_priority, name_lower)
 
-        return sorted(retrieved_models, key=get_sort_key)
-        
+        sorted_models = sorted(retrieved_models, key=get_sort_key)
+        _GEMINI_MODELS_CACHE = {"key": api_key, "models": sorted_models, "timestamp": now}
+        return list(sorted_models)
+
     except Exception as e:
-        logging.error(f"Impossibile connettersi a Gemini API o recuperare i modelli: {e}")
+        logging.error(f"Failed to connect to Gemini API or retrieve models: {e}")
         return ["gemini-flash-latest", "gemini-flash-lite-latest"]

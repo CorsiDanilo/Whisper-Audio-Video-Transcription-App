@@ -108,9 +108,10 @@ If `query_ollama` fails, verify the local daemon status:
 *   **Check Port:** Ensure `http://localhost:11434` is reachable.
 *   **Model Availability:** Use `list_ollama_models()` to verify the application can communicate with the daemon. If the list is empty, the daemon may be unreachable or no models are installed.
 
-### Gemini API Errors
+### Gemini API Errors & Automatic Cascade Fallback
 *   **Invalid Key:** Ensure `config.get_gemini_api_key()` returns a valid string.
-*   **Quota Limits:** If the API returns 429 errors, verify your Google Cloud project quota in the Google AI Studio console.
+*   **Automatic Model Fallback:** Starting in version 3.2.1, `query_gemini` incorporates a sequential cascading fallback mechanism. If the requested model encounters an HTTP 429 (quota exhaustion / rate limiting), HTTP 500 (upstream server error), or HTTP 404 (model deprecated or unavailable for the current account), the system displays a transient warning in the UI and automatically fails over to the next best model in sequence (e.g., `gemini-flash-latest`, `gemini-3.8-flash`, `gemini-3.7-flash`, etc.) until a successful response is generated.
+*   **In-Memory Models Cache:** Available Gemini models retrieved via `get_sorted_gemini_models` are cached in memory for 15 minutes to eliminate redundant network roundtrips to `client.models.list()`.
 
 ---
 

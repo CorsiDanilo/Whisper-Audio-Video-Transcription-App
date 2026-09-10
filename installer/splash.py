@@ -149,7 +149,7 @@ class InstallerSplashScreen:
         # Version label
         tk.Label(
             inner,
-            text="v3.2.0",
+            text="v3.2.1",
             bg=_BG,
             fg=_MUTED,
             font=("Segoe UI", 8),

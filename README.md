@@ -14,6 +14,7 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🚀 GPU support for faster transcription using CUDA
 - 🎥 Extracts audio from video files automatically
 - 🔍 High-precision transcription with options for beam search and other configurations
+- 🤖 **Resilient AI Post-Processing with Cascade Fallback**: Post-process, format, or query transcripts with Google Gemini, Ollama, or LM Studio. Includes automatic cascade model fallback for Gemini that seamlessly switches to the next available model upon encountering quota limits (HTTP 429) or upstream errors.
 - 🗂️ **Clean Tabbed Layout**: Intuitive navigation with dedicated `🎙️ Transcription` and `⚙️ Settings` tabs to prevent scrollbar clutter and provide an ultra-clean workspace.
 - 📊 **Dedicated Status Badge & Progress Tracking**: Real-time color-coded status badge (`⚪ Waiting`, `🟡 Transcribing...`, `🟢 Completed`, `🔴 Interrupted`) with phase progress bars and Web Audio sound notifications upon completion.
 - 🌐 **Fully Localized UI**: Complete bilingual support (English and Italian) backed by `settings/locales.yaml` for all controls, labels, progress indicators, and status messages.
@@ -54,13 +55,9 @@ This app can analyze the transcript using either **Ollama (local)** or **Google 
     - In the UI, open the **AI Provider** box, choose **Ollama**, then pick the model from **Choose Ollama Model**.
 
 - **Gemini (cloud)**
-    - Recommended: set the `GEMINI_API_KEY` environment variable.
-    - Create (or edit) the file `config/gemini.yaml` with your API key:
-        ```yaml
-        gemini_api_key: "YOUR_KEY_HERE"
-        ```
-    - Restart the app: the UI will show Gemini options (provider + **Choose Gemini Model**).
-    - Note: keep this key private and don’t commit it to git.
+    - Recommended: set the `GEMINI_API_KEY` environment variable or configure it via the setup wizard.
+    - Features **automatic cascade model fallback**: if a chosen model hits quota limits (HTTP 429) or temporary server errors (HTTP 500), the app automatically shifts to the next best model in sequence (e.g., `gemini-flash-latest`, `gemini-3.8-flash`, etc.) without interrupting your work.
+    - Keep this key private and don’t commit it to git.
 
 - **LM Studio (local)**
     - Launch LM Studio and start the Local Server (usually on `http://localhost:1234`).
