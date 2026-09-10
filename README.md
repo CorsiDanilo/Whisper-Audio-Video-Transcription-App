@@ -20,7 +20,7 @@ This project is a transcription app built using the [Faster Whisper model](https
 - 🌐 **Fully Localized UI**: Complete bilingual support (English and Italian) backed by `settings/locales.yaml` for all controls, labels, progress indicators, and status messages.
 - ⚙️ **Smart Setup Customization & Non-Destructive Preservations**: Interactive wizard options for Gemini API key, UI language, default Whisper model, computation device (CUDA/CPU), and CPU threads. Pre-fills and preserves pre-existing user settings on upgrades.
 - 📂 **OS-Native System AppData Storage**: User preferences and API keys are stored safely in system configuration locations (`%APPDATA%\WhisperUtility` on Windows, `~/Library/Application Support/WhisperUtility` on macOS, `~/.config/whisper-utility` on Linux), isolating user data from application binaries.
-- 🔄 **In-App Auto-Updater**: One-click update check against remote GitHub releases and direct installer launcher right from the Gradio Settings tab.
+- 🔄 **In-App Auto-Updater & Reinstaller**: One-click update check against remote GitHub releases with real-time UI status feedback, decoupled background execution (`pythonw`), frozen standalone detection with GitHub releases fallback, and on-demand repair/reinstallation of the current version.
 - ⬇️ Save transcripts and converted/extracted `.mp3` audio files in custom timestamped output folders (`YYYY-MM-DD_HH-MM-SS_transcription`), preserving folder structure and producing combined session files.
 
 ## Demo

@@ -3,6 +3,11 @@
 ## [3.2.1] - 2026-09-10
 
 ### Added
+- **Interactive Auto-Updater & Reinstall Flow**:
+  - Added real-time in-app status updates to the updater panel in `ui.py` so checking or launching setup immediately updates `update_status_md` with clear feedback.
+  - Added support for reinstalling or repairing the current version when the application is already up to date, avoiding dead-end UI states.
+  - Enhanced detached process spawning in `updater.py` with `subprocess.CREATE_NEW_PROCESS_GROUP`, `close_fds=True`, and `pythonw.exe` preference on Windows to eliminate console pop-up flicker and fix execution failures in virtual environment wrappers.
+  - Added frozen standalone detection to find setup executables (`WhisperUtilitySetup_Windows.exe`, `WhisperUtilitySetup.exe`) or seamlessly fallback to the official GitHub releases page in the default web browser.
 - **Automatic Model Fallback & Resiliency for Google Gemini**: Implemented sequential cascading fallback in `query_gemini` (`llms.py`). If a requested or default model fails (e.g., HTTP 429 quota exhaustion, HTTP 500 upstream server error, HTTP 404 unsupported model), the system immediately issues a transient alert to the UI and retries with the next best available model in order (`gemini-flash-latest`, `gemini-3.8-flash`, `gemini-3.7-flash`, etc.) without interrupting transcription workflows or crashing the application.
 - **In-Memory Models Cache**: Added a 15-minute in-memory cache to `get_sorted_gemini_models` in `llms.py` to eliminate redundant remote Google API roundtrips (`client.models.list()`) on consecutive requests and dropdown interactions.
 

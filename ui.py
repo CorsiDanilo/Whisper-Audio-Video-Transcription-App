@@ -1484,13 +1484,16 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         res = check_for_updates()
         if res.get("has_update"):
             msg = _("update_available").format(latest=res['latest_version'], current=CURRENT_VERSION)
-            return msg, gr.update(visible=True)
+            btn_label = _("updater_launch_update_btn").format(latest=res['latest_version'])
+            return msg, gr.update(value=btn_label, variant="primary", visible=True)
         elif "check_failed" in str(res.get("status")):
             msg = _("update_check_failed").format(current=CURRENT_VERSION)
-            return msg, gr.update(visible=False)
+            btn_label = _("updater_reinstall_btn").format(version=CURRENT_VERSION)
+            return msg, gr.update(value=btn_label, variant="secondary", visible=True)
         else:
             msg = _("update_up_to_date").format(current=CURRENT_VERSION)
-            return msg, gr.update(visible=False)
+            btn_label = _("updater_reinstall_btn").format(version=CURRENT_VERSION)
+            return msg, gr.update(value=btn_label, variant="secondary", visible=True)
 
     check_updates_btn.click(
         fn=on_check_updates,
@@ -1499,14 +1502,23 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     )
 
     def on_launch_updater():
-        success = launch_installer_update()
+        success, outcome = launch_installer_update()
         if success:
-            gr.Info(_("update_installer_launched"))
+            if outcome == "opened_browser":
+                msg = _("updater_launched_browser")
+                gr.Info(msg)
+                return f"🌐 **{msg}**"
+            else:
+                msg = _("update_installer_launched")
+                gr.Info(msg)
+                return f"🚀 **{msg}**"
         else:
-            gr.Error(_("update_installer_failed"))
+            err = _("update_installer_failed")
+            gr.Error(err)
+            return f"❌ **{err}** (`{outcome}`)"
 
     launch_updater_btn.click(
         fn=on_launch_updater,
         inputs=[],
-        outputs=[]
+        outputs=[update_status_md]
     )

@@ -183,6 +183,10 @@ english:
   updater_title: '### 🔄 Application Update Check'
   updater_check_btn: 🔍 Check for Updates
   updater_launch_btn: 🚀 Launch Update
+  updater_launch_update_btn: "🚀 Download & Install v{latest}"
+  updater_reinstall_btn: "🔄 Reinstall / Repair v{version}"
+  updater_starting: "⏳ Launching setup wizard in a new window..."
+  updater_launched_browser: "🌐 Opened GitHub Releases page in your browser."
   update_available: "🚀 **New version v{latest} available!** (Current: `v{current}`)"
   update_check_failed: "⚠ **Failed to check for updates** (Current: `v{current}`)"
   update_up_to_date: "✅ **Whisper Utility is up to date (`v{current}`)**"
@@ -401,6 +405,10 @@ italian:
   updater_title: '### 🔄 Controllo Aggiornamenti Applicazione'
   updater_check_btn: 🔍 Verifica Aggiornamenti
   updater_launch_btn: 🚀 Avvia Aggiornamento
+  updater_launch_update_btn: "🚀 Scarica e Installa v{latest}"
+  updater_reinstall_btn: "🔄 Reinstalla / Ripristina v{version}"
+  updater_starting: "⏳ Avvio del programma di installazione guidata in corso..."
+  updater_launched_browser: "🌐 Pagina delle release di GitHub aperta nel browser."
   update_available: "🚀 **Nuova versione v{latest} disponibile!** (Attuale: `v{current}`)"
   update_check_failed: "⚠ **Impossibile verificare aggiornamenti** (Attuale: `v{current}`)"
   update_up_to_date: "✅ **Whisper Utility è aggiornato all'ultima versione (`v{current}`)**"

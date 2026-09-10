@@ -106,6 +106,17 @@ config = load_default_config()
 # Access parameters like config['whisper_model'] or config['device']
 ```
 
+## Smart Installer & In-App Auto-Updater
+
+Whisper Utility provides a built-in update checking and installation mechanism:
+
+- **Interactive Check**: In the Gradio UI under `Settings` (`Configurazioni`), click **Check for Updates** (`Verifica Aggiornamenti`).
+- **Dynamic Action**:
+  - If a newer release is published on GitHub, a **Download & Install v{latest}** button appears.
+  - If the application is already up to date, a **Reinstall / Repair Current Version** button is available, allowing users to re-run setup and repair components or configuration on demand.
+- **Detached Process Execution**: The installer wizard launches as a detached background process (using `pythonw.exe` on Windows) so that the running web server and UI remain responsive.
+- **Frozen Executable Fallback**: When packaged with PyInstaller, the updater detects bundled `WhisperUtilitySetup_Windows.exe` or redirects automatically to GitHub Releases if a standalone setup binary is not co-located.
+
 ## Troubleshooting
 
 ### FFmpeg Errors
