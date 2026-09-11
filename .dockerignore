@@ -8,7 +8,6 @@ __pycache__
 .pytest_cache
 .ruff_cache
 .docgen-agent
-.graphify
 docs/
 outputs/
 whisper.log
