@@ -10,7 +10,7 @@ from typing import Dict, Any, Tuple
 from packaging.version import parse as parse_version
 from installer.manifest import Manifest, ManifestError
 
-CURRENT_VERSION = "3.2.1"
+CURRENT_VERSION = "3.2.2"
 RELEASES_URL = "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/latest"
 
 

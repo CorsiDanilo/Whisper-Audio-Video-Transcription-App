@@ -198,8 +198,10 @@ english:
   remote_url_label: Remote Server URL
   remote_model_label: Active Model
   test_connection_btn: 🔍 Test Connection
-  remote_connected_status: "🟢 **Connected!** Active model: `{model}` ({device})"
-  remote_error_status: "🔴 **Connection error:** {error}"
+  remote_status_label: Connection Status
+  remote_status_waiting: "⚪ Waiting for connection..."
+  remote_connected_status: "🟢 Connection established successfully ({model} - {device})"
+  remote_error_status: "🔴 Connection error: {error}"
   progress_uploading_remote: Uploading audio to remote server (/v1/audio/transcriptions)...
   progress_transcribing_remote: Remote transcription in progress...
   remote_model_switched: "✅ Remote model successfully switched to: `{model}`"
@@ -420,8 +422,10 @@ italian:
   remote_url_label: URL Server Remoto
   remote_model_label: Modello attivo 
   test_connection_btn: 🔍 Test Connessione
-  remote_connected_status: "🟢 **Connesso!** Modello attivo: `{model}` ({device})"
-  remote_error_status: "🔴 **Errore connessione:** {error}"
+  remote_status_label: Stato Connessione
+  remote_status_waiting: "⚪ In attesa di connessione..."
+  remote_connected_status: "🟢 Connessione stabilita con successo ({model} - {device})"
+  remote_error_status: "🔴 Errore connessione: {error}"
   progress_uploading_remote: Invio audio al server remoto (/v1/audio/transcriptions)...
   progress_transcribing_remote: Trascrizione remota in corso...
   remote_model_switched: "✅ Modello sul server commutato con successo in: `{model}`"

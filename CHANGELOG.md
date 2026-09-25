@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.2.2] - 2026-09-25
+
+### Modifiche
+- **Rimozione dropdown modello duplicato nel backend remoto**: Il selettore `remote_model` presente nella riga superiore dell'interfaccia (accanto all'URL del server) è stato eliminato. Il modello attivo viene ora selezionato esclusivamente tramite il dropdown `Whisper Model` all'interno di `⚙️ Configurazioni Avanzate`, rimuovendo ogni ridondanza visiva.
+- **Nuovo widget di stato connessione**: Al posto del dropdown rimosso viene ora mostrata una `gr.Textbox` in sola lettura (`remote_status`) che riporta in tempo reale lo stato della connessione con il server remoto:
+  - `⚪ In attesa di connessione...` — stato iniziale all'avvio o al passaggio al backend remoto.
+  - `🟢 Connessione stabilita con successo ({model} - {device})` — dopo un test di connessione riuscito.
+  - `🔴 Errore connessione: {error}` — in caso di fallimento della connessione.
+- **Rimozione del blocco di rete all'avvio**: L'inizializzazione della UI non effettua più chiamate HTTP (`fetch_remote_models`, `check_server_health`) al lancio dell'applicazione. L'app si avvia immediatamente senza ritardi di rete, anche se il backend predefinito è quello remoto.
+- **Rimozione del badge di stato Markdown** (`remote_status_badge`): sostituito dalla nuova `remote_status` Textbox. Il formato dei messaggi è stato aggiornato da Markdown a testo piano per compatibilità con il widget.
+- **Eliminazione di `_on_remote_model_change`**: L'handler dedicato al cambio del dropdown `remote_model` è stato rimosso insieme alla registrazione dell'evento `remote_model.change`. La logica di switch del modello sul server è interamente gestita da `_on_whisper_model_change`.
+- **Aggiornamento handler `_on_backend_change`**: Ora emette un solo output per lo stato connessione (`remote_status`) invece di due output separati (`remote_status_badge` + `remote_model`). Al passaggio al backend remoto imposta lo stato su "In attesa di connessione".
+- **Aggiornamento handler `_test_remote_conn`**: Passa da 8 a 7 output, eliminando l'aggiornamento ridondante di `remote_model`; popola solo `whisper_model` con i modelli disponibili sul server.
+- **Aggiornamento handler `_on_whisper_model_change`**: Restituisce un singolo valore (`remote_status`) invece di una coppia.
+- **Aggiornamento handler `_on_compute_type_change`**: L'output punta ora a `remote_status` anziché al precedente `remote_status_badge`.
+
+### Localizzazione
+- Aggiunte 4 nuove chiavi in `settings/locales.yaml` (inglese + italiano):
+  - `remote_status_label` — etichetta del widget di stato (`Connection Status` / `Stato Connessione`).
+  - `remote_status_waiting` — testo di attesa (`⚪ Waiting for connection...` / `⚪ In attesa di connessione...`).
+  - `remote_connected_status` — messaggio di connessione riuscita (formato testo piano, senza Markdown).
+  - `remote_error_status` — messaggio di errore connessione (formato testo piano, senza Markdown).
+
 ## [3.2.1] - 2026-09-10
 
 ### Added

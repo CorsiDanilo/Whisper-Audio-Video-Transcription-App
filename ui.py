@@ -509,24 +509,6 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     with gr.Tabs():
         with gr.Tab(_("tab_transcription")):
             _init_is_remote = (default_config_values.get("transcription_backend", "local") == "remote")
-            _init_remote_choices = []
-            _init_remote_active = ""
-            _init_remote_compute = "int8"
-            _init_remote_status = ""
-            if _init_is_remote:
-                try:
-                    _u = default_config_values.get("remote_server_url", "http://192.168.1.32:8088")
-                    _choices, _active, _raw_models, _err = fetch_remote_models(_u, only_downloaded=True, retries=1)
-                    if not _err:
-                        _init_remote_choices = _choices
-                        _init_remote_active = _active
-                        _ok, _h, _h_err = check_server_health(_u, retries=1)
-                        if _ok:
-                            _init_remote_compute = _h.get("compute_type", "int8")
-                            _dev_str = f"{_h.get('device', 'cpu').upper()}, {_init_remote_compute}"
-                            _init_remote_status = _("remote_connected_status").format(model=_active, device=_dev_str)
-                except Exception:
-                    pass
 
             with gr.Row():
                 transcription_backend = gr.Radio(
@@ -542,13 +524,19 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
                 )
                 remote_model = gr.Dropdown(
                     label=_("remote_model_label"),
-                    choices=_init_remote_choices,
-                    value=_init_remote_active,
+                    choices=[],
+                    value="",
                     scale=2,
                     allow_custom_value=True,
+                    visible=False,
+                )
+                remote_status = gr.Textbox(
+                    label=_("remote_status_label"),
+                    value=_("remote_status_waiting"),
+                    interactive=False,
+                    scale=2,
                 )
             test_remote_btn = gr.Button(_("test_connection_btn"), variant="secondary", scale=1, visible=_init_is_remote)
-            remote_status_badge = gr.Markdown(_init_remote_status, visible=_init_is_remote)
 
             with gr.Accordion(_("configurations_accordion"), open=False) as config_accordion:
                 with gr.Accordion(label=_("explanation_accordion"), open=False):
@@ -950,8 +938,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         if not is_remote:
             return (
                 gr.update(visible=False),
-                gr.update(visible=False, value=""),
-                gr.update(choices=[], value=""),
+                gr.update(value=""),
                 gr.update(choices=default_values['configurations']['models'], value=default_config_values["whisper_model"]),
                 gr.update(choices=default_values['configurations']['compute_types'], value=default_config_values["compute_type"]),
                 gr.update(visible=True),  # local_only_box (SHOW local options)
@@ -961,11 +948,9 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
                 gr.update(visible=False), # test_remote_btn (HIDE on local)
             )
         # For remote: DO NOT make network calls automatically! Only show remote controls and prompt to test
-        prompt_text = _("remote_prompt_test")
         return (
             gr.update(visible=True),
-            gr.update(visible=True, value=prompt_text),
-            gr.update(),
+            gr.update(value=_("remote_status_waiting")),
             gr.update(),
             gr.update(choices=["int8", "float16", "auto"]),
             gr.update(visible=False), # local_only_box (HIDES ALL NON-SERVER OPTIONS!)
@@ -980,8 +965,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         inputs=[transcription_backend],
         outputs=[
             remote_server_box,
-            remote_status_badge,
-            remote_model,
+            remote_status,
             whisper_model,
             compute_type,
             local_only_box,
@@ -999,8 +983,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
             err_msg = _("remote_error_status").format(error=err)
             gr.Warning(err_msg)
             return (
-                gr.update(visible=True, value=err_msg),
-                gr.update(),
+                gr.update(value=err_msg),
                 gr.update(),
                 gr.update(choices=["int8", "float16", "auto"]),
                 gr.update(),
@@ -1033,8 +1016,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         prompt_update = gr.update(value=str(server_prompt))
 
         return (
-            gr.update(visible=True, value=status_msg),
-            gr.update(choices=choices, value=model_val),
+            gr.update(value=status_msg),
             gr.update(choices=choices, value=model_val),
             gr.update(choices=["int8", "float16", "auto"], value=c_type),
             lang_update,
@@ -1047,8 +1029,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         fn=_test_remote_conn,
         inputs=[remote_server_url],
         outputs=[
-            remote_status_badge,
-            remote_model,
+            remote_status,
             whisper_model,
             compute_type,
             language,
@@ -1058,40 +1039,15 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
         ],
     )
 
-    def _on_remote_model_change(selected_model, current_url, current_compute):
-        if not selected_model or not current_url:
-            return gr.update(), gr.update()
-        ok, health, _h_err = check_server_health(current_url, retries=2)
-        if ok and health.get("model") == selected_model and health.get("compute_type") == current_compute:
-            dev_str = f"{health.get('device', 'cpu').upper()}, {health.get('compute_type', 'int8')}"
-            return gr.update(value=_("remote_connected_status").format(model=selected_model, device=dev_str)), gr.update(value=selected_model)
-        switched, msg = switch_remote_model(current_url, selected_model, compute_type=current_compute, retries=2)
-        if switched:
-            msg_text = _("remote_model_switched").format(model=selected_model)
-            gr.Info(msg_text)
-            ok, health, _h_err2 = check_server_health(current_url, retries=2)
-            dev_str = f"{health.get('device', 'cpu').upper()}, {health.get('compute_type', current_compute or 'int8')}" if ok else "online"
-            badge_text = _("remote_connected_status").format(model=selected_model, device=dev_str)
-            return gr.update(value=badge_text), gr.update(value=selected_model)
-        else:
-            err_text = _("remote_switch_error").format(error=msg)
-            gr.Warning(err_text)
-            return gr.update(value=err_text), gr.update()
-
-    remote_model.change(
-        fn=_on_remote_model_change,
-        inputs=[remote_model, remote_server_url, compute_type],
-        outputs=[remote_status_badge, whisper_model],
-    )
 
     def _on_whisper_model_change(selected_model, b_choice, current_url, current_compute):
         is_remote = (b_choice == _("backend_remote"))
         if not is_remote or not selected_model or not current_url:
-            return gr.update(), gr.update()
+            return gr.update()
         ok, health, _h_err = check_server_health(current_url, retries=2)
         if ok and health.get("model") == selected_model and health.get("compute_type") == current_compute:
             dev_str = f"{health.get('device', 'cpu').upper()}, {health.get('compute_type', 'int8')}"
-            return gr.update(value=_("remote_connected_status").format(model=selected_model, device=dev_str)), gr.update(value=selected_model)
+            return gr.update(value=_("remote_connected_status").format(model=selected_model, device=dev_str))
         switched, msg = switch_remote_model(current_url, selected_model, compute_type=current_compute, retries=2)
         if switched:
             msg_text = _("remote_model_switched").format(model=selected_model)
@@ -1099,16 +1055,16 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
             ok, health, _h_err2 = check_server_health(current_url, retries=2)
             dev_str = f"{health.get('device', 'cpu').upper()}, {health.get('compute_type', current_compute or 'int8')}" if ok else "online"
             badge_text = _("remote_connected_status").format(model=selected_model, device=dev_str)
-            return gr.update(value=badge_text), gr.update(value=selected_model)
+            return gr.update(value=badge_text)
         else:
             err_text = _("remote_switch_error").format(error=msg)
             gr.Warning(err_text)
-            return gr.update(value=err_text), gr.update()
+            return gr.update(value=err_text)
 
     whisper_model.change(
         fn=_on_whisper_model_change,
         inputs=[whisper_model, transcription_backend, remote_server_url, compute_type],
-        outputs=[remote_status_badge, remote_model],
+        outputs=[remote_status],
     )
 
     def _on_compute_type_change(new_compute, b_choice, current_url, current_model):
@@ -1130,7 +1086,7 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     compute_type.change(
         fn=_on_compute_type_change,
         inputs=[compute_type, transcription_backend, remote_server_url, whisper_model],
-        outputs=[remote_status_badge],
+        outputs=[remote_status],
     )
 
     choose_output_dir_btn.click(
