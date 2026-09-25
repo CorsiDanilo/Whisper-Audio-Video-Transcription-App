@@ -2,25 +2,49 @@
 updater.py - Version checker and installer launcher for Whisper Utility.
 """
 
+import json
 import os
-import sys
 import subprocess
+import sys
 import webbrowser
 from typing import Dict, Any, Tuple
-from packaging.version import parse as parse_version
-from installer.manifest import Manifest, ManifestError
+from urllib.request import Request, urlopen
 
-CURRENT_VERSION = "3.2.2"
-RELEASES_URL = "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/latest"
+from packaging.version import parse as parse_version
+
+from version import APP_VERSION, REPOSITORY
+
+CURRENT_VERSION = APP_VERSION
+RELEASES_URL = f"https://github.com/{REPOSITORY}/releases/latest"
+LATEST_RELEASE_API_URL = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
+
+
+def fetch_latest_release_version(timeout: int = 10) -> str:
+    """Return the latest published GitHub release version without its ``v`` prefix."""
+    request = Request(
+        LATEST_RELEASE_API_URL,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "WhisperUtilityUpdater/1.0",
+        },
+    )
+    with urlopen(request, timeout=timeout) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+
+    tag_name = payload.get("tag_name")
+    if not isinstance(tag_name, str) or not tag_name.strip():
+        raise ValueError("GitHub latest release response has no tag_name")
+
+    tag_name = tag_name.strip()
+    return tag_name[1:] if tag_name.startswith("v") else tag_name
 
 
 def check_for_updates() -> Dict[str, Any]:
     """
-    Fetch remote manifest and compare latest version against CURRENT_VERSION.
+    Fetch the latest GitHub release and compare it against CURRENT_VERSION.
     """
     try:
-        remote_manifest = Manifest.fetch_remote()
-        latest_version = remote_manifest.version
+        latest_version = fetch_latest_release_version()
 
         has_update = parse_version(latest_version) > parse_version(CURRENT_VERSION)
         return {

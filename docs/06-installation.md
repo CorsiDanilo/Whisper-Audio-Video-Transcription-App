@@ -24,8 +24,8 @@ The project provides separate dependency files to optimize for hardware capabili
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-org/whisper-utility.git
-cd whisper-utility
+git clone https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App.git
+cd Whisper-Audio-Video-Transcription-App
 ```
 
 ### 2. Create Virtual Environment
@@ -111,11 +111,13 @@ config = load_default_config()
 Whisper Utility provides a built-in update checking and installation mechanism:
 
 - **Interactive Check**: In the Gradio UI under `Settings` (`Configurazioni`), click **Check for Updates** (`Verifica Aggiornamenti`).
+- **Release Source**: The updater reads the latest published GitHub release tag through the GitHub Releases API. The installer manifest remains hosted on the repository's `main` branch and contains the platform-specific package URLs.
 - **Dynamic Action**:
   - If a newer release is published on GitHub, a **Download & Install v{latest}** button appears.
   - If the application is already up to date, a **Reinstall / Repair Current Version** button is available, allowing users to re-run setup and repair components or configuration on demand.
 - **Detached Process Execution**: The installer wizard launches as a detached background process (using `pythonw.exe` on Windows) so that the running web server and UI remain responsive.
 - **Frozen Executable Fallback**: When packaged with PyInstaller, the updater detects bundled `WhisperUtilitySetup_Windows.exe` or redirects automatically to GitHub Releases if a standalone setup binary is not co-located.
+- **Release Metadata**: `version.py` is the source of the application version and repository identifier. The release workflow validates these values against the pushed tag before building installers.
 
 ## Troubleshooting
 

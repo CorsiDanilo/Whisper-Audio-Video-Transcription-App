@@ -107,7 +107,7 @@ Open your browser at **http://localhost:7860**.
 
 #### Step 1: Clone the repository
 ```bash
-git clone https://github.com/CorsiDanilo/whisper-utility.git
+git clone https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App.git
 ```
 
 ### Step 2: Set up a virtual environment (optional but recommended):
@@ -193,7 +193,7 @@ Media and configuration files are read from the local paths you select and check
     - 🗂️ The usual path is: `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\vXX.X\bin`.
 
 ## 📄 License
-This project is licensed under the MIT License. See the [LICENSE](https://github.com/CorsiDanilo/whisper-utility/blob/main/LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/blob/main/LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 - [Faster Whisper](https://github.com/SYSTRAN/faster-whisper) by Guillaume Klein

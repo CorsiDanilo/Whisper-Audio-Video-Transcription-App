@@ -33,8 +33,10 @@ import json
 import urllib.request
 from typing import Any, Dict, Optional
 
+from version import REPOSITORY
+
 DEFAULT_MANIFEST_URL = (
-    "https://raw.githubusercontent.com/CorsiDanilo/whisper-utility/main/installer/manifest.json"
+    f"https://raw.githubusercontent.com/{REPOSITORY}/main/installer/manifest.json"
 )
 
 

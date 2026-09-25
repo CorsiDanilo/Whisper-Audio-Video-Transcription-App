@@ -38,6 +38,43 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate release version metadata
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          release_version = os.environ["RELEASE_TAG"].removeprefix("v")
+          version_globals = {}
+          exec(Path("version.py").read_text(encoding="utf-8"), version_globals)
+          repository = version_globals["REPOSITORY"]
+          if version_globals["APP_VERSION"] != release_version:
+              raise SystemExit(
+                  f"version.py has {version_globals['APP_VERSION']}, "
+                  f"but the release tag is {release_version}"
+              )
+
+          manifest_path = Path("installer/manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          if manifest["version"] != release_version:
+              raise SystemExit(
+                  f"manifest.json has {manifest['version']}, "
+                  f"but the release tag is {release_version}"
+              )
+          for key, url in manifest["components"]["app_core"].items():
+              expected = (
+                  f"https://github.com/{repository}/releases/download/"
+                  f"v{release_version}/{url.rsplit('/', 1)[-1]}"
+              )
+              if url != expected:
+                  raise SystemExit(f"app_core URL for {key} is not release-aligned: {url}")
+          PY
+
       - name: Set up uv & Python 3.11
         uses: astral-sh/setup-uv@v5
         with:

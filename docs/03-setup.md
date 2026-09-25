@@ -22,8 +22,8 @@ Ensure the following software is installed on your system before proceeding:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/whisper-utility.git
-cd whisper-utility
+git clone https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App.git
+cd Whisper-Audio-Video-Transcription-App
 ```
 
 ### 2. Create Virtual Environment

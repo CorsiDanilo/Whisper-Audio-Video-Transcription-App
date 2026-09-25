@@ -23,7 +23,7 @@ from installer.downloader import DownloadError, FileDownloader, format_bytes, fo
 from installer.extractor import extract_archive
 from installer.hardware_detector import HardwareInfo, detect_hardware
 from installer.locales import get_locale_strings
-from installer.manifest import Manifest, ManifestError
+from installer.manifest import DEFAULT_MANIFEST_URL, Manifest, ManifestError
 from installer.shortcut_manager import create_shortcuts, create_uninstaller
 from installer.config_manager import load_existing_configs, save_merged_configs
 
@@ -48,9 +48,7 @@ FONT_HEADING = ("Segoe UI", 13, "bold")
 FONT_BODY = ("Segoe UI", 10)
 FONT_MONO = ("Consolas", 9)
 
-MANIFEST_URL = (
-    "https://raw.githubusercontent.com/CorsiDanilo/whisper-utility/main/installer/manifest.json"
-)
+MANIFEST_URL = DEFAULT_MANIFEST_URL
 
 # Placeholder used while hardware detection runs in background
 _HARDWARE_LOADING = "detecting..."

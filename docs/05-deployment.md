@@ -8,7 +8,7 @@
 
 ## GitHub Actions Release Pipeline
 
-The release workflow (`.github/workflows/release.yml`) is triggered by pushing a version tag matching `v*` (e.g., `v1.0.0`). It runs four parallel jobs — one per target platform — using a matrix strategy.
+The release workflow (`.github/workflows/build_installers.yml`) is triggered by pushing a version tag matching `v*` (e.g., `v1.0.0`). It runs three parallel jobs — one per target platform — using a matrix strategy.
 
 ### Trigger
 
@@ -21,24 +21,23 @@ git push origin v1.0.0
 
 | Job | Runner | Requirements | Output |
 | :--- | :--- | :--- | :--- |
-| `windows-cpu` | `windows-latest` | `requirements_cpu.txt` | `Whisper-windows-cpu-<tag>.zip` |
-| `windows-gpu` | `windows-latest` | `requirements_gpu.txt` | `Whisper-windows-gpu-<tag>.zip` |
-| `macos` | `macos-latest` | `requirements_macos.txt` | `Whisper-macos-<tag>.zip` |
-| `linux` | `ubuntu-latest` | `requirements_linux.txt` | `Whisper-linux-<tag>.tar.gz` |
+| Windows | `windows-latest` | `requirements_cpu.txt` | `whisper_app_win.zip` |
+| macOS | `macos-latest` | `requirements_macos.txt` | `whisper_app_mac.zip` |
+| Linux | `ubuntu-latest` | `requirements_linux.txt` | `whisper_app_linux.zip` |
 
-Each job also produces a `.sha256` checksum file. All eight artefacts are attached to the GitHub Release automatically.
+Each job uploads the platform installer and core application archive. The Linux job also uploads `installer/manifest.json` once; all artefacts are attached to the GitHub Release automatically.
 
 ### Pipeline Steps (per job)
 
 1. **Checkout** the repository
 2. **Set up Python 3.11**
-3. **Install system dependencies** — `ffmpeg` on all platforms; GTK/WebKit headers on Linux
-4. **Install Python dependencies** from the platform-specific requirements file
-5. **Build** the executable with `pyinstaller --noconfirm whisper.spec`
-6. **Copy runtime assets** (`default_values/`, `settings/`, `faster_whisper/`, `safehttpx/`) into `dist/Whisper/`
-7. **Archive** `dist/Whisper/` into a versioned zip or tar.gz
-8. **Generate SHA256** checksum
-9. **Upload** artefact + checksum to the GitHub Release (release body sourced from `CHANGELOG.md`)
+3. **Validate release metadata**: `version.py`, `installer/manifest.json`, and package URLs must match the pushed tag.
+4. **Install system dependencies** — `ffmpeg` on all platforms; GTK/WebKit headers on Linux
+5. **Install Python dependencies** from the platform-specific requirements file
+6. **Build** the core application with `tools/build_release.py`
+7. **Build** the platform installer with PyInstaller
+8. **Archive** the core application and prepare the installer artefact
+9. **Upload** artefacts and `installer/manifest.json` to the GitHub Release (release body sourced from `CHANGELOG.md`)
 
 ### GPU Build Note
 
@@ -67,9 +66,11 @@ Both scripts invoke `pyinstaller --noconfirm whisper.spec` and copy the required
 The file `CHANGELOG.md` at the repository root tracks all releases in [Keep a Changelog](https://keepachangelog.com/) format. Its content is used as the GitHub Release body automatically.
 
 When preparing a new release:
-1. Add a new entry to `CHANGELOG.md` under `## [x.y.z] - YYYY-MM-DD`
-2. Commit the changelog update
-3. Push the version tag: `git tag vx.y.z && git push origin vx.y.z`
+1. Update `version.py`, `installer/manifest.json`, and `CHANGELOG.md` with the release version.
+2. Commit the release metadata and documentation update.
+3. Push the version tag: `git tag vx.y.z && git push origin vx.y.z`.
+
+The workflow stops before building if the tag and release metadata do not match. A corrective rebuild may reuse an existing version tag only when the tag is deliberately moved to the corrected commit.
 
 ## Environment Matrix
 

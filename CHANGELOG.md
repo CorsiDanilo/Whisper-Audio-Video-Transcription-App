@@ -27,6 +27,12 @@
 * `remote_connected_status` — successful connection message (plain text format, no Markdown).
 * `remote_error_status` — connection error message (plain text format, no Markdown).
 
+### Fixed
+
+* **Reliable update detection**: The updater now compares the installed version with the latest GitHub release tag instead of relying on a stale installer manifest version.
+* **Release metadata synchronization**: Centralized application version and repository metadata in `version.py`, aligned installer download URLs with the canonical repository, and added CI validation for release tags, manifests, and application URLs.
+* **Version display consistency**: Desktop and installer splash screens now use the centralized application version.
+
 ## [3.2.1] - 2026-09-10
 
 ### Added

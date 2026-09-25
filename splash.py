@@ -19,6 +19,8 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 
+from version import APP_VERSION
+
 
 # ── Bilingual strings ─────────────────────────────────────────────────────────
 
@@ -172,7 +174,7 @@ class AppSplashScreen:
         # Version label
         tk.Label(
             inner,
-            text="v3.2.1",
+            text=f"v{APP_VERSION}",
             bg=_BG,
             fg=_MUTED,
             font=("Segoe UI", 8),
