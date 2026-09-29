@@ -19,3 +19,7 @@ initial_prompt: Ciao! Questa è una conversazione chiara, naturale e ben puntegg
   Usa lettere maiuscole, accenti precisi, virgole, punti e punti interrogativi? Mantiene
   intatti termini comuni come computer, software, streaming, audio, microfono, app
   e internet.
+custom_llm_url: http://192.168.1.11:1234/v1
+custom_llm_model: Abiray/MiniCPM5-2B-heretic-abliterated-GGUF
+custom_llm_api_key: ''
+ai_provider: Custom (OpenAI-compatible)

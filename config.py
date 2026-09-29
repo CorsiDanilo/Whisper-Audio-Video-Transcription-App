@@ -91,6 +91,10 @@ def load_default_config():
 
     data.setdefault("transcription_backend", "local")
     data.setdefault("remote_server_url", "http://192.168.1.32:8088")
+    data.setdefault("custom_llm_url", "http://192.168.1.11:1234/v1")
+    data.setdefault("custom_llm_model", "")
+    data.setdefault("custom_llm_api_key", "")
+    data.setdefault("ai_provider", "Google")
     return data
     
 def get_gemini_api_key():

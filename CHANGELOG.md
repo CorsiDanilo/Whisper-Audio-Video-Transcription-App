@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.3.0] - 2026-09-29
+
+### Added
+
+* **Unified Custom OpenAI-Compatible LLM Provider**:
+  * Replaced the separate Ollama and LM Studio radio buttons with a unified `Custom (OpenAI-compatible)` provider option alongside Google Gemini.
+  * Added configurable base endpoint URL input supporting standard `/v1` endpoints (Unsloth, vLLM, Ollama, LM Studio, LocalAI, etc.).
+  * Added optional API Key field with password masking to support secure local and remote servers requiring Bearer token authentication.
+  * Added live `Test Connection` verification button querying `/v1/models` to validate server reachability and automatically populate the model dropdown with available models.
+  * Added auto-saving and persistent configuration across restarts via `settings/default.yaml` and OS user `AppData` (`custom_llm_url`, `custom_llm_model`, `custom_llm_api_key`).
+  * Added full bilingual localization (`settings/locales.yaml`) in Italian and English for all new controls, placeholders, and connection status alerts.
+
+### Changed
+
+* **Streamlined LLM Post-Processing Architecture**:
+  * Consolidated OpenAI-compatible inference into `query_custom_llm` in `llms.py`, supporting Server-Sent Events (SSE) streaming and Bearer token headers.
+  * Safeguarded optional dependency imports to guarantee high resilience across all supported Python environments.
+
 ## [3.2.2] - 2026-09-25
 
 ### Changes

@@ -19,6 +19,9 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "gemini_model": "gemini-flash-latest",
     "lmstudio_timeout": 300,
     "ollama_timeout": 300,
+    "custom_llm_url": "http://127.0.0.1:8000/v1",
+    "custom_llm_model": "",
+    "ai_provider": "Google",
 }
 
 

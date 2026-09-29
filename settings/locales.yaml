@@ -115,6 +115,18 @@ english:
   choose_gemini_model: Gemini Model
   choose_ollama_model: Ollama Model
   choose_lmstudio_model: LM Studio Model
+  choose_custom_model: Custom Model
+  custom_llm_url_label: Endpoint URL (OpenAI-compatible)
+  custom_llm_api_key_label: API Key (Optional / if required)
+  custom_llm_api_key_placeholder: Optional API Key (e.g. sk-unsloth-...)
+  custom_llm_status_waiting: '*Click ''Test Connection'' to check endpoint and load models.*'
+  custom_llm_status_connected: '🟢 **Connected:** {count} model(s) found.'
+  custom_llm_status_error: '🔴 **Connection error:** {error}'
+  custom_llm_status_auth_error: '🔴 **Authentication error (HTTP 401/403):** API Key required or invalid. Check Settings → API in Unsloth or stop LAN access to enable Keyless API status.'
+  custom_llm_testing: '⏳ Testing connection to {url}...'
+  custom_provider_name: 'Custom (OpenAI-compatible)'
+  custom_llm_url_not_specified: 'Endpoint URL not specified'
+  custom_llm_no_models_found: 'No models returned by endpoint'
   preset_summary: 📝 Summary
   preset_summary_val: Summarize the transcription
   preset_todo: 🔑 To-Do List
@@ -334,6 +346,18 @@ italian:
   choose_gemini_model: Modello Gemini
   choose_ollama_model: Modello Ollama
   choose_lmstudio_model: Modello LM Studio
+  choose_custom_model: Modello Personalizzato
+  custom_llm_url_label: URL Endpoint (compatibile OpenAI)
+  custom_llm_api_key_label: API Key (Opzionale / se richiesta)
+  custom_llm_api_key_placeholder: API Key opzionale (es. sk-unsloth-...)
+  custom_llm_status_waiting: '*Clicca su ''Test Connessione'' per verificare l''endpoint e caricare i modelli.*'
+  custom_llm_status_connected: '🟢 **Connesso:** {count} modello/i trovato/i.'
+  custom_llm_status_error: '🔴 **Errore di connessione:** {error}'
+  custom_llm_status_auth_error: '🔴 **Errore autenticazione (HTTP 401/403):** API Key richiesta o non valida. Controlla Settings → API in Unsloth oppure premi Stop su LAN access per attivare Keyless API status.'
+  custom_llm_testing: '⏳ Test di connessione a {url}...'
+  custom_provider_name: 'Custom (OpenAI-compatibile)'
+  custom_llm_url_not_specified: 'URL non specificato'
+  custom_llm_no_models_found: 'Nessun modello restituito dall''endpoint'
   preset_summary: 📝 Riassunto
   preset_summary_val: Fammi un riassunto della trascrizione
   preset_todo: 🔑 Cose da fare

@@ -4,8 +4,13 @@ import json
 import os
 import time
 from config import load_default_values, load_default_config, get_gemini_api_key, get_translation as _
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+except Exception as _genai_err:
+    genai = None
+    types = None
+    logging.debug(f"Google GenAI SDK not available: {_genai_err}")
 
 def _env_int(name, default):
     """Read integer env var with safe fallback."""
@@ -44,6 +49,8 @@ LMSTUDIO_TIMEOUT = _get_timeout_setting("lmstudio_timeout", ["LMSTUDIO_TIMEOUT",
 LMSTUDIO_CONNECT_TIMEOUT = _env_int("LMSTUDIO_CONNECT_TIMEOUT", 5)
 LMSTUDIO_READ_TIMEOUT = _get_timeout_setting("lmstudio_timeout", ["LMSTUDIO_READ_TIMEOUT", "LMSTUDIO_TIMEOUT"], LMSTUDIO_TIMEOUT)
 OLLAMA_READ_TIMEOUT = _get_timeout_setting("ollama_timeout", ["OLLAMA_READ_TIMEOUT", "OLLAMA_TIMEOUT"], 300)
+CUSTOM_LLM_TIMEOUT = _get_timeout_setting("custom_llm_timeout", ["CUSTOM_LLM_TIMEOUT", "CUSTOM_LLM_READ_TIMEOUT"], 300)
+CUSTOM_LLM_CONNECT_TIMEOUT = _env_int("CUSTOM_LLM_CONNECT_TIMEOUT", 5)
 
 default_values = load_default_values()
 
@@ -123,6 +130,8 @@ SYSTEM_PROMPT_FIX_TEXT_EN = (
 
 def initialize_client():
     """Initialize the Gemini client."""
+    if not genai:
+        return None
     GEMINI_API_KEY = get_gemini_api_key()
     if not GEMINI_API_KEY:
         return None
@@ -417,7 +426,187 @@ def list_lmstudio_models():
         return []
 
 
-def query_gemini(user_input, transcription, gemini_model, provider="Gemini", ollama_model=None, lmstudio_model=None, fix_text=False, response_language="Italiano"):
+def _normalize_openai_base_url(url: str) -> str:
+    """Normalize user-provided base URL to avoid malformed endpoints."""
+    if not url or not str(url).strip():
+        return "http://127.0.0.1:8000/v1"
+    return str(url).strip().rstrip("/")
+
+
+def list_custom_models(custom_url: str, timeout: int = 5, api_key: str = None):
+    """Return a tuple (list_of_models, error_message) from an OpenAI-compatible /v1/models endpoint."""
+    if not custom_url or not str(custom_url).strip():
+        return [], _("custom_llm_url_not_specified")
+
+    base = _normalize_openai_base_url(custom_url)
+    candidates = []
+    if base.endswith("/v1"):
+        candidates.append(f"{base}/models")
+        candidates.append(f"{base[:-3]}/models")
+    else:
+        candidates.append(f"{base}/v1/models")
+        candidates.append(f"{base}/models")
+
+    headers = {}
+    if api_key and str(api_key).strip():
+        headers["Authorization"] = f"Bearer {str(api_key).strip()}"
+
+    last_error = None
+    for url in candidates:
+        try:
+            resp = requests.get(url, headers=headers, timeout=timeout)
+            if resp.status_code == 200:
+                data = resp.json()
+                models = []
+                data_list = (
+                    data.get("data", [])
+                    if isinstance(data, dict)
+                    else (data if isinstance(data, list) else [])
+                )
+                if not data_list and isinstance(data, dict) and "models" in data:
+                    data_list = data.get("models", [])
+
+                for item in data_list:
+                    if isinstance(item, dict):
+                        m_id = item.get("id") or item.get("name") or item.get("model")
+                        if m_id:
+                            models.append(str(m_id))
+                    elif isinstance(item, str) and item.strip():
+                        models.append(item.strip())
+
+                seen = set()
+                deduped = []
+                for m in models:
+                    if m not in seen:
+                        seen.add(m)
+                        deduped.append(m)
+                if deduped:
+                    return deduped, None
+                return [], None
+            elif resp.status_code in (401, 403):
+                return [], _("custom_llm_status_auth_error")
+            else:
+                last_error = f"HTTP {resp.status_code}: {resp.text[:100]}"
+        except requests.exceptions.ConnectionError:
+            last_error = "Connection refused / Host unreachable"
+        except requests.exceptions.Timeout:
+            last_error = "Connection timed out"
+        except Exception as e:
+            last_error = str(e)
+
+    return [], last_error or _("custom_llm_no_models_found")
+
+
+def query_custom_llm(
+    user_input,
+    transcription,
+    custom_model,
+    custom_url,
+    api_key=None,
+    fix_text=False,
+    response_language="Italiano",
+):
+    """Query a custom OpenAI-compatible server (e.g. Unsloth, vLLM, llama.cpp, LocalAI) using SSE streaming.
+
+    Yields the accumulated text progressively by parsing SSE delta chunks.
+    """
+    try:
+        if not custom_model:
+            yield "Error querying Custom LLM: no model selected."
+            return
+
+        base = _normalize_openai_base_url(custom_url)
+        if base.endswith("/v1"):
+            url = f"{base}/chat/completions"
+        else:
+            url = f"{base}/v1/chat/completions"
+
+        is_english = str(response_language).strip().lower() == "english"
+        if fix_text:
+            sys_prompt = SYSTEM_PROMPT_FIX_TEXT_EN if is_english else SYSTEM_PROMPT_FIX_TEXT
+        else:
+            sys_prompt = SYSTEM_PROMPT_EN if is_english else SYSTEM_PROMPT
+
+        if is_english:
+            user_content = f"# Transcription\n{transcription}\n\nUser prompt: \n{user_input}"
+        else:
+            user_content = f"# Trascrizione\n{transcription}\n\nUser prompt: \n{user_input}"
+
+        payload = {
+            "model": custom_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": sys_prompt,
+                },
+                {
+                    "role": "user",
+                    "content": user_content,
+                },
+            ],
+            "temperature": 0.2,
+            "stream": True,
+        }
+
+        headers = {"Content-Type": "application/json"}
+        if api_key and str(api_key).strip():
+            headers["Authorization"] = f"Bearer {str(api_key).strip()}"
+
+        resp = requests.post(
+            url,
+            json=payload,
+            headers=headers,
+            timeout=(CUSTOM_LLM_CONNECT_TIMEOUT, CUSTOM_LLM_TIMEOUT),
+            stream=True,
+        )
+        if resp.status_code in (401, 403):
+            yield _("custom_llm_status_auth_error")
+            return
+        resp.raise_for_status()
+        accumulated = ""
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line or line.strip() == "data: [DONE]":
+                continue
+            if line.startswith("data: "):
+                line = line[6:]
+            try:
+                obj = json.loads(line)
+                choices = obj.get("choices", []) if isinstance(obj, dict) else []
+                if choices and isinstance(choices[0], dict):
+                    delta = choices[0].get("delta", {})
+                    content = delta.get("content", "") if isinstance(delta, dict) else ""
+                    if content:
+                        accumulated += content
+                        yield accumulated
+            except Exception:
+                continue
+    except requests.exceptions.ReadTimeout as e:
+        logging.error(f"Custom LLM timed out at {custom_url}: {e}")
+        yield (
+            f"Error querying Custom LLM at {custom_url}: request timed out while waiting for model output. "
+            "Ensure the server is running and the model is loaded."
+        )
+    except requests.exceptions.ConnectionError as e:
+        logging.error(f"Custom LLM connection error at {custom_url}: {e}")
+        yield f"Error querying Custom LLM: could not connect to {custom_url}. Check if the server is active."
+    except Exception as e:
+        logging.error(f"Error querying Custom LLM at {custom_url}: {e}")
+        yield f"Error querying Custom LLM: {e}"
+
+
+def query_gemini(
+    user_input,
+    transcription,
+    gemini_model,
+    provider="Gemini",
+    ollama_model=None,
+    lmstudio_model=None,
+    fix_text=False,
+    response_language="Italiano",
+    custom_model=None,
+    custom_url=None,
+    custom_api_key=None,
+):
     """Dispatch query to the selected provider and stream the response.
 
     This is a generator: it yields the progressively accumulated text so
@@ -428,6 +617,22 @@ def query_gemini(user_input, transcription, gemini_model, provider="Gemini", oll
     language the LLM is instructed to reply in.
     """
     try:
+        if provider and (
+            str(provider).lower().startswith("custom")
+            or str(provider).lower().startswith("pers")
+        ):
+            model_name = custom_model or (gemini_model if gemini_model else "custom-model")
+            yield from query_custom_llm(
+                user_input,
+                transcription,
+                custom_model=model_name,
+                custom_url=custom_url,
+                api_key=custom_api_key,
+                fix_text=fix_text,
+                response_language=response_language,
+            )
+            return
+
         if provider and str(provider).lower().startswith('olla'):
             model_name = ollama_model or (gemini_model if gemini_model else 'llama2')
             yield from query_ollama(user_input, transcription, model_name, fix_text=fix_text, response_language=response_language)
@@ -543,7 +748,7 @@ def get_sorted_gemini_models(api_key: str, force_refresh: bool = False) -> list[
     and sort them placing the most recent/best first.
     Includes a 15-minute cache to avoid repeated client.models.list() calls.
     """
-    if not api_key:
+    if not api_key or not genai:
         return []
 
     global _GEMINI_MODELS_CACHE

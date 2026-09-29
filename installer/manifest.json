@@ -1,11 +1,11 @@
 {
-  "version": "3.2.2",
+  "version": "3.3.0",
   "components": {
     "app_core": {
-      "windows":    "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/download/v3.2.2/whisper_app_win.zip",
-      "macos_arm64": "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/download/v3.2.2/whisper_app_mac.zip",
-      "macos_x64":  "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/download/v3.2.2/whisper_app_mac.zip",
-      "linux":      "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/download/v3.2.2/whisper_app_linux.zip"
+      "windows":    "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/download/v3.3.0/whisper_app_win.zip",
+      "macos_arm64": "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/download/v3.3.0/whisper_app_mac.zip",
+      "macos_x64":  "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/download/v3.3.0/whisper_app_mac.zip",
+      "linux":      "https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App/releases/download/v3.3.0/whisper_app_linux.zip"
     },
     "ffmpeg": {
       "windows_x64": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",

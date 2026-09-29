@@ -16,7 +16,7 @@ configure_gradio_temp_dir()
 import gradio as gr  # noqa: E402
 from transcription import transcribe_file  # noqa: E402
 from config import load_default_values, load_default_config, get_gemini_api_key, get_translation as _  # noqa: E402
-from llms import query_gemini, list_ollama_models, list_lmstudio_models, get_sorted_gemini_models  # noqa: E402
+from llms import query_gemini, list_ollama_models, list_lmstudio_models, list_custom_models, get_sorted_gemini_models  # noqa: E402
 from config import setup_logging  # noqa: E402
 from updater import check_for_updates, launch_installer_update, CURRENT_VERSION  # noqa: E402
 from remote_transcription import (  # noqa: E402
@@ -83,6 +83,43 @@ def load_config_file(file_path):
         logging.error(f"Error loading configuration: {e}")
         return _default_config_tuple()
 
+def save_custom_llm_config(url: str, model: str = "", provider_name: str = "Custom", api_key: str = "") -> None:
+    """Auto-persist custom LLM endpoint, model and optional api key to local and AppData configs."""
+    from config import get_app_config_dir
+    try:
+        cfg_patch = {
+            "custom_llm_url": str(url or "http://192.168.1.11:1234/v1"),
+            "custom_llm_model": str(model or ""),
+            "custom_llm_api_key": str(api_key or ""),
+            "ai_provider": str(provider_name or "Custom"),
+        }
+        local_path = "settings/default.yaml"
+        if os.path.exists(local_path):
+            with open(local_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+            if isinstance(data, dict):
+                data.update(cfg_patch)
+                with open(local_path, "w", encoding="utf-8") as f:
+                    yaml.dump(data, f, sort_keys=False, allow_unicode=True)
+
+        sys_settings_dir = os.path.join(get_app_config_dir(), "settings")
+        os.makedirs(sys_settings_dir, exist_ok=True)
+        sys_path = os.path.join(sys_settings_dir, "default.yaml")
+        sys_data = {}
+        if os.path.exists(sys_path):
+            try:
+                with open(sys_path, "r", encoding="utf-8") as f:
+                    sys_data = yaml.safe_load(f) or {}
+            except Exception:
+                pass
+        if isinstance(sys_data, dict):
+            sys_data.update(cfg_patch)
+            with open(sys_path, "w", encoding="utf-8") as f:
+                yaml.dump(sys_data, f, sort_keys=False, allow_unicode=True)
+    except Exception as e:
+        logging.warning("Could not auto-save custom LLM config: %s", e)
+
+
 def save_config(
         device,
         cpu_threads,
@@ -102,6 +139,10 @@ def save_config(
         vad_threshold=0.5,
         silence_threshold=0.6,
         initial_prompt="",
+        custom_llm_url="http://192.168.1.11:1234/v1",
+        custom_llm_model="",
+        ai_provider="Google",
+        custom_llm_api_key="",
     ):
     """Save configuration to both local settings/default.yaml and system AppData."""
     from config import get_app_config_dir
@@ -126,6 +167,10 @@ def save_config(
             "vad_threshold": float(vad_threshold) if vad_threshold is not None else 0.5,
             "silence_threshold": float(silence_threshold) if silence_threshold is not None else 0.6,
             "initial_prompt": str(initial_prompt or ""),
+            "custom_llm_url": str(custom_llm_url or "http://192.168.1.11:1234/v1"),
+            "custom_llm_model": str(custom_llm_model or ""),
+            "custom_llm_api_key": str(custom_llm_api_key or ""),
+            "ai_provider": str(ai_provider or "Google"),
         }
 
         # 1. Write local copy
@@ -169,15 +214,13 @@ def save_config(
     except Exception as e:
         logging.error(f"Error saving settings: {e}")
         gr.Warning(f"Error saving settings: {e}")
-    except Exception as e:
-        logging.error(f"Error saving settings: {e}")
-        gr.Warning(f"Error saving settings: {e}")
 
 def reset_fields():
     """Reset fields to default values."""
     gemini_api_key = get_gemini_api_key()
     has_gemini = bool(gemini_api_key)
-    default_provider = "Google" if has_gemini else "Ollama"
+    custom_prov_label = _("custom_provider_name") if _("custom_provider_name") != "custom_provider_name" else "Custom (OpenAI-compatible)"
+    default_provider = "Google" if has_gemini else custom_prov_label
     default_brand = "Gemini"
     default_gemini = default_config_values.get("gemini_model", "gemini-flash-latest")
 
@@ -205,7 +248,8 @@ def reset_fields():
         ".txt",                   # output_format
         _("status_waiting"),      # status_badge
         default_provider,         # provider
-        gr.update(value=default_brand, visible=has_gemini), # google_brand_radio
+        gr.update(value=default_brand, visible=has_gemini and (default_provider == "Google")), # google_brand_radio
+        gr.update(visible=not (default_provider == "Google")), # custom_llm_box
     )
 
 
@@ -675,21 +719,29 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
             has_gemini = len(gemini_models) > 0
 
             with gr.Accordion(_("ai_provider_accordion"), open=True):
-                # Provider selection: if Gemini API key and models are present, allow all providers; otherwise only local providers
-                provider_choices = ["Google", "Ollama", "LM Studio"] if has_gemini else ["Ollama", "LM Studio"]
+                # Provider selection: Google or Custom (OpenAI-compatible)
+                custom_provider_name = _("custom_provider_name") if _("custom_provider_name") != "custom_provider_name" else "Custom (OpenAI-compatible)"
+                provider_choices = ["Google", custom_provider_name] if has_gemini else [custom_provider_name]
+                saved_provider = default_config_values.get("ai_provider", "Google")
+                if saved_provider not in provider_choices:
+                    initial_provider_val = "Google" if has_gemini else custom_provider_name
+                else:
+                    initial_provider_val = saved_provider
+
                 provider = gr.Radio(
                     choices=provider_choices,
-                    value="Google" if has_gemini else "Ollama",
-                    label=_("provider_label")
+                    value=initial_provider_val,
+                    label=_("provider_label"),
                 )
+
+                is_google_selected = (initial_provider_val == "Google")
 
                 google_brand_radio = gr.Radio(
                     choices=["Gemini", "Gemma"],
                     value="Gemini",
                     label=_("model_family_label"),
-                    visible=has_gemini,
+                    visible=has_gemini and is_google_selected,
                 )
-
 
                 initial_filtered_models = [m for m in gemini_models if "gemini" in m.lower()]
                 if not initial_filtered_models and gemini_models:
@@ -709,38 +761,45 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
                     value=default_val,
                     allow_custom_value=True,
                     label=_("choose_gemini_model"),
-                    visible=has_gemini,
+                    visible=has_gemini and is_google_selected,
                 )
 
-                # Ollama-specific model selector (populated from local Ollama)
-                # allow_custom_value=True prevents Gradio warning when choices are empty at init
-                try:
-                    _initial_ollama_models = list_ollama_models() if not has_gemini else []
-                except Exception:
-                    _initial_ollama_models = []
-                _initial_ollama_value = _initial_ollama_models[0] if _initial_ollama_models else ""
+                # Custom OpenAI-compatible endpoint controls
+                with gr.Column(visible=not is_google_selected) as custom_llm_box:
+                    with gr.Row():
+                        custom_llm_url = gr.Textbox(
+                            value=default_config_values.get("custom_llm_url", "http://192.168.1.11:1234/v1"),
+                            label=_("custom_llm_url_label"),
+                            placeholder="http://192.168.1.11:1234/v1",
+                            scale=3,
+                        )
+                        custom_llm_api_key = gr.Textbox(
+                            value=default_config_values.get("custom_llm_api_key", ""),
+                            label=_("custom_llm_api_key_label") if _("custom_llm_api_key_label") != "custom_llm_api_key_label" else "API Key (Opzionale)",
+                            placeholder=_("custom_llm_api_key_placeholder") if _("custom_llm_api_key_placeholder") != "custom_llm_api_key_placeholder" else "API Key",
+                            type="password",
+                            scale=2,
+                        )
+                        test_custom_conn_btn = gr.Button(_("test_connection_btn"), variant="secondary", scale=1)
 
-                ollama_model = gr.Dropdown(
-                    choices=_initial_ollama_models,
-                    value=_initial_ollama_value,
-                    allow_custom_value=True,
-                    label=_("choose_ollama_model"),
-                    visible=not has_gemini,
-                )
+                    saved_custom_model = default_config_values.get("custom_llm_model", "")
+                    init_custom_status = (
+                        f"🟢 {_('custom_llm_status_connected').format(count=1)} (`{saved_custom_model}`)"
+                        if saved_custom_model
+                        else _("custom_llm_status_waiting")
+                    )
+                    custom_llm_status = gr.Markdown(init_custom_status)
+                    _custom_choices = [saved_custom_model] if saved_custom_model else []
+                    custom_llm_model = gr.Dropdown(
+                        choices=_custom_choices,
+                        value=saved_custom_model if saved_custom_model else None,
+                        allow_custom_value=True,
+                        label=_("choose_custom_model"),
+                    )
 
-                try:
-                    _initial_lmstudio_models = []
-                except Exception:
-                    _initial_lmstudio_models = []
-                _initial_lmstudio_value = _initial_lmstudio_models[0] if _initial_lmstudio_models else ""
-
-                lmstudio_model = gr.Dropdown(
-                    choices=_initial_lmstudio_models,
-                    value=_initial_lmstudio_value,
-                    allow_custom_value=True,
-                    label=_("choose_lmstudio_model"),
-                    visible=False,
-                )
+                # Dummy state variables to maintain backward compatibility
+                ollama_model = gr.State("")
+                lmstudio_model = gr.State("")
 
                 # Response language selector for AI assistant
                 response_language = gr.Radio(
@@ -1116,36 +1175,57 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
 
 
     def _provider_change(p):
-        # show Gemini model choices only when Google selected
         if str(p).lower().startswith('g'):
             return (
                 gr.update(visible=True),
                 gr.update(visible=True),
-                gr.update(visible=False, choices=[], value=""),
-                gr.update(visible=False, choices=[], value=""),
-            )
-        # when Ollama selected, fetch models and show dropdown
-        if str(p).lower().startswith('olla'):
-            models = list_ollama_models() or [NO_MODELS_FOUND]
-            value = models[0] if models and models[0] != NO_MODELS_FOUND else ""
-            return (
                 gr.update(visible=False),
-                gr.update(visible=False),
-                gr.update(visible=True, choices=models, value=value),
-                gr.update(visible=False, choices=[], value=""),
             )
-
-        # when LM Studio selected, fetch models and show dropdown
-        lm_models = list_lmstudio_models() or [NO_MODELS_FOUND]
-        lm_value = lm_models[0] if lm_models and lm_models[0] != NO_MODELS_FOUND else ""
+        # Custom provider
         return (
             gr.update(visible=False),
             gr.update(visible=False),
-            gr.update(visible=False, choices=[], value=""),
-            gr.update(visible=True, choices=lm_models, value=lm_value),
+            gr.update(visible=True),
         )
 
-    provider.change(fn=_provider_change, inputs=[provider], outputs=[google_brand_radio, gemini_model, ollama_model, lmstudio_model])
+    provider.change(
+        fn=_provider_change,
+        inputs=[provider],
+        outputs=[google_brand_radio, gemini_model, custom_llm_box],
+    )
+
+    def _test_custom_conn(current_url, current_model, current_provider, current_key):
+        if not current_url or not str(current_url).strip():
+            msg = _("custom_llm_status_error").format(error=_("custom_llm_url_not_specified"))
+            return gr.update(value=msg), gr.update()
+
+        models, err = list_custom_models(current_url, api_key=current_key)
+        if err:
+            err_msg = _("custom_llm_status_error").format(error=err) if ("{error}" in _("custom_llm_status_error") and "{error}" not in err) else err
+            gr.Warning(err_msg)
+            return gr.update(value=err_msg), gr.update()
+        if not models:
+            msg = _("custom_llm_status_error").format(error=_("custom_llm_no_models_found"))
+            gr.Warning(msg)
+            return gr.update(value=msg), gr.update(choices=[], value="")
+
+        status_msg = _("custom_llm_status_connected").format(count=len(models))
+        gr.Info(status_msg)
+        val = current_model if (current_model in models) else models[0]
+        save_custom_llm_config(current_url, val, str(current_provider), api_key=str(current_key or ""))
+        return gr.update(value=status_msg), gr.update(choices=models, value=val)
+
+    test_custom_conn_btn.click(
+        fn=_test_custom_conn,
+        inputs=[custom_llm_url, custom_llm_model, provider, custom_llm_api_key],
+        outputs=[custom_llm_status, custom_llm_model],
+    )
+
+    custom_llm_model.change(
+        fn=lambda m, u, p, k: save_custom_llm_config(u, m, str(p), api_key=str(k or "")),
+        inputs=[custom_llm_model, custom_llm_url, provider, custom_llm_api_key],
+        outputs=[],
+    )
 
     def _update_google_models(brand):
         filtered = [m for m in gemini_models if brand.lower() in m.lower()]
@@ -1172,7 +1252,19 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     )
     query_event = query_start.then(
         fn=query_gemini,
-        inputs=[user_query, output_text, gemini_model, provider, ollama_model, lmstudio_model, fix_text_mode, response_language],
+        inputs=[
+            user_query,
+            output_text,
+            gemini_model,
+            provider,
+            ollama_model,
+            lmstudio_model,
+            fix_text_mode,
+            response_language,
+            custom_llm_model,
+            custom_llm_url,
+            custom_llm_api_key,
+        ],
         outputs=[gemini_response],
         stream_every=0.05,  # flush UI at most every 50 ms
     )
@@ -1239,6 +1331,10 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
                 vad_threshold,
                 silence_threshold,
                 initial_prompt,
+                custom_llm_url,
+                custom_llm_model,
+                provider,
+                custom_llm_api_key,
             ],
             outputs=[]
         )
@@ -1246,7 +1342,33 @@ with gr.Blocks(title="Whisper Utility", head=js_head_script) as demo:
     reset_button.click(
         fn=reset_fields,
         inputs=[],
-        outputs=[file_path_input, config_path_input, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, output_text, transcript_file_path, word_timestamps, gemini_model, user_query, gemini_response, save_transcript_button, submit_query_button, output_format, status_badge, provider, google_brand_radio]
+        outputs=[
+            file_path_input,
+            config_path_input,
+            device,
+            cpu_threads,
+            num_workers,
+            language,
+            whisper_model,
+            compute_type,
+            temperature,
+            beam_size,
+            batch_size,
+            condition_on_previous_text,
+            output_text,
+            transcript_file_path,
+            word_timestamps,
+            gemini_model,
+            user_query,
+            gemini_response,
+            save_transcript_button,
+            submit_query_button,
+            output_format,
+            status_badge,
+            provider,
+            google_brand_radio,
+            custom_llm_box,
+        ]
     ).then(fn=lambda: False, inputs=[], outputs=[fix_text_mode])
 
     def transcribe_wrapper(file_paths_text, device, cpu_threads, num_workers, language, whisper_model, compute_type, temperature, beam_size, batch_size, condition_on_previous_text, word_timestamps, output_format=".txt", output_dir_override="", backend_choice=None, remote_url="http://192.168.1.32:8088", initial_prompt="", progress=gr.Progress(track_tqdm=False)):
