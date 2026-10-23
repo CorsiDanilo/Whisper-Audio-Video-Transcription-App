@@ -58,6 +58,14 @@ class PlatformPackagingTests(unittest.TestCase):
         self.assertIn("root.eval('info patchlevel')", workflow)
         self.assertNotIn("root.destroy()", workflow)
 
+    def test_macos_intel_build_uses_available_runner(self):
+        workflow = Path(".github/workflows/build_installers.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("os: macos-15-intel", workflow)
+        self.assertNotIn("os: macos-13", workflow)
+
     def test_manifest_uses_exact_architecture_asset(self):
         manifest = Manifest(
             {

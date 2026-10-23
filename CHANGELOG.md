@@ -1,12 +1,5 @@
 # Changelog
 
-## [3.4.1] - 2026-10-23
-
-### Fixed
-
-* GitHub Actions now runs the dependency installation step with Bash on all platforms, avoiding PowerShell parsing errors on Windows.
-* macOS Tk runtime validation no longer calls `destroy()` on a Tcl-only interpreter.
-
 ## [3.4.0] - 2026-10-23
 
 ### Added
@@ -26,6 +19,9 @@
 * Linux installer and packaged application startup issues.
 * Unix uninstaller execution by adding a Python shebang.
 * Platform-specific archive extraction and application launch paths.
+* GitHub Actions dependency installation now runs with Bash on all platforms.
+* macOS Tk runtime validation no longer calls `destroy()` on a Tcl-only interpreter.
+* Intel macOS builds now use the available `macos-15-intel` runner.
 
 ## [3.3.0] - 2026-09-29
 

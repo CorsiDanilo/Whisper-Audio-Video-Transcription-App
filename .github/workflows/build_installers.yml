@@ -21,7 +21,7 @@ jobs:
             pyinstaller_name: WhisperUtilitySetup_Windows
             app_artifact: whisper_app_win.zip
             requirements: requirements_cpu.txt
-          - os: macos-13
+          - os: macos-15-intel
             installer_name: WhisperUtilitySetup_macOS_x64
             pyinstaller_name: WhisperUtilitySetup_macOS_x64
             app_artifact: whisper_app_mac_x64.zip
