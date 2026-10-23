@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.1] - 2026-10-23
+
+### Fixed
+
+* GitHub Actions now runs the dependency installation step with Bash on all platforms, avoiding PowerShell parsing errors on Windows.
+* macOS Tk runtime validation no longer calls `destroy()` on a Tcl-only interpreter.
+
 ## [3.4.0] - 2026-10-23
 
 ### Added

@@ -94,7 +94,7 @@ jobs:
 
       - name: Verify Tk runtime (Unix)
         if: runner.os != 'Windows'
-        run: uv run python -c "import tkinter; root = tkinter.Tk(useTk=False); root.destroy()"
+        run: uv run python -c "import tkinter; root = tkinter.Tk(useTk=False); root.eval('info patchlevel')"
 
       - name: Install Python dependencies for app core
         run: |
@@ -103,6 +103,7 @@ jobs:
           fi
           uv pip install -r ${{ matrix.requirements }}
           uv pip install pyinstaller
+        shell: bash
 
       - name: Verify GTK Python backend (Linux)
         if: runner.os == 'Linux'

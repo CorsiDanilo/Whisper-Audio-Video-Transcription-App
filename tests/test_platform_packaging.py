@@ -40,6 +40,24 @@ class PlatformPackagingTests(unittest.TestCase):
         self.assertIn("import gi, cairo", workflow)
         self.assertIn("from webview.platforms import gtk", workflow)
 
+    def test_workflow_uses_bash_for_cross_platform_dependency_install(self):
+        workflow = Path(".github/workflows/build_installers.yml").read_text(
+            encoding="utf-8"
+        )
+        dependency_step = workflow.split(
+            "- name: Install Python dependencies for app core", 1
+        )[1].split("- name: Verify GTK Python backend (Linux)", 1)[0]
+
+        self.assertIn("shell: bash", dependency_step)
+
+    def test_workflow_checks_tk_without_destroying_tcl_only_interpreter(self):
+        workflow = Path(".github/workflows/build_installers.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("root.eval('info patchlevel')", workflow)
+        self.assertNotIn("root.destroy()", workflow)
+
     def test_manifest_uses_exact_architecture_asset(self):
         manifest = Manifest(
             {
