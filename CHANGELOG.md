@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.4.0] - 2026-10-23
+
+### Added
+
+* Cross-platform Linux and macOS installer/runtime packaging support.
+* Architecture-aware macOS release artifacts for Intel and Apple Silicon.
+* Linux GTK/PyGObject runtime validation and bundled backend dependencies.
+
+### Changed
+
+* Installer windows are resizable and start with a more usable cross-platform size.
+* Installer paths, launch commands, shortcuts, FFmpeg lookup, and resource loading now account for each supported operating system.
+* Release workflows validate platform dependencies and architecture-specific assets.
+
+### Fixed
+
+* Linux installer and packaged application startup issues.
+* Unix uninstaller execution by adding a Python shebang.
+* Platform-specific archive extraction and application launch paths.
+
 ## [3.3.0] - 2026-09-29
 
 ### Added

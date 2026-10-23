@@ -102,7 +102,7 @@ class InstallerSplashScreen:
             text="Whisper Utility Setup",
             bg=_BG,
             fg=_TEXT,
-            font=("Segoe UI", 16, "bold"),
+            font=("TkDefaultFont", 16, "bold"),
         ).pack(anchor="w")
 
         # Subtitle
@@ -111,7 +111,7 @@ class InstallerSplashScreen:
             text=self._strings["title"].split("–")[-1].strip(),
             bg=_BG,
             fg=_MUTED,
-            font=("Segoe UI", 10),
+            font=("TkDefaultFont", 10),
         ).pack(anchor="w", pady=(2, 16))
 
         # Status label
@@ -121,7 +121,7 @@ class InstallerSplashScreen:
             textvariable=self._status_var,
             bg=_BG,
             fg=_TEXT,
-            font=("Segoe UI", 9),
+            font=("TkDefaultFont", 9),
             anchor="w",
             justify="left",
         ).pack(anchor="w", fill="x")
@@ -154,7 +154,7 @@ class InstallerSplashScreen:
             text=f"v{APP_VERSION}",
             bg=_BG,
             fg=_MUTED,
-            font=("Segoe UI", 8),
+            font=("TkDefaultFont", 8),
         ).pack(anchor="e", pady=(6, 0))
 
         self._root.update()

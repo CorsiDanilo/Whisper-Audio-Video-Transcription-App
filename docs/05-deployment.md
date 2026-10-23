@@ -22,17 +22,18 @@ git push origin v1.0.0
 | Job | Runner | Requirements | Output |
 | :--- | :--- | :--- | :--- |
 | Windows | `windows-latest` | `requirements_cpu.txt` | `whisper_app_win.zip` |
-| macOS | `macos-latest` | `requirements_macos.txt` | `whisper_app_mac.zip` |
+| macOS Intel | `macos-13` | `requirements_macos.txt` | `whisper_app_mac_x64.zip` |
+| macOS Apple Silicon | `macos-14` | `requirements_macos.txt` | `whisper_app_mac_arm64.zip` |
 | Linux | `ubuntu-latest` | `requirements_linux.txt` | `whisper_app_linux.zip` |
 
-Each job uploads the platform installer and core application archive. The Linux job also uploads `installer/manifest.json` once; all artefacts are attached to the GitHub Release automatically.
+Each job uploads the platform installer and core application archive. The Linux job also uploads `installer/manifest.json` once; all artefacts are attached to the GitHub Release automatically. Linux/macOS binaries downloaded outside an archive may need executable permission restored with `chmod +x`.
 
 ### Pipeline Steps (per job)
 
 1. **Checkout** the repository
 2. **Set up Python 3.11**
 3. **Validate release metadata**: `version.py`, `installer/manifest.json`, and package URLs must match the pushed tag.
-4. **Install system dependencies** — `ffmpeg` on all platforms; GTK/WebKit headers on Linux
+4. **Install system dependencies** — `ffmpeg` on all platforms; Tk, GTK and WebKit headers on Linux; Tkinter is verified on macOS
 5. **Install Python dependencies** from the platform-specific requirements file
 6. **Build** the core application with `tools/build_release.py`
 7. **Build** the platform installer with PyInstaller
@@ -59,7 +60,7 @@ For local builds outside of CI, use the existing scripts:
 - `build_windows.sh` — Git Bash / WSL environment
 - `installer.bat` — native Windows command prompt
 
-Both scripts invoke `pyinstaller --noconfirm whisper.spec` and copy the required runtime assets into `dist/Whisper/`.
+Both scripts invoke `pyinstaller --noconfirm whisper.spec` and copy the required runtime assets into the platform output. macOS produces `Whisper Utility.app`; Linux and Windows produce `dist/Whisper/`.
 
 ## CHANGELOG
 

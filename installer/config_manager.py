@@ -130,5 +130,5 @@ def save_merged_configs(
                 current_secrets["gemini_api_key"] = gemini_api_key.strip()
                 with open(secrets_path, "w", encoding="utf-8") as f:
                     yaml.dump(current_secrets, f, sort_keys=False, allow_unicode=True)
-        except Exception as exc:
+        except Exception:
             pass

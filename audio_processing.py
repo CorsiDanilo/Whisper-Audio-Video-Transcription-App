@@ -1,10 +1,62 @@
 import os
+import shutil
 import subprocess
+import sys
 import logging
+from pathlib import Path
 from config import load_default_values
 from security_utils import get_ffmpeg_timeout_seconds
 
 DEFAULT_VALUES = load_default_values()
+
+
+def bundled_runtime_roots(runtime_dir: Path, system: str) -> tuple[Path, ...]:
+    """Return directories that may contain installer-managed runtime files."""
+    roots = [runtime_dir]
+    if system == "darwin" and runtime_dir.name == "MacOS" and runtime_dir.parent.name == "Contents":
+        roots.append(runtime_dir.parent.parent)
+        roots.append(runtime_dir.parent.parent.parent)
+    return tuple(roots)
+
+
+def _get_ffmpeg_executable() -> str:
+    """Locate system FFmpeg or the bundled copy installed beside the app."""
+    configured = os.environ.get("WHISPER_FFMPEG_PATH")
+    if configured:
+        return configured
+
+    system_ffmpeg = shutil.which("ffmpeg")
+    if system_ffmpeg:
+        return system_ffmpeg
+
+    runtime_dir = (
+        Path(sys.executable).resolve().parent
+        if getattr(sys, "frozen", False)
+        else Path(__file__).resolve().parent
+    )
+    for root in bundled_runtime_roots(runtime_dir, sys.platform):
+        candidates = [
+            root / "ffmpeg" / "ffmpeg",
+            root / "ffmpeg" / "ffmpeg.exe",
+            root / "ffmpeg" / "bin" / "ffmpeg",
+            root / "ffmpeg" / "bin" / "ffmpeg.exe",
+        ]
+        for candidate in candidates:
+            if candidate.is_file():
+                return str(candidate)
+
+        # Static FFmpeg archives contain a versioned directory. Search only below
+        # the installer-managed ffmpeg directory to avoid scanning the whole disk.
+        bundled_root = root / "ffmpeg"
+        if bundled_root.is_dir():
+            for candidate in bundled_root.rglob("ffmpeg"):
+                if candidate.is_file():
+                    return str(candidate)
+            for candidate in bundled_root.rglob("ffmpeg.exe"):
+                if candidate.is_file():
+                    return str(candidate)
+
+    return "ffmpeg"
 
 
 def _run_ffmpeg(command, action):
@@ -44,7 +96,7 @@ def is_whatsapp_audio_file(file_path):
 def convert_whatsapp_audio_to_mp3(file_path, output_audio_file, device=None):
     """Converts a WhatsApp audio file to MP3 format."""
     logging.info(f"Converting WhatsApp audio file to MP3: {file_path}...")
-    command = ["ffmpeg", "-hide_banner", "-nostdin"]
+    command = [_get_ffmpeg_executable(), "-hide_banner", "-nostdin"]
     if device and str(device).lower() == "cuda":
         command.extend(["-hwaccel", "auto"])
     command.extend([
@@ -85,7 +137,7 @@ def extract_audio_from_video(video_file, output_audio_file, device=None):
     """
     try:
         logging.info(f"Extracting audio from video file: {video_file}...")
-        command = ["ffmpeg", "-hide_banner", "-nostdin"]
+        command = [_get_ffmpeg_executable(), "-hide_banner", "-nostdin"]
         if device and str(device).lower() == "cuda":
             command.extend(["-hwaccel", "auto"])
         command.extend([
@@ -133,7 +185,7 @@ def convert_audio_to_mp3(audio_file, output_audio_file, device=None):
     """Converts an audio file to MP3 format."""
     try:
         logging.info(f"Converting audio file to MP3: {audio_file}...")
-        command = ["ffmpeg", "-hide_banner", "-nostdin"]
+        command = [_get_ffmpeg_executable(), "-hide_banner", "-nostdin"]
         if device and str(device).lower() == "cuda":
             command.extend(["-hwaccel", "auto"])
         command.extend([

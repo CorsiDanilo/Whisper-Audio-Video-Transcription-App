@@ -6,7 +6,7 @@ Automatically detects the operating system locale via locale.getdefaultlocale().
 """
 
 import locale
-from typing import Dict, Any, Optional
+from typing import Dict, Optional
 
 STRINGS_EN: Dict[str, str] = {
     "title": "Whisper Utility – Setup Wizard",

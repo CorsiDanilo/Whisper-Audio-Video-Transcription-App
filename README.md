@@ -108,24 +108,40 @@ Open your browser at **http://localhost:7860**.
 #### Step 1: Clone the repository
 ```bash
 git clone https://github.com/CorsiDanilo/Whisper-Audio-Video-Transcription-App.git
+cd Whisper-Audio-Video-Transcription-App
 ```
 
 ### Step 2: Set up a virtual environment (optional but recommended):
 ```
+# Debian/Ubuntu only: sudo apt install python3-venv python3-pip
 python3 -m venv .venv
 source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
 
 ```
 
+The pinned dependency matrix is validated with Python 3.11. If the system
+Python is newer (for example 3.14 on Ubuntu 26.04), create the environment
+with `uv` using Python 3.11 as shown below.
+
 ### Step 3: Install the required dependencies
+
+Use the requirement file for your operating system:
+
 ```bash
+# Windows CPU
 pip install -r requirements_cpu.txt
+
+# Linux CPU
+pip install -r requirements_linux.txt
+
+# macOS
+pip install -r requirements_macos.txt
 ```
 
-If you have an NVIDIA GPU and want CUDA acceleration, use:
-```bash
-pip install -r requirements_gpu.txt
-```
+`requirements_cpu.txt` and `requirements_gpu.txt` contain the Windows CPU/GPU
+matrix. Do not use them on Linux or macOS. Linux GPU packaging is not part of
+the desktop release matrix; use the GPU Docker profile or install a compatible
+CUDA environment manually.
 
 > ⚡ **Tip (Ultra-Fast Installation & Python Version Control with `uv`):**
 > If you have [`uv`](https://github.com/astral-sh/uv) installed, you can automatically download Python 3.11 and install dependencies up to 10-100x faster without pre-installing Python 3.11 manually on your OS:
@@ -142,6 +158,18 @@ pip install -r requirements_gpu.txt
 - 🍎 macOS: Install via Homebrew (`brew install ffmpeg`)
 - 🖥️ Windows: [Download FFmpeg](https://ffmpeg.org/download.html) and add it to your system's PATH (or use `winget install Gyan.FFmpeg`)
     - Follow [this guide](https://phoenixnap.com/kb/ffmpeg-windows) to ensure it's in your system's PATH.
+
+On Linux, the desktop build also needs the Tk/GTK/WebKit runtime libraries. On Debian/Ubuntu:
+```bash
+sudo apt install python3-tk ffmpeg libgirepository-2.0-dev libcairo2-dev \
+  pkg-config gir1.2-gtk-3.0 libgtk-3-0 libwebkit2gtk-4.1-0
+```
+
+On macOS, use a Python distribution that provides Tkinter (the official
+Python.org installer is suitable) and verify it with:
+```bash
+python -c "import tkinter; print('Tkinter available')"
+```
 
 ### (OPTIONAL) Step 5: Install CUDA for NVIDIA GPU (Only if running from source)
 - Download and install [CUDA Toolkit 12.9](https://developer.nvidia.com/cuda-12-9-1-download-archive).

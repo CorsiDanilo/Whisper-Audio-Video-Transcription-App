@@ -4,6 +4,7 @@ updater.py - Version checker and installer launcher for Whisper Utility.
 
 import json
 import os
+import platform
 import subprocess
 import sys
 import webbrowser
@@ -72,14 +73,21 @@ def launch_installer_update(install_dir: str = "", force: bool = False) -> Tuple
 
     if is_frozen:
         app_dir = os.path.dirname(os.path.abspath(sys.executable))
-        candidates = [
-            os.path.join(app_dir, "WhisperUtilitySetup.exe"),
-            os.path.join(app_dir, "WhisperUtilitySetup_Windows.exe"),
-            os.path.join(os.path.dirname(app_dir), "WhisperUtilitySetup.exe"),
-            os.path.join(os.path.dirname(app_dir), "WhisperUtilitySetup_Windows.exe"),
-            os.path.join(app_dir, "installer", "WhisperUtilitySetup.exe"),
-            os.path.join(app_dir, "installer", "WhisperUtilitySetup_Windows.exe"),
-        ]
+        if sys.platform == "win32":
+            setup_names = ["WhisperUtilitySetup.exe", "WhisperUtilitySetup_Windows.exe"]
+        elif sys.platform == "darwin":
+            arch = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"
+            setup_names = [
+                f"WhisperUtilitySetup_macOS_{arch}",
+                "WhisperUtilitySetup_macOS",
+                "WhisperUtilitySetup_macOS.app",
+            ]
+        else:
+            setup_names = ["WhisperUtilitySetup_Linux", "WhisperUtilitySetup_Linux.run"]
+
+        candidates = []
+        for base_dir in (app_dir, os.path.dirname(app_dir), os.path.join(app_dir, "installer")):
+            candidates.extend(os.path.join(base_dir, name) for name in setup_names)
         for cand in candidates:
             if os.path.exists(cand):
                 try:

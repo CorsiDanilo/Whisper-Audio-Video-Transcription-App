@@ -103,23 +103,42 @@ def _create_windows_shortcuts(install_dir: str, app_name: str) -> None:
 
 
 def _create_macos_shortcuts(install_dir: str, app_name: str) -> None:
-    """On macOS the app bundle lives in install_dir; create a Desktop alias."""
+    """Create a Desktop alias for an app bundle or portable executable."""
     desktop = os.path.expanduser("~/Desktop")
+    os.makedirs(desktop, exist_ok=True)
     alias_path = os.path.join(desktop, f"{app_name}.app")
     app_bundle = os.path.join(install_dir, f"{app_name}.app")
     if os.path.exists(app_bundle) and not os.path.exists(alias_path):
         script = f'tell application "Finder" to make alias file to POSIX file "{app_bundle}" at POSIX file "{desktop}"'
-        subprocess.run(["osascript", "-e", script], capture_output=True)
+        result = subprocess.run(["osascript", "-e", script], capture_output=True)
+        if result.returncode == 0 or os.path.lexists(alias_path):
+            return
+        try:
+            os.symlink(app_bundle, alias_path, target_is_directory=True)
+        except FileExistsError:
+            pass
+        return
+
+    # Keep legacy portable macOS installations usable during upgrades.
+    executable = os.path.join(install_dir, "Whisper")
+    portable_alias = os.path.join(desktop, app_name)
+    if os.path.isfile(executable):
+        os.chmod(executable, os.stat(executable).st_mode | 0o111)
+        if not os.path.lexists(portable_alias):
+            os.symlink(executable, portable_alias)
 
 
 def _create_linux_shortcuts(install_dir: str, app_name: str) -> None:
-    executable = os.path.join(install_dir, "app_main")
-    icon = os.path.join(install_dir, "logo.png")
+    executable = os.path.join(install_dir, "Whisper")
+    icon = os.path.join(install_dir, "logo.ico")
+    if os.path.isfile(executable):
+        os.chmod(executable, os.stat(executable).st_mode | 0o111)
     desktop_entry = (
         "[Desktop Entry]\n"
         f"Name={app_name}\n"
-        f"Exec={executable}\n"
+        f'Exec="{executable}"\n'
         f"Icon={icon}\n"
+        f"Path={install_dir}\n"
         "Type=Application\n"
         "Terminal=false\n"
         "Categories=AudioVideo;Utility;\n"
@@ -146,7 +165,7 @@ def create_uninstaller(install_dir: str, os_name: str) -> None:
         os_name: One of "windows", "macos", "linux".
     """
     script_path = os.path.join(install_dir, "uninstall.py")
-    code = """\
+    code = """#!/usr/bin/env python3
 import os
 import shutil
 import sys

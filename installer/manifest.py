@@ -89,6 +89,20 @@ class Manifest:
         key = f"{os_name}_{arch}"
         return self._components.get("ffmpeg", {}).get(key)
 
+    def get_app_core_url(self, os_name: str, arch: str) -> Optional[str]:
+        """Return a compatible core archive without crossing architectures.
+
+        Older manifests used generic ``windows`` and ``linux`` keys. Those
+        entries remain valid for x64 only; ARM64 must have an explicit asset.
+        """
+        app_core = self._components.get("app_core", {})
+        exact = app_core.get(f"{os_name}_{arch}")
+        if exact:
+            return exact
+        if arch == "x64":
+            return app_core.get(os_name)
+        return None
+
     def get_component_url(self, component: str, key: str) -> Optional[str]:
         """Generic lookup: ``manifest.get_component_url("app_core", "linux")``."""
         return self._components.get(component, {}).get(key)

@@ -12,7 +12,7 @@ The application supports both CPU and GPU-accelerated inference. Ensure your env
 
 | Component | Requirement |
 | :--- | :--- |
-| **OS** | Windows 10/11 (Recommended for `.exe` builds) |
+| **OS** | Windows 10/11, Linux x64, macOS Intel/Apple Silicon |
 | **Python** | 3.10 or 3.11 |
 | **FFmpeg** | Required for audio/video processing (must be in system PATH) |
 | **Hardware (CPU)** | Minimum 8GB RAM, AVX2 support recommended |
@@ -33,21 +33,39 @@ It is recommended to use a virtual environment to isolate dependencies.
 
 ```bash
 python -m venv venv
+# Windows:
 .\venv\Scripts\activate
+# Linux/macOS:
+# source venv/bin/activate
 ```
 
 ### 3. Install Dependencies
-Choose the installation path based on your hardware configuration:
+Choose the installation path based on your operating system and hardware:
 
-**For CPU-only environments:**
+**Windows CPU-only:**
 ```bash
 pip install -r requirements_cpu.txt
 ```
 
-**For GPU-accelerated environments:**
+**Windows GPU-accelerated:**
 ```bash
 pip install -r requirements_gpu.txt
 ```
+
+**Linux CPU:**
+```bash
+pip install -r requirements_linux.txt
+```
+
+**macOS:**
+```bash
+pip install -r requirements_macos.txt
+```
+
+Do not install the Windows requirement files on Linux or macOS. On Linux,
+install the native desktop/build dependencies with `python3-tk
+libgirepository-2.0-dev libcairo2-dev pkg-config gir1.2-gtk-3.0
+libgtk-3-0 libwebkit2gtk-4.1-0`.
 
 ## Architecture Overview
 
@@ -65,28 +83,24 @@ graph TD
 
 ## Building the Executable
 
-The project includes a build pipeline using `PyInstaller` to package the application into a standalone Windows executable. This process bundles the Gradio web interface and the necessary runtime hooks.
+The project includes a cross-platform `PyInstaller` pipeline. Windows and
+Linux produce the `Whisper` directory layout; macOS produces a
+Finder-compatible `Whisper Utility.app` bundle. The build bundles the Gradio
+web interface and the required runtime hooks.
 
 ### Build Configuration
 The build process is defined in `whisper.spec` and executed via `app_main.py`. The `hooks/hook-gradio.py` file ensures that Gradio's static assets are correctly included in the final bundle.
 
 ### Execution Command
-To generate the executable, run the following command from the project root:
+To generate the platform-specific release from the project root:
 
 ```bash
-pyinstaller app_main.py ^
-  --collect-data gradio ^
-  --collect-data gradio_client ^
-  --additional-hooks-dir=./hooks ^
-  --runtime-hook ./runtime_hook.py ^
-  --add-data "default_values/default_values.yaml;default_values" ^
-  --add-data "settings/*.yaml;settings" ^
-  --noconfirm ^
-  --icon=logo.ico ^
-  --distpath=./dist/whisper_with_cmd
+python tools/build_release.py
 ```
 
-*Note: The resulting executable will be located in `./dist/whisper_with_cmd/app_main.exe`.*
+The resulting archive is `dist/whisper_app_win.zip`,
+`dist/whisper_app_linux.zip`, `dist/whisper_app_mac_x64.zip`, or
+`dist/whisper_app_mac_arm64.zip`, depending on the platform.
 
 ## Configuration
 

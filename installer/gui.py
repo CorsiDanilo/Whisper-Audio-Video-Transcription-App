@@ -12,10 +12,11 @@ remains responsive. All text labels adapt automatically to the user's OS languag
 """
 
 import os
+import platform
 import sys
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, ttk
 import ctypes
 from typing import Optional
 
@@ -24,6 +25,7 @@ from installer.extractor import extract_archive
 from installer.hardware_detector import HardwareInfo, detect_hardware
 from installer.locales import get_locale_strings
 from installer.manifest import DEFAULT_MANIFEST_URL, Manifest, ManifestError
+from installer.platform_checks import missing_linux_runtime_dependencies
 from installer.shortcut_manager import create_shortcuts, create_uninstaller
 from installer.config_manager import load_existing_configs, save_merged_configs
 
@@ -43,10 +45,10 @@ TEXT = "#eaeaea"
 MUTED = "#8899aa"
 SUCCESS = "#4caf50"
 
-FONT_TITLE = ("Segoe UI", 20, "bold")
-FONT_HEADING = ("Segoe UI", 13, "bold")
-FONT_BODY = ("Segoe UI", 10)
-FONT_MONO = ("Consolas", 9)
+FONT_TITLE = ("TkDefaultFont", 20, "bold")
+FONT_HEADING = ("TkDefaultFont", 13, "bold")
+FONT_BODY = ("TkDefaultFont", 10)
+FONT_MONO = ("TkFixedFont", 9)
 
 MANIFEST_URL = DEFAULT_MANIFEST_URL
 
@@ -56,6 +58,9 @@ _HARDWARE_LOADING = "detecting..."
 
 class InstallerWizard(tk.Tk):
     """Root window that hosts a stack of wizard page frames."""
+
+    DEFAULT_WINDOW_SIZE = (1200, 760)
+    MIN_WINDOW_SIZE = (820, 560)
 
     def __init__(self) -> None:
         super().__init__()
@@ -71,8 +76,15 @@ class InstallerWizard(tk.Tk):
         self.strings = get_locale_strings(self._lang_code)
 
         # ── Placeholder hardware (window opens instantly) ──────────────────────
+        detected_system = platform.system().lower()
+        initial_os = {
+            "windows": "windows",
+            "darwin": "macos",
+        }.get(detected_system, "linux")
+        initial_machine = platform.machine().lower()
+        initial_arch = "arm64" if initial_machine in ("arm64", "aarch64") else "x64"
         self.hardware: HardwareInfo = HardwareInfo(
-            os_name="windows", arch="x64",
+            os_name=initial_os, arch=initial_arch,
             has_nvidia_gpu=False, is_apple_silicon=False,
             gpu_name=None,
         )
@@ -93,13 +105,16 @@ class InstallerWizard(tk.Tk):
 
         # ── Window setup ──────────────────────────────────────────────────────
         self.title(self.strings["title"])
-        self.geometry("680x460")
-        self.resizable(False, False)
+        default_width, default_height = self.DEFAULT_WINDOW_SIZE
+        min_width, min_height = self.MIN_WINDOW_SIZE
+        self.geometry(f"{default_width}x{default_height}")
+        self.minsize(min_width, min_height)
+        self.resizable(True, True)
         self.configure(bg=BG)
         self._center_window()
 
         try:
-            self.iconbitmap(_resource("logo.ico"))
+            self.iconbitmap(self._resource("logo.ico"))
         except Exception:
             pass
 
@@ -117,7 +132,7 @@ class InstallerWizard(tk.Tk):
             "Accent.TButton",
             background=ACCENT,
             foreground="white",
-            font=("Segoe UI", 10, "bold"),
+            font=("TkDefaultFont", 10, "bold"),
             relief="flat",
             padding=(16, 8),
         )
@@ -272,6 +287,18 @@ class InstallerWizard(tk.Tk):
 
         tk.Label(card, textvariable=self._hw_status_var, bg=SURFACE, fg=TEXT, font=FONT_BODY, justify="left").pack(anchor="w")
         tk.Label(card, textvariable=self._hw_spinner_var, bg=SURFACE, fg=MUTED, font=FONT_BODY).pack(anchor="w")
+        if self.hardware.os_name == "linux":
+            missing = missing_linux_runtime_dependencies()
+            if missing:
+                tk.Label(
+                    card,
+                    text="Missing Linux runtime libraries: " + ", ".join(missing),
+                    bg=SURFACE,
+                    fg=ACCENT,
+                    font=FONT_BODY,
+                    justify="left",
+                    wraplength=580,
+                ).pack(anchor="w", pady=(8, 0))
 
         # Install path
         ttk.Label(f, text=self.strings["path_label"]).pack(anchor="w", pady=(8, 2))
@@ -517,11 +544,15 @@ class InstallerWizard(tk.Tk):
             # Build download queue
             tasks: list[tuple[str, str, str | None]] = []
 
-            core_key = "windows" if os_name == "windows" else f"{os_name}_{arch}"
-            core_url = self.manifest.get_component_url("app_core", core_key)
+            # Releases historically used both ``linux`` and ``linux_x64``.
+            # Prefer the architecture-specific key, then fall back to the
+            # generic platform key for compatibility with existing manifests.
+            core_url = self.manifest.get_app_core_url(os_name, arch)
             if core_url:
-                ext = ".zip" if os_name == "windows" else ".tar.gz"
+                ext = self._archive_extension(core_url)
                 tasks.append((core_url, os.path.join(install_dir, f"app_core{ext}"), None))
+            else:
+                raise RuntimeError(f"No application package published for {os_name}/{arch}")
 
             ffmpeg_url = self.manifest.get_ffmpeg_url(os_name, arch)
             if ffmpeg_url:
@@ -556,9 +587,14 @@ class InstallerWizard(tk.Tk):
 
                 try:
                     self._downloader.download_file(url, dest, sha, _progress)
-                    self._log_write(f"  ✓ downloaded\n")
+                    self._log_write("  ✓ downloaded\n")
                 except DownloadError as exc:
                     if "app_core" in fname:
+                        if getattr(sys, "frozen", False):
+                            self._log_write(f"  ✗ Core package unavailable: {exc}\n")
+                            self._log_write("  ✗ Refusing to install an incomplete source fallback.\n")
+                            self.after(0, self._show_done, False)
+                            return
                         self._log_write("  ⚠ Remote release asset not published yet.\n")
                         self._log_write("  [App] Packaging local codebase for dev testing…\n")
                         self._create_local_app_bundle(dest)
@@ -577,7 +613,7 @@ class InstallerWizard(tk.Tk):
                     extract_archive(dest, os.path.dirname(dest))
                     if os.path.exists(dest):
                         os.remove(dest)
-                    self._log_write(f"  ✓ extracted\n")
+                    self._log_write("  ✓ extracted\n")
 
                 self.after(0, self._update_overall_bar, int(idx / total * 100))
 
@@ -615,16 +651,21 @@ class InstallerWizard(tk.Tk):
     def _finish(self, success: bool) -> None:
         import subprocess
         if success and getattr(self, "_launch_var", None) and self._launch_var.get():
-            exe = os.path.join(
-                self.install_dir.get(),
-                "Whisper.exe" if self.hardware.os_name == "windows" else "app_main",
-            )
+            command = self._launch_command(self.install_dir.get(), self.hardware.os_name)
             bat = os.path.join(self.install_dir.get(), "Whisper.bat")
-            if os.path.exists(exe):
-                subprocess.Popen([exe], cwd=self.install_dir.get())
+            if command[0] == "open" or os.path.exists(command[0]):
+                subprocess.Popen(command, cwd=self.install_dir.get())
             elif os.path.exists(bat):
                 subprocess.Popen([bat], shell=True, cwd=self.install_dir.get())
         self.destroy()
+
+    @staticmethod
+    def _launch_command(install_dir: str, os_name: str) -> list[str]:
+        """Return the native command used to launch an installed app."""
+        if os_name == "macos":
+            return ["open", os.path.join(install_dir, "Whisper Utility.app")]
+        executable = "Whisper.exe" if os_name == "windows" else "Whisper"
+        return [os.path.join(install_dir, executable)]
 
     # ── GUI helpers ───────────────────────────────────────────────────────────
 
@@ -665,6 +706,15 @@ class InstallerWizard(tk.Tk):
         if hw.os_name == "macos":
             return os.path.expanduser("~/Applications/WhisperUtility")
         return os.path.expanduser("~/.local/share/whisper-utility")
+
+    @staticmethod
+    def _archive_extension(url: str) -> str:
+        """Return the archive suffix used to select the safe extractor."""
+        clean_url = url.split("?", 1)[0].lower()
+        for extension in (".tar.xz", ".tar.gz", ".tgz", ".zip"):
+            if clean_url.endswith(extension):
+                return extension
+        raise ValueError(f"Unsupported download archive format: {url}")
 
     def _create_local_app_bundle(self, dest_zip: str) -> None:
         import zipfile

@@ -1,17 +1,34 @@
-from splash import AppSplashScreen as _SplashScreen
+import os
+import sys
+
+
+def _set_runtime_directory() -> None:
+    """Make packaged and desktop-launcher runs resolve bundled resources."""
+    if getattr(sys, "frozen", False):
+        runtime_dir = os.path.dirname(os.path.abspath(sys.executable))
+        if sys.platform == "darwin" and os.path.basename(runtime_dir) == "MacOS":
+            contents_dir = os.path.dirname(runtime_dir)
+            if os.path.basename(contents_dir) == "Contents":
+                runtime_dir = os.path.dirname(contents_dir)
+    else:
+        runtime_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(runtime_dir)
+
+
+_set_runtime_directory()
+
+from splash import AppSplashScreen as _SplashScreen  # noqa: E402
 
 _splash = _SplashScreen()
 _splash.update_status("init", 5)
 
-import webview
-import threading
-import time
-import sys
-import os
-import ctypes
-from ctypes import wintypes
-import pystray
-from PIL import Image
+import webview  # noqa: E402
+import threading  # noqa: E402
+import time  # noqa: E402
+import ctypes  # noqa: E402
+from ctypes import wintypes  # noqa: E402
+import pystray  # noqa: E402
+from PIL import Image  # noqa: E402
 
 _splash.update_status("init", 20)
 
@@ -23,13 +40,13 @@ if sys.platform == 'win32':
     except Exception:
         pass
 
-from config import get_translation as _
+from config import get_translation as _  # noqa: E402
 _splash.update_status("init", 35)
 
-from main import demo as main
+from main import demo as main  # noqa: E402
 _splash.update_status("server", 60)
 
-from security_utils import get_gradio_launch_kwargs
+from security_utils import get_gradio_launch_kwargs  # noqa: E402
 
 def get_icon_path():
     if hasattr(sys, '_MEIPASS'):
@@ -91,7 +108,7 @@ def apply_window_icon():
 
 def delayed_icon_setter():
     # Retry applying icon as the webview window initializes
-    for _ in range(8):
+    for attempt in range(8):
         time.sleep(0.5)
         apply_window_icon()
 
@@ -122,7 +139,7 @@ def setup_tray():
     icon = pystray.Icon("WhisperApp", image, "Whisper Audio/Video Utility", menu)
     icon.run()
 
-from ui import custom_css
+from ui import custom_css  # noqa: E402
 
 _splash.update_status("server", 75)
 main.launch(css=custom_css, **get_gradio_launch_kwargs(prevent_thread_lock=True))

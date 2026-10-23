@@ -1,11 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
+import sys
+
+project_root = os.path.abspath(os.path.dirname(SPEC))
+
 
 a = Analysis(
-    ['installer\\installer_main.py'],
-    pathex=[],
+    [os.path.join(project_root, 'installer', 'installer_main.py')],
+    pathex=[project_root],
     binaries=[],
-    datas=[],
+    datas=[
+        (os.path.join(project_root, 'installer', 'manifest.json'), '.'),
+        (os.path.join(project_root, 'logo.ico'), '.'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -32,7 +40,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['logo.ico'],
+    icon=os.path.join(project_root, 'logo.ico') if sys.platform == 'win32' else None,
 )
 coll = COLLECT(
     exe,

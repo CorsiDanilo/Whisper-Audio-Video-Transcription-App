@@ -21,10 +21,15 @@ jobs:
             pyinstaller_name: WhisperUtilitySetup_Windows
             app_artifact: whisper_app_win.zip
             requirements: requirements_cpu.txt
-          - os: macos-latest
-            installer_name: WhisperUtilitySetup_macOS
-            pyinstaller_name: WhisperUtilitySetup_macOS
-            app_artifact: whisper_app_mac.zip
+          - os: macos-13
+            installer_name: WhisperUtilitySetup_macOS_x64
+            pyinstaller_name: WhisperUtilitySetup_macOS_x64
+            app_artifact: whisper_app_mac_x64.zip
+            requirements: requirements_macos.txt
+          - os: macos-14
+            installer_name: WhisperUtilitySetup_macOS_arm64
+            pyinstaller_name: WhisperUtilitySetup_macOS_arm64
+            app_artifact: whisper_app_mac_arm64.zip
             requirements: requirements_macos.txt
           - os: ubuntu-latest
             installer_name: WhisperUtilitySetup_Linux
@@ -85,27 +90,47 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y ffmpeg libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-3.0 libwebkit2gtk-4.1-dev
+          sudo apt-get install -y ffmpeg libgirepository-2.0-dev gcc libcairo2-dev pkg-config python3-dev python3-tk tk-dev gir1.2-gtk-3.0 libgtk-3-0 libwebkit2gtk-4.1-dev
+
+      - name: Verify Tk runtime (Unix)
+        if: runner.os != 'Windows'
+        run: uv run python -c "import tkinter; root = tkinter.Tk(useTk=False); root.destroy()"
 
       - name: Install Python dependencies for app core
         run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            export LDFLAGS="-lgmodule-2.0"
+          fi
           uv pip install -r ${{ matrix.requirements }}
           uv pip install pyinstaller
+
+      - name: Verify GTK Python backend (Linux)
+        if: runner.os == 'Linux'
+        run: uv run python -c "import gi, cairo; from webview.platforms import gtk"
 
       - name: Build Core Application
         run: uv run python tools/build_release.py
 
       - name: Build Installer Binary
         run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            DATA_SEP=';'
+          else
+            DATA_SEP=':'
+          fi
+          ICON_ARGS=()
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            ICON_ARGS+=(--icon "logo.ico")
+          fi
           uv run pyinstaller \
             --onefile \
             --noconsole \
             --noupx \
             --noconfirm \
             --name "${{ matrix.pyinstaller_name }}" \
-            --icon "logo.ico" \
-            --add-data "installer/manifest.json:." \
-            --add-data "logo.ico:." \
+            --add-data "installer/manifest.json${DATA_SEP}." \
+            --add-data "logo.ico${DATA_SEP}." \
+            "${ICON_ARGS[@]}" \
             installer/installer_main.py
         shell: bash
 
@@ -125,7 +150,7 @@ jobs:
           files: |
             dist/${{ matrix.installer_name }}
             dist/${{ matrix.app_artifact }}
-          fail_on_unmatched_files: false
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

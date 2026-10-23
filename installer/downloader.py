@@ -82,13 +82,11 @@ class FileDownloader:
         if parent:
             os.makedirs(parent, exist_ok=True)
 
-        last_exc: Exception = Exception("Unknown error")
         for attempt in range(1, self.MAX_RETRIES + 1):
             try:
                 self._fetch(url, target_path, progress_callback)
                 break
             except Exception as exc:
-                last_exc = exc
                 if os.path.exists(target_path):
                     os.remove(target_path)
                 if attempt == self.MAX_RETRIES:

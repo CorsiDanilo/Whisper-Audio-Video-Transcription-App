@@ -17,6 +17,12 @@ if sys.platform == 'win32':
     tmp_ret = collect_all('win32ctypes')
     datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
+if sys.platform == 'linux':
+    tmp_ret = collect_all('gi')
+    datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+    tmp_ret = collect_all('cairo')
+    datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+
 tmp_ret = collect_all('faster_whisper')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
@@ -63,3 +69,10 @@ coll = COLLECT(
     upx_exclude=[],
     name='Whisper',
 )
+
+if sys.platform == 'darwin':
+    app = BUNDLE(
+        coll,
+        name='Whisper Utility.app',
+        bundle_identifier='com.corsidanilo.whisperutility',
+    )

@@ -14,6 +14,7 @@ Ensure the following software is installed on your system before proceeding:
 *   **FFmpeg**: Required for audio processing and video extraction.
     *   *Windows*: Install via `winget install ffmpeg` or download from [ffmpeg.org](https://ffmpeg.org/).
     *   *Linux*: `sudo apt install ffmpeg`
+    *   *macOS*: `brew install ffmpeg`
 *   **Git**: For version control.
 *   **Ollama** (Optional): Required only if you intend to use local LLM features.
 
@@ -43,12 +44,23 @@ source venv/bin/activate
 
 ### 3. Install Dependencies
 
-The project provides separate requirement files for CPU and GPU environments. Choose the one that matches your hardware capabilities.
+The project keeps Windows CPU/GPU requirements separate from the Linux and macOS
+requirements. Choose the file for the operating system first:
 
 | Environment | Command |
 | :--- | :--- |
-| **CPU Only** | `pip install -r requirements_cpu.txt` |
-| **GPU (CUDA)** | `pip install -r requirements_gpu.txt` |
+| **Windows CPU** | `pip install -r requirements_cpu.txt` |
+| **Windows GPU (CUDA)** | `pip install -r requirements_gpu.txt` |
+| **Linux CPU** | `pip install -r requirements_linux.txt` |
+| **macOS** | `pip install -r requirements_macos.txt` |
+
+The Linux desktop build also needs `python3-tk`, GTK 3, and WebKitGTK. On
+Debian/Ubuntu install them with:
+
+```bash
+sudo apt install python3-tk libgirepository-2.0-dev libcairo2-dev pkg-config \
+  gir1.2-gtk-3.0 libgtk-3-0 libwebkit2gtk-4.1-0
+```
 
 ## Configuration
 
