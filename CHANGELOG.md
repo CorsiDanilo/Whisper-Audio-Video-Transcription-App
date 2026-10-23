@@ -22,6 +22,7 @@
 * GitHub Actions dependency installation now runs with Bash on all platforms.
 * macOS Tk runtime validation no longer calls `destroy()` on a Tcl-only interpreter.
 * Intel macOS builds now use the available `macos-15-intel` runner.
+* macOS requirements pin an ONNX Runtime version with Intel and Apple Silicon wheels.
 
 ## [3.3.0] - 2026-09-29
 

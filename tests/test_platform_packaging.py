@@ -18,6 +18,11 @@ class PlatformPackagingTests(unittest.TestCase):
         self.assertRegex(requirements, r"(?im)^PyGObject(?:[<>=!~].*)?$")
         self.assertRegex(requirements, r"(?im)^pycairo(?:[<>=!~].*)?$")
 
+    def test_macos_requirements_pin_onnxruntime_with_intel_wheel(self):
+        requirements = Path("requirements_macos.txt").read_text(encoding="utf-8")
+
+        self.assertRegex(requirements, r"(?im)^onnxruntime==1\.23\.2$")
+
     def test_linux_spec_collects_pywebview_gtk_backend(self):
         spec = Path("whisper.spec").read_text(encoding="utf-8")
 
